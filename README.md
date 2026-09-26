@@ -46,7 +46,7 @@ In this application, the LLM is treated strictly as an interchangeable inference
            v                                                       v
 +------------------------------------+             +--------------------------------+
 |       ai_engine.py                 |             |       crm_dispatcher.py        |
-|  - Google Gemini 1.5 Flash         |             |  - HTTP POST with retry logic  |
+|  - Google Gemini (Flash-Lite / Flash)|             |  - HTTP POST with retry logic  |
 |  - Pydantic Structured Outputs     |             |  - Simulation Mode Fallback    |
 |  - Model-Agnostic Schema Guards    |             +--------------------------------+
 +------------------------------------+                             |
@@ -157,3 +157,11 @@ The application includes two preloaded, realistic test cases:
 - **Type Safety:** All inputs and outputs are governed by Pydantic models.
 - **No Unhandled Crashes:** All network calls, API timeouts, and missing credentials are caught with user-friendly warnings rather than raw tracebacks.
 - **SOC 2 & Privacy Awareness:** Local execution on Docker and model-agnostic payload formatting ensure financial client data can be retained in private infrastructure.
+
+---
+
+## 8. Authors & Engineering Credits
+
+- **Lead Operations & Automation Engineer:** Christian Omar Payán Torróntegui ([@opyntorr](https://github.com/opyntorr))
+- **AI Architecture & Implementation Co-pilot:** Antigravity (Google DeepMind)
+
