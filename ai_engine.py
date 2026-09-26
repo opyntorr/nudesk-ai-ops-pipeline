@@ -1,0 +1,130 @@
+import os
+import json
+from typing import Tuple, Optional
+from dotenv import load_dotenv
+
+from models import CreditTriageOutput, SalesLeadOutput
+from mock_data import MOCK_FALLBACK_CREDIT, MOCK_FALLBACK_SALES
+
+load_dotenv()
+
+
+def _get_api_key(explicit_key: Optional[str] = None) -> Optional[str]:
+    """Retrieve API key from explicit argument or environment variable."""
+    if explicit_key and explicit_key.strip():
+        return explicit_key.strip()
+    env_key = os.getenv("GEMINI_API_KEY", "")
+    return env_key.strip() if env_key else None
+
+
+def analyze_credit_call(
+    transcript: str,
+    api_key: Optional[str] = None
+) -> Tuple[CreditTriageOutput, bool, Optional[str]]:
+    """
+    Parse a raw discovery call transcript into a structured CreditTriageOutput.
+    Returns: (output_object, is_fallback, error_message)
+    """
+    effective_key = _get_api_key(api_key)
+
+    if not effective_key:
+        return (
+            MOCK_FALLBACK_CREDIT,
+            True,
+            "DEMONSTRATION MODE: Displaying pre-computed benchmark analysis. To analyze dynamic or custom transcripts in real time, please input a Google Gemini API key in the sidebar."
+        )
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=effective_key)
+
+        prompt = f"""You are an elite Senior Commercial Credit Underwriter at nuDesk Capital.
+Analyze the following post-call discovery transcript from our Fireflies / dialer system.
+Extract all relevant applicant details, compute risk tier (Low Risk, Moderate Risk, High Risk),
+estimate the DTI ratio, list clear red flags, and generate actionable operational tasks for Asana.
+
+TRANSCRIPT:
+\"\"\"
+{transcript}
+\"\"\"
+
+Return strictly valid JSON matching the requested CreditTriageOutput schema.
+"""
+
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=CreditTriageOutput,
+                temperature=0.2
+            )
+        )
+
+        raw_text = response.text
+        parsed_dict = json.loads(raw_text)
+        result = CreditTriageOutput(**parsed_dict)
+        return (result, False, None)
+
+    except Exception as exc:
+        err_str = f"Live inference encountered an issue ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
+        return (MOCK_FALLBACK_CREDIT, True, err_str)
+
+
+def qualify_sales_lead(
+    lead_info: str,
+    api_key: Optional[str] = None
+) -> Tuple[SalesLeadOutput, bool, Optional[str]]:
+    """
+    Qualify an inbound/outbound commercial prospect and generate tailored outreach assets.
+    Returns: (output_object, is_fallback, error_message)
+    """
+    effective_key = _get_api_key(api_key)
+
+    if not effective_key:
+        return (
+            MOCK_FALLBACK_SALES,
+            True,
+            "DEMONSTRATION MODE: Displaying pre-computed benchmark analysis. To score dynamic or custom sales leads in real time, please input a Google Gemini API key in the sidebar."
+        )
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=effective_key)
+
+        prompt = f"""You are an expert Head of Growth & Lead Scoring Architect at nuDesk Capital.
+Evaluate the following business commercial profile for financial viability, factoring, or commercial lending.
+Score the lead from 1 to 100 based on transaction size, operational urgency, and revenue strength.
+Write an authentic, highly persuasive cold email in professional US business English, and draft a punchy
+30-second telephone script for our bilingual BDR team in Mazatlan.
+
+PROSPECT DATA:
+\"\"\"
+{lead_info}
+\"\"\"
+
+Return strictly valid JSON matching the requested SalesLeadOutput schema.
+"""
+
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=SalesLeadOutput,
+                temperature=0.3
+            )
+        )
+
+        raw_text = response.text
+        parsed_dict = json.loads(raw_text)
+        result = SalesLeadOutput(**parsed_dict)
+        return (result, False, None)
+
+    except Exception as exc:
+        err_str = f"Live inference encountered an issue ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
+        return (MOCK_FALLBACK_SALES, True, err_str)

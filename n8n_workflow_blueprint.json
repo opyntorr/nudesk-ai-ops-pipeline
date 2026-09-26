@@ -1,0 +1,142 @@
+{
+  "name": "nuDesk Operations Studio - Triage & CRM Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nudesk-triage",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-webhook-1",
+      "name": "Incoming DeskMate Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "webhookId": "nudesk-triage-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const meta = body.metadata || {};\n  const data = body.data || {};\n  \n  // Determine if Credit or Sales payload\n  const isCredit = Boolean(data.risk_tier);\n  \n  output.push({\n    json: {\n      pipeline_type: isCredit ? 'Credit Operations' : 'Sales Operations',\n      timestamp: meta.dispatch_timestamp || new Date().toISOString(),\n      entity_name: data.business_name || data.company_name || 'N/A',\n      contact_name: data.applicant_name || data.contact_person || 'N/A',\n      industry: data.industry || 'General Commercial',\n      financial_metric_usd: data.loan_amount_requested_usd || data.annual_revenue_usd || 0,\n      assessment: data.risk_tier || `Score: ${data.lead_score}/100`,\n      summary_notes: data.executive_summary || data.score_rationale || '',\n      raw_payload: JSON.stringify(data)\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "node-transformer-2",
+      "name": "Format for Google Sheets / CRM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.pipeline_type }}",
+              "value2": "Credit Operations"
+            }
+          ]
+        }
+      },
+      "id": "node-filter-3",
+      "name": "Route by Operation Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "Credit Memo Appended to Underwriting Pipeline"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-credit-dest-4",
+      "name": "Persist to Credit Google Sheet / Asana",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        940,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "Sales Lead Synced with CRM & BDR Outbox"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-sales-dest-5",
+      "name": "Persist to Sales CRM Sheet & Gmail Drafts",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.2,
+      "position": [
+        940,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "Incoming DeskMate Webhook": {
+      "main": [
+        [
+          {
+            "node": "Format for Google Sheets / CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Google Sheets / CRM": {
+      "main": [
+        [
+          {
+            "node": "Route by Operation Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Operation Type": {
+      "main": [
+        [
+          {
+            "node": "Persist to Credit Google Sheet / Asana",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Persist to Sales CRM Sheet & Gmail Drafts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
