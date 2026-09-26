@@ -228,7 +228,8 @@ with tab_credit:
             if st.button("Dispatch Credit File to n8n / Underwriting Pipeline", type="secondary"):
                 success, msg, enriched_data = dispatch_to_n8n(
                     webhook_url=n8n_url_input,
-                    payload=cred.model_dump()
+                    payload=cred.model_dump(),
+                    flow_type="credit"
                 )
                 if success:
                     st.success(f"[SUCCESS] {msg}")
@@ -319,7 +320,8 @@ with tab_sales:
             if st.button("Dispatch Qualified Lead to n8n / Sales CRM", type="secondary"):
                 success, msg, enriched_data = dispatch_to_n8n(
                     webhook_url=n8n_url_input,
-                    payload=sale.model_dump()
+                    payload=sale.model_dump(),
+                    flow_type="sales"
                 )
                 if success:
                     st.success(f"[SUCCESS] {msg}")

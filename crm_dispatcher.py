@@ -5,7 +5,8 @@ import requests
 
 def dispatch_to_n8n(
     webhook_url: Optional[str],
-    payload: Dict[str, Any]
+    payload: Dict[str, Any],
+    flow_type: str = "credit"
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """
     Dispatch structured payload to an n8n webhook instance.
@@ -13,8 +14,10 @@ def dispatch_to_n8n(
     Returns: (success: bool, status_message: str, dispatched_payload: dict)
     """
     enriched_payload = {
+        "flow_type": flow_type,
         "metadata": {
             "source": "DeskMate Operations Studio",
+            "flow_type": flow_type,
             "dispatch_timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
             "environment": "Mazatlan Operations Hub"
         },
