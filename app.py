@@ -76,7 +76,8 @@ with st.sidebar:
 
     # Operational status indicator
     if api_key_input and api_key_input.strip():
-        st.success("[STATUS] Live AI Engine Active (Gemini 1.5 Flash via google-genai)")
+        st.success("[STATUS] Live AI Engine Active (Cost-Optimized: Gemini 3.5 Flash-Lite)")
+        st.caption("Prioritizing gemini-3.5-flash-lite for maximum cost efficiency and speed, with automatic cascade on demand spikes.")
     else:
         st.warning(
             "[STATUS] Demonstration Mode Active (Precomputed Data)\n\n"
@@ -98,11 +99,15 @@ if "credit_output" not in st.session_state:
     st.session_state.credit_output = None
 if "credit_is_fallback" not in st.session_state:
     st.session_state.credit_is_fallback = False
+if "credit_msg" not in st.session_state:
+    st.session_state.credit_msg = ""
 
 if "sales_output" not in st.session_state:
     st.session_state.sales_output = None
 if "sales_is_fallback" not in st.session_state:
     st.session_state.sales_is_fallback = False
+if "sales_msg" not in st.session_state:
+    st.session_state.sales_msg = ""
 
 if "transcript_text" not in st.session_state:
     st.session_state.transcript_text = ""
@@ -161,6 +166,7 @@ with tab_credit:
                 )
                 st.session_state.credit_output = output
                 st.session_state.credit_is_fallback = is_fallback
+                st.session_state.credit_msg = err_msg or ""
 
     # Display Credit Triage Results
     if st.session_state.credit_output:
@@ -174,9 +180,9 @@ with tab_credit:
                 "For live AI extraction on dynamic or novel transcripts, please enter a valid Google Gemini API key in the sidebar."
             )
         else:
+            notice = st.session_state.credit_msg if st.session_state.credit_msg else "Generated in real time by Google Gemini."
             st.success(
-                "**[LIVE INFERENCE NOTICE]**: This underwriting memo was generated in real time by Google Gemini 1.5 Flash "
-                "with strict Pydantic JSON schema enforcement."
+                f"**[LIVE INFERENCE NOTICE]**: {notice} (Validated with strict Pydantic JSON schemas)."
             )
 
         # Top metric row
@@ -277,6 +283,7 @@ with tab_sales:
                 )
                 st.session_state.sales_output = sales_res
                 st.session_state.sales_is_fallback = is_fallback
+                st.session_state.sales_msg = err_msg or ""
 
     # Display Sales Results
     if st.session_state.sales_output:
@@ -290,9 +297,9 @@ with tab_sales:
                 "For live AI scoring on dynamic or novel prospects, please enter a valid Google Gemini API key in the sidebar."
             )
         else:
+            notice = st.session_state.sales_msg if st.session_state.sales_msg else "Generated in real time by Google Gemini."
             st.success(
-                "**[LIVE INFERENCE NOTICE]**: This sales qualification was generated in real time by Google Gemini 1.5 Flash "
-                "with strict Pydantic JSON schema enforcement."
+                f"**[LIVE INFERENCE NOTICE]**: {notice} (Validated with strict Pydantic JSON schemas)."
             )
 
         s1, s2, s3 = st.columns([1.2, 1.5, 1.3])
