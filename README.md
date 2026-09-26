@@ -70,19 +70,31 @@ In this application, the LLM is treated strictly as an interchangeable inference
 ## 3. Repository Structure
 
 ```text
-nudesk-operations-studio/
+nudesk-ai-ops-pipeline/
 ├── .env.example                # Template for environment configuration
-├── .gitignore                  # Standard Python & Docker exclusions
+├── .gitignore                  # Exclusions (ignoring .env and SQLite DBs)
 ├── README.md                   # Technical documentation and evaluation brief
 ├── requirements.txt            # Minimal, pinned Python dependencies
 ├── docker-compose.yml          # Container configuration for local n8n instance
 ├── n8n_workflow_blueprint.json # Importable workflow blueprint for n8n
-├── app.py                      # Interactive Streamlit operations dashboard
-├── models.py                   # Pydantic schemas (CreditTriageOutput, SalesLeadOutput)
-├── ai_engine.py                # LLM inference engine with structured outputs & fallback
-├── crm_dispatcher.py           # Resilient webhook dispatcher with simulation mode
-└── mock_data.py                # Realistic FinServ transcripts and prospect records
+├── app.py                      # V2 Enterprise DeskMate Operations Studio
+├── app_v1_legacy.py            # V1 Prototype reference backup
+├── auth_rbac.py                # Google Workspace SSO & Role-Based Access Control
+├── database.py                 # SQLite persistent audit trail & operations log
+├── document_reader.py          # Multi-modal collateral ingestion (URLs & files)
+├── meeting_queue.py            # Automated meeting queue (Read AI / Fireflies simulator)
+├── models.py                   # Pydantic schemas (Credit, Sales, HR)
+├── ai_engine.py                # Multi-model inference cascade (Gemini 3.5 Flash-Lite)
+├── crm_dispatcher.py           # Resilient webhook dispatcher to n8n
+├── mock_data.py                # Benchmark transcripts and candidate records
+├── styles/
+│   └── nudesk_theme.py         # Design system tokens directly from nudesk.ai
+├── scripts/
+│   └── start_tunnel.sh         # One-click Cloudflare HTTPS tunnel for mobile demo
+└── tests/
+    └── test_v2_suite.py        # Automated test suite for schemas, RBAC, and DB
 ```
+
 
 ---
 
@@ -152,15 +164,29 @@ The application includes two preloaded, realistic test cases:
 
 ---
 
-## 7. Compliance & Technical Rigor
+## 7. Compliance, Testing & Technical Rigor
 
 - **Type Safety:** All inputs and outputs are governed by Pydantic models.
+- **Automated Test Suite:** Run `python -m unittest tests/test_v2_suite.py` to verify schema serialization, RBAC permissions, meeting queues, and SQLite database persistence.
 - **No Unhandled Crashes:** All network calls, API timeouts, and missing credentials are caught with user-friendly warnings rather than raw tracebacks.
 - **SOC 2 & Privacy Awareness:** Local execution on Docker and model-agnostic payload formatting ensure financial client data can be retained in private infrastructure.
 
 ---
 
-## 8. Authors & Engineering Credits
+## 8. Mobile & Remote Demo Access (Cloudflare Tunnel)
+
+To test or demo the dashboard on mobile devices (iOS / Android) or external computers without complex port-forwarding:
+
+```bash
+# Run the automated tunnel script
+./scripts/start_tunnel.sh
+```
+A public HTTPS link (e.g. `https://*.trycloudflare.com`) will be generated to access the dashboard securely from any browser.
+
+---
+
+## 9. Authors & Engineering Credits
+
 
 - **Lead Operations & Automation Engineer:** Christian Omar Payán Torróntegui ([@opyntorr](https://github.com/opyntorr))
 - **AI Architecture & Implementation Co-pilot:** Antigravity (Google DeepMind)

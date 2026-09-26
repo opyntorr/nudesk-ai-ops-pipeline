@@ -1,4 +1,4 @@
-from models import AsanaTask, CreditTriageOutput, SalesLeadOutput
+from models import AsanaTask, CreditTriageOutput, SalesLeadOutput, HRTalentOutput
 
 MOCK_FIREFLIES_TRANSCRIPT = """[00:00:02] Agent (nuDesk Discovery): Thank you for taking the time today, Robert. I want to quickly review your commercial financing inquiry for Apex Fleet Repair.
 [00:00:10] Robert Martinez: Sure thing. As I mentioned in the online form, we're located in Dallas, Texas. We operate a heavy-duty commercial truck repair bay.
@@ -98,3 +98,29 @@ We provide same-day freight bill advances with zero long-term lockups so your tr
 
 Marcus, if I could show you how to unlock your current unpaid receivables by this Friday, would you be open to a 5-minute review tomorrow morning?"""
 )
+
+# Canonical aliases for meeting queue and UI loaders
+BENCHMARK_TRANSCRIPT = MOCK_FIREFLIES_TRANSCRIPT
+BENCHMARK_SALES_LEAD = MOCK_SALES_LEAD_RAW
+
+MOCK_FALLBACK_HR = HRTalentOutput(
+    candidate_name="Sofia Valdez",
+    applied_role="Senior Bilingual Credit Analyst",
+    overall_fit_score=94,
+    bilingual_fluency_rating="C1 Advanced Professional",
+    executive_summary="Exceptional FinServ candidate based in Mazatlán with 4 years of cross-border SME debt underwriting. Demonstrated sharp credit acumen by catching undisclosed MCA stacking, and possesses fluent English communication suitable for direct US client calls.",
+    technical_competencies=[
+        "US Small-Medium Enterprise (SME) Credit Memo Structuring",
+        "Debt Service Coverage Ratio (DSCR) & Cash Flow Reconciliation",
+        "Bank Statement & MCA Stacking Fraud Detection",
+        "Google Workspace (Sheets modeling) & Asana Pipeline Management"
+    ],
+    behavioral_red_flags=[],
+    recommended_action="Advance to Hiring Manager",
+    next_interview_focus_questions=[
+        "Walk through your step-by-step methodology when analyzing seasonal revenue volatility in trucking or construction.",
+        "How do you handle a high-urgency broker pushing for exceptions on non-conforming collateral?",
+        "What is your target workload for daily complete credit memos within our Asana queue?"
+    ]
+)
+

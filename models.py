@@ -51,3 +51,37 @@ class SalesLeadOutput(BaseModel):
     phone_script_30s_en: str = Field(
         description="Persuasive 30-second cold calling opening script for the Mazatlan BDR team"
     )
+
+
+class HRTalentOutput(BaseModel):
+    candidate_name: str = Field(description="Full name of candidate interviewed")
+    applied_role: str = Field(description="Role applied for within nuDesk or lending client team")
+    overall_fit_score: int = Field(
+        description="Score from 1 to 100 assessing technical capability, bilingual fluency, and culture fit",
+        ge=1,
+        le=100
+    )
+    bilingual_fluency_rating: Literal[
+        "C2 Native / Bilingual",
+        "C1 Advanced Professional",
+        "B2 Working Proficiency",
+        "Below Target"
+    ] = Field(description="Assessed English fluency for US lending communication")
+    executive_summary: str = Field(
+        description="2-3 sentence overview of candidate strengths, background fit, and communication style"
+    )
+    technical_competencies: List[str] = Field(
+        description="Core skills verified during screening (e.g. credit memo drafting, DSCR, Google Workspace)"
+    )
+    behavioral_red_flags: List[str] = Field(
+        description="Potential concerns or risks identified during interview (e.g. short tenures, evasive answers)"
+    )
+    recommended_action: Literal[
+        "Advance to Hiring Manager",
+        "Hold for Alternate Pipeline",
+        "Polite Reject"
+    ] = Field(description="Next operational step for the recruiting pipeline")
+    next_interview_focus_questions: List[str] = Field(
+        description="Key follow-up questions for the Hiring Manager to drill down into during next round"
+    )
+
