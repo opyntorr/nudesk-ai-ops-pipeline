@@ -1,12 +1,20 @@
 import os
 import json
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 from dotenv import load_dotenv
 
 from models import CreditTriageOutput, SalesLeadOutput
 from mock_data import MOCK_FALLBACK_CREDIT, MOCK_FALLBACK_SALES
 
 load_dotenv()
+
+# Prioritized list of active Google Gemini models to handle transient demand spikes
+CANDIDATE_MODELS: List[str] = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.8-flash"
+]
 
 
 def _get_api_key(explicit_key: Optional[str] = None) -> Optional[str]:
@@ -23,7 +31,8 @@ def analyze_credit_call(
 ) -> Tuple[CreditTriageOutput, bool, Optional[str]]:
     """
     Parse a raw discovery call transcript into a structured CreditTriageOutput.
-    Returns: (output_object, is_fallback, error_message)
+    Tries candidate Gemini models sequentially, falling back to benchmark data if needed.
+    Returns: (output_object, is_fallback, status_or_error_message)
     """
     effective_key = _get_api_key(api_key)
 
@@ -53,23 +62,32 @@ TRANSCRIPT:
 Return strictly valid JSON matching the requested CreditTriageOutput schema.
 """
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=CreditTriageOutput,
-                temperature=0.2
-            )
-        )
+        last_error = None
+        for model_name in CANDIDATE_MODELS:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=CreditTriageOutput,
+                        temperature=0.2
+                    )
+                )
 
-        raw_text = response.text
-        parsed_dict = json.loads(raw_text)
-        result = CreditTriageOutput(**parsed_dict)
-        return (result, False, None)
+                raw_text = response.text
+                parsed_dict = json.loads(raw_text)
+                result = CreditTriageOutput(**parsed_dict)
+                return (result, False, f"Live inference generated using {model_name}.")
+            except Exception as model_err:
+                last_error = model_err
+                continue
+
+        err_str = f"Live inference reached capacity on candidate models ({type(last_error).__name__}). Showing benchmark analysis."
+        return (MOCK_FALLBACK_CREDIT, True, err_str)
 
     except Exception as exc:
-        err_str = f"Live inference encountered an issue ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
+        err_str = f"Initialization error ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
         return (MOCK_FALLBACK_CREDIT, True, err_str)
 
 
@@ -79,7 +97,8 @@ def qualify_sales_lead(
 ) -> Tuple[SalesLeadOutput, bool, Optional[str]]:
     """
     Qualify an inbound/outbound commercial prospect and generate tailored outreach assets.
-    Returns: (output_object, is_fallback, error_message)
+    Tries candidate Gemini models sequentially, falling back to benchmark data if needed.
+    Returns: (output_object, is_fallback, status_or_error_message)
     """
     effective_key = _get_api_key(api_key)
 
@@ -110,21 +129,30 @@ PROSPECT DATA:
 Return strictly valid JSON matching the requested SalesLeadOutput schema.
 """
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=SalesLeadOutput,
-                temperature=0.3
-            )
-        )
+        last_error = None
+        for model_name in CANDIDATE_MODELS:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        response_schema=SalesLeadOutput,
+                        temperature=0.3
+                    )
+                )
 
-        raw_text = response.text
-        parsed_dict = json.loads(raw_text)
-        result = SalesLeadOutput(**parsed_dict)
-        return (result, False, None)
+                raw_text = response.text
+                parsed_dict = json.loads(raw_text)
+                result = SalesLeadOutput(**parsed_dict)
+                return (result, False, f"Live inference generated using {model_name}.")
+            except Exception as model_err:
+                last_error = model_err
+                continue
+
+        err_str = f"Live inference reached capacity on candidate models ({type(last_error).__name__}). Showing benchmark analysis."
+        return (MOCK_FALLBACK_SALES, True, err_str)
 
     except Exception as exc:
-        err_str = f"Live inference encountered an issue ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
+        err_str = f"Initialization error ({type(exc).__name__}: {str(exc)}). Switched to Demonstration Mode."
         return (MOCK_FALLBACK_SALES, True, err_str)
