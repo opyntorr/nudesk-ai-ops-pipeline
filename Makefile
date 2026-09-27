@@ -6,7 +6,7 @@ PIP := $(shell if [ -f $(VENV)/bin/pip ]; then echo $(VENV)/bin/pip; else echo p
 STREAMLIT := $(shell if [ -f $(VENV)/bin/streamlit ]; then echo $(VENV)/bin/streamlit; else echo streamlit; fi)
 
 help:
-	@echo "nuDesk DeskMate Operations Studio - Developer Commands"
+	@echo "nuDesk Operations Studio - Developer Commands"
 	@echo "------------------------------------------------------"
 	@echo "make install     : Install all project dependencies into active environment"
 	@echo "make test        : Run full automated test suite"

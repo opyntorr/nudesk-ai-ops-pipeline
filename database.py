@@ -1,5 +1,5 @@
 """
-SQLite Persistence Layer for DeskMate Operations Studio
+SQLite Persistence Layer for nuDesk Operations Studio
 nuDesk MX — Mazatlán Operations Hub & US Commercial Lending
 Provides persistent audit trails, operational history, dual-queue triage, and multi-criteria queries.
 """
@@ -8,7 +8,7 @@ import sqlite3
 import json
 import time
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DB_PATH = os.path.join(DB_DIR, "operations_history.db")
@@ -753,4 +753,87 @@ def get_candidate_area(record: Dict[str, Any]) -> str:
     elif any(k in text for k in ["technology", "systems", "it", "dev", "engineer", "software"]):
         return "Technology & Systems"
     return "Credit Underwriting & Risk"
+
+
+def get_database_schema(table_name: str = "operations_history") -> List[Dict[str, Any]]:
+    """Return table column metadata for database inspection."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    rows = cursor.fetchall()
+    return [
+        {
+            "cid": r["cid"],
+            "name": r["name"],
+            "type": r["type"],
+            "notnull": bool(r["notnull"]),
+            "dflt_value": r["dflt_value"],
+            "pk": bool(r["pk"])
+        }
+        for r in rows
+    ]
+
+
+def get_database_stats() -> Dict[str, Any]:
+    """Retrieve database metrics including record counts and disk footprint."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) AS total FROM operations_history")
+    total = cursor.fetchone()["total"]
+
+    cursor.execute("SELECT module_type, COUNT(*) AS cnt FROM operations_history GROUP BY module_type")
+    by_mod = {row["module_type"]: row["cnt"] for row in cursor.fetchall()}
+
+    cursor.execute("SELECT is_processed, COUNT(*) AS cnt FROM operations_history GROUP BY is_processed")
+    by_proc = {row["is_processed"]: row["cnt"] for row in cursor.fetchall()}
+
+    file_size_bytes = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+
+    return {
+        "db_path": DB_PATH,
+        "file_size_bytes": file_size_bytes,
+        "file_size_kb": round(file_size_bytes / 1024, 2),
+        "total_records": total,
+        "credit_count": by_mod.get("credit", 0),
+        "sales_count": by_mod.get("sales", 0),
+        "hr_count": by_mod.get("hr", 0),
+        "processed_count": by_proc.get(1, 0),
+        "pending_count": by_proc.get(0, 0),
+    }
+
+
+def execute_safe_query(sql_query: str, max_rows: int = 100) -> Tuple[List[str], List[Tuple], Optional[str]]:
+    """
+    Safely execute read-only queries (SELECT, PRAGMA, EXPLAIN) in the SQLite database.
+    Rejects mutation statements (DROP, DELETE, UPDATE, INSERT, ALTER) to protect production data.
+    """
+    cleaned = sql_query.strip()
+    first_token = cleaned.split()[0].upper() if cleaned else ""
+    if first_token not in ["SELECT", "PRAGMA", "EXPLAIN"]:
+        return [], [], f"Security Policy Violation: Only read-only queries (SELECT, PRAGMA) are permitted. Received: '{first_token}'"
+
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(cleaned)
+        col_names = [d[0] for d in cursor.description] if cursor.description else []
+        rows = cursor.fetchmany(max_rows)
+        return col_names, [tuple(r) for r in rows], None
+    except Exception as exc:
+        return [], [], str(exc)
+
+
+def vacuum_database() -> Dict[str, Any]:
+    """Execute VACUUM to reclaim unused disk space and optimize page allocation."""
+    size_before = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+    conn = get_connection()
+    conn.execute("VACUUM")
+    conn.execute("PRAGMA optimize")
+    size_after = os.path.getsize(DB_PATH) if os.path.exists(DB_PATH) else 0
+    return {
+        "size_before_bytes": size_before,
+        "size_after_bytes": size_after,
+        "reclaimed_bytes": max(0, size_before - size_after)
+    }
+
 

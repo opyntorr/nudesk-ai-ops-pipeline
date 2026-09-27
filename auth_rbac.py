@@ -32,7 +32,7 @@ PRESET_WORKSPACE_PERSONAS: List[UserPersona] = [
         role_key="underwriter",
         role_title="Senior Underwriter",
         department="Credit Operations (Mazatlán)",
-        default_tab="Credit DeskMate",
+        default_tab="Credit Operations",
         avatar_initials="RM",
         permissions={
             "view_credit": True,
@@ -51,7 +51,7 @@ PRESET_WORKSPACE_PERSONAS: List[UserPersona] = [
         role_key="bdr",
         role_title="Commercial BDR",
         department="Sales Operations",
-        default_tab="Sales DeskMate",
+        default_tab="Commercial Sales",
         avatar_initials="SJ",
         permissions={
             "view_credit": False,
@@ -70,7 +70,7 @@ PRESET_WORKSPACE_PERSONAS: List[UserPersona] = [
         role_key="hr_recruiter",
         role_title="Talent Specialist",
         department="HR Solutions & Recruiting",
-        default_tab="HR DeskMate",
+        default_tab="Talent Operations",
         avatar_initials="ER",
         permissions={
             "view_credit": False,
@@ -218,7 +218,7 @@ def create_persona_from_google_user(user_info: Dict[str, Any]) -> UserPersona:
         role_key = "underwriter"
         role_title = "Operations Specialist"
         department = "Credit Operations (Mazatlán)"
-        default_tab = "Credit DeskMate"
+        default_tab = "Credit Operations"
         permissions = {
             "view_credit": True,
             "view_sales": True,

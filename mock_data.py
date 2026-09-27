@@ -88,7 +88,7 @@ Do you have 7 minutes this Thursday at 10:00 AM MST for a quick feasibility chec
 
 Best regards,
 
-DeskMate Sales Acceleration Team | nuDesk Operations
+nuDesk Sales Acceleration Team | Commercial Lending Operations
 Mazatlan Talent Hub -- US Lending Operations""",
     phone_script_30s_en="""Hi Marcus, this is [BDR Name] with nuDesk Capital. I'll be brief -- I see Sunbelt is running 14 reefers out of Phoenix. 
 

@@ -1,4 +1,4 @@
-name: DeskMate Studio CI Pipeline
+name: nuDesk Ops Studio CI Pipeline
 
 on:
   push:

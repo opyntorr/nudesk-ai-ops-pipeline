@@ -3,7 +3,7 @@
 nuDesk Ingestion Pipeline Bridge
 Ingests incoming call transcripts and applications from external webhooks
 (Read AI, Fireflies.ai, Zoom, Google Drive Intake, Google Forms) directly into
-nuDesk DeskMate FIFO queue with active SLA tracking.
+nuDesk FIFO operational queue with active SLA tracking.
 """
 import sys
 import os
@@ -26,7 +26,7 @@ def ingest_file(
     assessment_summary: str = "Awaiting discovery analysis",
     metadata_extra: dict = None
 ) -> dict:
-    """Ingest a pending record into the DeskMate operational queue."""
+    """Ingest a pending record into the nuDesk operational queue."""
     record_id = database.ingest_pending_record(
         module_type=module_type,
         entity_name=entity_name,
@@ -46,7 +46,7 @@ def ingest_file(
         "headline_metric": headline_metric,
         "source_channel": source_channel,
         "status": "Pending Triage",
-        "message": f"Successfully queued {entity_name} in {module_type.upper()} DeskMate queue (Record #{record_id})."
+        "message": f"Successfully queued {entity_name} in {module_type.upper()} operational queue (Record #{record_id})."
     }
 
 

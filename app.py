@@ -1,10 +1,11 @@
 """
-DeskMate Operations Studio V2 (FinTech Operations Cockpit)
+nuDesk Operations Studio V2 (FinTech Operations Cockpit)
 nuDesk MX — Mazatlán Operations Hub & US Commercial Lending
 AI-Workforce Platform for Financial Services
 """
 import os
 import json
+import time
 from typing import Optional, Any, Dict, List, Tuple
 import streamlit as st
 from dotenv import load_dotenv
@@ -40,7 +41,7 @@ database.init_db()
 
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
-    page_title="DeskMate Studio | nuDesk MX",
+    page_title="nuDesk Operations Studio | nuDesk MX",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -181,7 +182,7 @@ col_head_left, col_head_right = st.columns([7, 3])
 with col_head_left:
     st.markdown("""<div class="nudesk-header" style="margin-bottom:0.75rem; padding:0.85rem 1.4rem;">
 <div>
-<h1>nuDesk | DeskMate Operations Studio</h1>
+<h1>nuDesk | Operations Studio</h1>
 <div class="subtitle">AI-Workforce Platform for Financial Services — Mazatlán Talent Hub</div>
 </div>
 </div>""", unsafe_allow_html=True)
@@ -259,9 +260,9 @@ with col_head_right:
 
 # ----------------- PERMISSION-GOVERNED NAVIGATION TABS -----------------
 tab_labels = [
-    "Credit DeskMate (Underwriting)",
-    "Sales DeskMate (BDR Outreach)",
-    "HR DeskMate (Talent Screening)",
+    "Credit Operations (Underwriting)",
+    "Commercial Sales (BDR Outreach)",
+    "Talent Operations (HR Screening)",
     "Executive KPI Dashboard & History",
     "IT & System Administration"
 ]
@@ -269,7 +270,7 @@ tab_labels = [
 tabs = st.tabs(tab_labels)
 
 # =========================================================================
-# TAB 1: CREDIT DESKMATE (UNDERWRITING DISCOVERY TRIAGE - SPLIT COCKPIT)
+# TAB 1: CREDIT OPERATIONS (UNDERWRITING DISCOVERY TRIAGE - SPLIT COCKPIT)
 # =========================================================================
 with tabs[0]:
     col_c_head, col_c_win = st.columns([7, 3], gap="medium")
@@ -368,10 +369,37 @@ with tabs[0]:
 
     # ---------------- LEFT PANEL: QUEUE & AUDIT HUB ----------------
     with col_c_queue:
+        def on_credit_tab_change():
+            curr_tab = st.session_state.get("credit_queue_tab_key", "")
+            if "Pending" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="credit",
+                    sort_by="date",
+                    sort_order="asc",
+                    status_filter="pending",
+                    time_window=st.session_state.get("cq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_credit_id = top_items[0]["id"]
+                    st.session_state.credit_result = None
+            elif "Processed" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="credit",
+                    sort_by="date",
+                    sort_order="desc",
+                    status_filter="processed",
+                    time_window=st.session_state.get("cq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_credit_id = top_items[0]["id"]
+                    st.session_state.credit_result = None
+
         credit_queue_tabs = st.tabs([
             f"Pending Queue ({credit_kpis['pending_count']})",
             f"Processed Audit ({credit_kpis['processed_count']})"
-        ])
+        ], key="credit_queue_tab_key", on_change=on_credit_tab_change)
 
         with credit_queue_tabs[0]:
             col_cq_s, col_cq_o = st.columns([6, 4])
@@ -566,6 +594,21 @@ with tabs[0]:
                     is_manual = True
                     st.session_state.active_credit_id = "manual"
 
+        # Auto-align canvas record if current active tab is Processed but active_credit_rec is pending, or vice versa
+        active_c_tab = st.session_state.get("credit_queue_tab_key", "")
+        if "Processed" in active_c_tab and (active_credit_rec is None or active_credit_rec.get("is_processed") != 1):
+            top_proc = database.get_filtered_operations(module_filter="credit", sort_by="date", sort_order="desc", status_filter="processed", time_window=cq_win, limit=1)
+            if top_proc:
+                st.session_state.active_credit_id = top_proc[0]["id"]
+                active_credit_rec = top_proc[0]
+                is_manual = False
+        elif "Pending" in active_c_tab and (active_credit_rec is not None and active_credit_rec.get("is_processed") == 1):
+            top_pend = database.get_filtered_operations(module_filter="credit", sort_by="date", sort_order="asc", status_filter="pending", time_window=cq_win, limit=1)
+            if top_pend:
+                st.session_state.active_credit_id = top_pend[0]["id"]
+                active_credit_rec = top_pend[0]
+                is_manual = False
+
         is_processed_c = (active_credit_rec is not None and active_credit_rec.get("is_processed") == 1)
 
         if is_processed_c:
@@ -599,6 +642,7 @@ with tabs[0]:
                     next_p = database.get_next_pending_operation("credit")
                     st.session_state.active_credit_id = next_p["id"] if next_p else "manual"
                     st.session_state.credit_result = None
+                    st.session_state.credit_queue_tab_key = f"Pending Queue ({credit_kpis['pending_count']})"
                     st.rerun()
 
             # Processed Detailed KPIs
@@ -895,7 +939,7 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
                         st.rerun()
 
 # =========================================================================
-# TAB 2: SALES DESKMATE (COMMERCIAL BDR LEAD SCORING - SPLIT COCKPIT)
+# TAB 2: COMMERCIAL SALES (COMMERCIAL BDR LEAD SCORING - SPLIT COCKPIT)
 # =========================================================================
 with tabs[1]:
     col_s_head, col_s_win = st.columns([7, 3], gap="medium")
@@ -992,10 +1036,37 @@ with tabs[1]:
 
     # ---------------- LEFT PANEL: SALES QUEUE & AUDIT ----------------
     with col_s_queue:
+        def on_sales_tab_change():
+            curr_tab = st.session_state.get("sales_queue_tab_key", "")
+            if "Pending" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="sales",
+                    sort_by="date",
+                    sort_order="asc",
+                    status_filter="pending",
+                    time_window=st.session_state.get("sq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_sales_id = top_items[0]["id"]
+                    st.session_state.sales_result = None
+            elif "Processed" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="sales",
+                    sort_by="date",
+                    sort_order="desc",
+                    status_filter="processed",
+                    time_window=st.session_state.get("sq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_sales_id = top_items[0]["id"]
+                    st.session_state.sales_result = None
+
         sales_queue_tabs = st.tabs([
             f"Pending Queue ({sales_kpis['pending_count']})",
             f"Processed Leads ({sales_kpis['processed_count']})"
-        ])
+        ], key="sales_queue_tab_key", on_change=on_sales_tab_change)
 
         with sales_queue_tabs[0]:
             col_sq_s, col_sq_o = st.columns([6, 4])
@@ -1175,6 +1246,21 @@ with tabs[1]:
                     is_manual_s = True
                     st.session_state.active_sales_id = "manual"
 
+        # Auto-align canvas record if current active tab is Processed but active_sales_rec is pending, or vice versa
+        active_s_tab = st.session_state.get("sales_queue_tab_key", "")
+        if "Processed" in active_s_tab and (active_sales_rec is None or active_sales_rec.get("is_processed") != 1):
+            top_proc = database.get_filtered_operations(module_filter="sales", sort_by="date", sort_order="desc", status_filter="processed", time_window=sq_win, limit=1)
+            if top_proc:
+                st.session_state.active_sales_id = top_proc[0]["id"]
+                active_sales_rec = top_proc[0]
+                is_manual_s = False
+        elif "Pending" in active_s_tab and (active_sales_rec is not None and active_sales_rec.get("is_processed") == 1):
+            top_pend = database.get_filtered_operations(module_filter="sales", sort_by="date", sort_order="asc", status_filter="pending", time_window=sq_win, limit=1)
+            if top_pend:
+                st.session_state.active_sales_id = top_pend[0]["id"]
+                active_sales_rec = top_pend[0]
+                is_manual_s = False
+
         is_processed_s = (active_sales_rec is not None and active_sales_rec.get("is_processed") == 1)
 
         if is_processed_s:
@@ -1208,6 +1294,7 @@ with tabs[1]:
                     next_p = database.get_next_pending_operation("sales")
                     st.session_state.active_sales_id = next_p["id"] if next_p else "manual"
                     st.session_state.sales_result = None
+                    st.session_state.sales_queue_tab_key = f"Pending Queue ({sales_kpis['pending_count']})"
                     st.rerun()
 
             # Processed Detailed KPIs
@@ -1451,7 +1538,7 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
                         st.rerun()
 
 # =========================================================================
-# TAB 3: HR DESKMATE (TALENT SCREENING - SPLIT COCKPIT)
+# TAB 3: TALENT OPERATIONS (HR SCREENING - SPLIT COCKPIT)
 # =========================================================================
 with tabs[2]:
     col_h_head, col_h_win = st.columns([7, 3], gap="medium")
@@ -1567,10 +1654,37 @@ with tabs[2]:
 
     # ---------------- LEFT PANEL: HR QUEUE & AUDIT ----------------
     with col_h_queue:
+        def on_hr_tab_change():
+            curr_tab = st.session_state.get("hr_queue_tab_key", "")
+            if "Pending" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="hr",
+                    sort_by="date",
+                    sort_order="asc",
+                    status_filter="pending",
+                    time_window=st.session_state.get("hq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_hr_id = top_items[0]["id"]
+                    st.session_state.hr_result = None
+            elif "Processed" in curr_tab:
+                top_items = database.get_filtered_operations(
+                    module_filter="hr",
+                    sort_by="date",
+                    sort_order="desc",
+                    status_filter="processed",
+                    time_window=st.session_state.get("hq_win", "all"),
+                    limit=1
+                )
+                if top_items:
+                    st.session_state.active_hr_id = top_items[0]["id"]
+                    st.session_state.hr_result = None
+
         hr_queue_tabs = st.tabs([
             f"Pending Queue ({hr_kpis['pending_count']})",
             f"Processed Talent ({hr_kpis['processed_count']})"
-        ])
+        ], key="hr_queue_tab_key", on_change=on_hr_tab_change)
 
         with hr_queue_tabs[0]:
             col_hq_s, col_hq_area, col_hq_o = st.columns([4, 4, 3])
@@ -1785,6 +1899,21 @@ with tabs[2]:
                     is_manual_h = True
                     st.session_state.active_hr_id = "manual"
 
+        # Auto-align canvas record if current active tab is Processed but active_hr_rec is pending, or vice versa
+        active_h_tab = st.session_state.get("hr_queue_tab_key", "")
+        if "Processed" in active_h_tab and (active_hr_rec is None or active_hr_rec.get("is_processed") != 1):
+            top_proc = database.get_filtered_operations(module_filter="hr", sort_by="date", sort_order="desc", status_filter="processed", time_window=hq_win, limit=1)
+            if top_proc:
+                st.session_state.active_hr_id = top_proc[0]["id"]
+                active_hr_rec = top_proc[0]
+                is_manual_h = False
+        elif "Pending" in active_h_tab and (active_hr_rec is not None and active_hr_rec.get("is_processed") == 1):
+            top_pend = database.get_filtered_operations(module_filter="hr", sort_by="date", sort_order="asc", status_filter="pending", time_window=hq_win, limit=1)
+            if top_pend:
+                st.session_state.active_hr_id = top_pend[0]["id"]
+                active_hr_rec = top_pend[0]
+                is_manual_h = False
+
         is_processed_h = (active_hr_rec is not None and active_hr_rec.get("is_processed") == 1)
 
         if is_processed_h:
@@ -1818,6 +1947,7 @@ with tabs[2]:
                     next_p = database.get_next_pending_operation("hr")
                     st.session_state.active_hr_id = next_p["id"] if next_p else "manual"
                     st.session_state.hr_result = None
+                    st.session_state.hr_queue_tab_key = f"Pending Queue ({hr_kpis['pending_count']})"
                     st.rerun()
 
             # Processed Detailed KPIs
@@ -2481,94 +2611,206 @@ Source Channel: {rec.get('source_channel', '')} &bull; Timestamp: {time_str} &bu
 # =========================================================================
 with tabs[4]:
     st.markdown("### System Architecture & IT Governance")
-    st.markdown("Operational infrastructure, API keys, webhook endpoints, and n8n Docker orchestration.")
+    st.markdown("Operational infrastructure, dynamic model cascade, database workbench, and enterprise telemetry.")
 
     if not persona.permissions.get("it_admin_settings", False):
         st.warning(
             f"Access Restricted: Your current Google Workspace identity ({persona.name} — {persona.role_title}) does not hold IT Administrator permissions. "
-            "Switch to Omar Payán (Lead AI Ops Engineer) in the identity selector above to configure API keys and webhook dispatchers."
+            "Switch to Omar Payán (Lead AI Ops Engineer) in the identity selector above to configure API keys and system administration tools."
         )
     else:
         st.success(f"Authenticated as {persona.name} ({persona.role_title}). IT controls unlocked.")
 
-        st.markdown("#### Cloud & AI Engine Configuration")
-        col_k1, col_k2 = st.columns(2)
-        with col_k1:
-            new_api_key = st.text_input(
-                "Google Gemini API Key (Server Environment):",
-                value=current_api_key,
-                type="password",
-                help="Active API key from Google AI Studio. Stored in .env and loaded automatically."
-            )
-        with col_k2:
-            new_webhook_url = st.text_input(
-                "n8n Webhook Destination URL (Docker Network):",
-                value=current_webhook_url,
-                help="Incoming webhook node endpoint in n8n container."
-            )
+        it_tabs = st.tabs([
+            "AI Model Cascade & Governance",
+            "Database Explorer & SQL Workbench",
+            "System Telemetry & Integrations"
+        ])
 
-        st.markdown("#### Active Model Cascade")
-        st.markdown("""
-        ```text
-        Tier 1: gemini-3.5-flash-lite (Cost-optimized, ultra-fast latency for high-volume discovery triage)
-        Tier 2: gemini-3.5-flash      (Intermediate fallback on high concurrency)
-        Tier 3: gemini-flash-latest   (Dynamic latest stable checkpoint)
-        Tier 4: Demonstration Mode   (Fail-safe synthetic benchmark to avoid runtime crash)
-        ```
-        """)
-
-        st.markdown("#### Remote Multi-Device HTTPS Access")
-        st.markdown("""
-        To demo this application on mobile devices (iOS / Android) or external laptops:
-        ```bash
-        # Run the automated tunnel script
-        ./scripts/start_tunnel.sh
-        ```
-        This generates an instant, secure Cloudflare HTTPS URL without requiring router port-forwarding.
-        """)
-
-        st.markdown("#### System Health & Diagnostics")
-        col_d1, col_d2, col_d3 = st.columns(3)
-        with col_d1:
-            st.metric("Docker n8n Status", "Online (Port 5678)")
-        with col_d2:
-            st.metric("Database Health", "SQLite OK (data/operations_history.db)")
-        with col_d3:
-            st.metric("Pydantic Schemas", "3 Active (Credit, Sales, HR)")
-
-        st.markdown("#### Synthetic Webhook & Meeting Bot Simulator")
-        st.caption("Demonstration suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive without paid accounts.")
-        col_sim1, col_sim2, col_sim3 = st.columns(3)
-        with col_sim1:
-            if st.button("Fire Read AI Credit Call", width="stretch", key="btn_it_sim_readai"):
-                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
-                p = generate_synthetic_payload("readai", "credit")
-                f = extract_ingestion_fields(p, "readai", "credit")
-                nid = database.ingest_pending_record(
-                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
-                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
-                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+        with it_tabs[0]:
+            st.markdown("#### Cloud & AI Engine Configuration")
+            col_k1, col_k2 = st.columns(2)
+            with col_k1:
+                new_api_key = st.text_input(
+                    "Google Gemini API Key (Server Environment):",
+                    value=current_api_key,
+                    type="password",
+                    help="Active API key from Google AI Studio. Stored in .env and loaded automatically."
                 )
-                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Credit Queue)")
-        with col_sim2:
-            if st.button("Fire Fireflies Sales Call", width="stretch", key="btn_it_sim_fireflies"):
-                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
-                p = generate_synthetic_payload("fireflies", "sales")
-                f = extract_ingestion_fields(p, "fireflies", "sales")
-                nid = database.ingest_pending_record(
-                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
-                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
-                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+            with col_k2:
+                new_webhook_url = st.text_input(
+                    "n8n Webhook Destination URL (Docker Network):",
+                    value=current_webhook_url,
+                    help="Incoming webhook node endpoint in n8n container."
                 )
-                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Sales Queue)")
-        with col_sim3:
-            if st.button("Fire Google Drive Intake", width="stretch", key="btn_it_sim_gdrive"):
-                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
-                p = generate_synthetic_payload("gdrive", "credit")
-                f = extract_ingestion_fields(p, "gdrive", "credit")
-                nid = database.ingest_pending_record(
-                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
-                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
-                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+
+            st.markdown("---")
+            st.markdown("#### Dynamic Multi-Model Cascade")
+            st.caption("Configure fallback tiers, latency priorities, and generation parameters for Credit, Sales, and HR modules.")
+
+            if "active_model_cascade" not in st.session_state:
+                st.session_state.active_model_cascade = ai_engine.get_candidate_models()
+
+            col_mc1, col_mc2 = st.columns([6, 4])
+            with col_mc1:
+                cascade_selection = st.multiselect(
+                    "Active Model Fallback Cascade (Ranked Order):",
+                    options=ai_engine.AVAILABLE_MODELS,
+                    default=st.session_state.active_model_cascade,
+                    help="Primary model runs first. On rate limits, timeouts, or transient 503s, execution falls back sequentially to lower tiers."
                 )
-                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Drive Intake)")
+
+                if st.button("Apply & Persist Model Cascade", key="btn_apply_cascade", width="stretch"):
+                    if cascade_selection:
+                        ai_engine.set_candidate_models(cascade_selection)
+                        st.session_state.active_model_cascade = cascade_selection
+                        st.success(f"Model cascade updated! Active sequence: {' → '.join(cascade_selection)}")
+                    else:
+                        st.error("Cascade cannot be empty. Please select at least one candidate model.")
+
+            with col_mc2:
+                cascade_temp = st.slider("Inference Temperature (Deterministic):", min_value=0.0, max_value=1.0, value=0.2, step=0.05, help="Low temperature (0.0-0.2) guarantees consistent, repeatable financial risk evaluations.")
+                st.checkbox("Enable Fail-Safe Demonstration Fallback", value=True, disabled=True, help="Always active: If all models reach quota, loads vetted benchmark data rather than failing.")
+
+            st.markdown("---")
+            st.markdown("#### Model Connectivity & Latency Benchmark")
+            col_ping_sel, col_ping_btn = st.columns([7, 3])
+            with col_ping_sel:
+                test_target_model = st.selectbox(
+                    "Select Model to Benchmark:",
+                    options=cascade_selection if cascade_selection else ai_engine.AVAILABLE_MODELS,
+                    key="sel_model_benchmark",
+                    label_visibility="collapsed"
+                )
+            with col_ping_btn:
+                do_ping = st.button("Ping & Measure Latency", width="stretch", key="btn_ping_model")
+
+            if do_ping:
+                with st.spinner(f"Testing connectivity and latency for {test_target_model}..."):
+                    ping_res = ai_engine.test_model_connectivity(test_target_model, new_api_key)
+                    if ping_res["connected"]:
+                        st.success(f"Status: {ping_res['status']} | Latency: {ping_res['latency_ms']} ms | Response: {ping_res['message']}")
+                    else:
+                        st.error(f"Status: {ping_res['status']} | Latency: {ping_res['latency_ms']} ms | Error: {ping_res['message']}")
+
+        with it_tabs[1]:
+            st.markdown("#### SQLite Operations Database Explorer & Query Workbench")
+            st.caption("Live relational database inspection, real-time read queries, schema analysis, and storage maintenance.")
+
+            db_stats = database.get_database_stats()
+            col_db1, col_db2, col_db3, col_db4 = st.columns(4)
+            with col_db1:
+                st.metric("Total Operations", f"{db_stats['total_records']} rows")
+            with col_db2:
+                st.metric("Pending Queue", f"{db_stats['pending_count']} pending")
+            with col_db3:
+                st.metric("Processed Memos", f"{db_stats['processed_count']} synced")
+            with col_db4:
+                st.metric("Database Footprint", f"{db_stats['file_size_kb']} KB")
+
+            st.markdown("---")
+            st.markdown("##### Interactive SQL Query Runner (Read-Only)")
+            default_sql = "SELECT id, timestamp, module_type, entity_name, headline_metric, is_processed FROM operations_history ORDER BY id DESC LIMIT 10;"
+            user_sql = st.text_area("SQL Statement (SELECT only):", value=default_sql, height=90, key="txt_sql_query")
+
+            col_qrun, col_qclear = st.columns([3, 1])
+            with col_qrun:
+                run_sql = st.button("Execute Safe Query", key="btn_execute_sql", width="stretch")
+
+            if run_sql:
+                q_cols, q_rows, q_err = database.execute_safe_query(user_sql, max_rows=100)
+                if q_err:
+                    st.error(f"SQL Error: {q_err}")
+                elif q_cols:
+                    import pandas as pd
+                    df_res = pd.DataFrame(q_rows, columns=q_cols)
+                    st.dataframe(df_res, width="stretch")
+                    st.caption(f"Retrieved {len(q_rows)} rows successfully.")
+                else:
+                    st.info("Query executed successfully with 0 rows returned.")
+
+            st.markdown("---")
+            col_sch, col_maint = st.columns([1, 1], gap="medium")
+            with col_sch:
+                st.markdown("##### Database Schema Inspector")
+                with st.expander("View Table Columns & Types (`operations_history`)", expanded=False):
+                    schema_data = database.get_database_schema("operations_history")
+                    df_schema = pd.DataFrame(schema_data)
+                    st.dataframe(df_schema[["name", "type", "notnull", "pk"]], width="stretch")
+
+            with col_maint:
+                st.markdown("##### Storage Optimization & Data Export")
+                col_vac, col_exp_csv = st.columns(2)
+                with col_vac:
+                    if st.button("VACUUM Database", width="stretch", key="btn_vacuum_db"):
+                        v_res = database.vacuum_database()
+                        st.success(f"Optimized! Reclaimed: {v_res['reclaimed_bytes']} bytes (Current size: {v_res['size_after_bytes']} B).")
+                with col_exp_csv:
+                    cols_all, rows_all, _ = database.execute_safe_query("SELECT * FROM operations_history ORDER BY id DESC;", max_rows=5000)
+                    if cols_all:
+                        df_all = pd.DataFrame(rows_all, columns=cols_all)
+                        csv_bytes = df_all.to_csv(index=False).encode("utf-8")
+                        st.download_button(
+                            label="Export CSV Backup",
+                            data=csv_bytes,
+                            file_name=f"nudesk_operations_backup_{int(time.time())}.csv",
+                            mime="text/csv",
+                            width="stretch"
+                        )
+
+        with it_tabs[2]:
+            st.markdown("#### System Health & Diagnostics")
+            col_d1, col_d2, col_d3 = st.columns(3)
+            with col_d1:
+                st.metric("Docker n8n Status", "Online (Port 5678)")
+            with col_d2:
+                st.metric("Database Health", "SQLite OK (data/operations_history.db)")
+            with col_d3:
+                st.metric("Pydantic Schemas", "3 Active (Credit, Sales, HR)")
+
+            st.markdown("#### Remote Multi-Device HTTPS Access")
+            st.markdown("""
+            To demo this application on mobile devices (iOS / Android) or external laptops:
+            ```bash
+            # Run the automated tunnel script
+            ./scripts/start_tunnel.sh
+            ```
+            This generates an instant, secure Cloudflare HTTPS URL without requiring router port-forwarding.
+            """)
+
+            st.markdown("#### Synthetic Webhook & Meeting Bot Simulator")
+            st.caption("Demonstration suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive without paid accounts.")
+            col_sim1, col_sim2, col_sim3 = st.columns(3)
+            with col_sim1:
+                if st.button("Fire Read AI Credit Call", width="stretch", key="btn_it_sim_readai"):
+                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                    p = generate_synthetic_payload("readai", "credit")
+                    f = extract_ingestion_fields(p, "readai", "credit")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Credit Queue)")
+            with col_sim2:
+                if st.button("Fire Fireflies Sales Call", width="stretch", key="btn_it_sim_fireflies"):
+                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                    p = generate_synthetic_payload("fireflies", "sales")
+                    f = extract_ingestion_fields(p, "fireflies", "sales")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Sales Queue)")
+            with col_sim3:
+                if st.button("Fire Google Drive Intake", width="stretch", key="btn_it_sim_gdrive"):
+                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                    p = generate_synthetic_payload("gdrive", "credit")
+                    f = extract_ingestion_fields(p, "gdrive", "credit")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Drive Intake)")

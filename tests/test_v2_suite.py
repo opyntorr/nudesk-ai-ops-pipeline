@@ -12,7 +12,7 @@ from styles.nudesk_theme import get_nudesk_css
 from streamlit.testing.v1 import AppTest
 
 
-class TestDeskMateV2Suite(unittest.TestCase):
+class TestNuDeskOpsV2Suite(unittest.TestCase):
 
     def test_pydantic_models(self):
         # Credit
@@ -377,6 +377,107 @@ class TestDeskMateV2Suite(unittest.TestCase):
         self.assertIn("dept_chart = configure_altair_donut(dept_chart", code)
         self.assertIn("risk_chart = configure_altair_donut(risk_chart", code)
 
+    def test_it_database_explorer_and_query_workbench(self):
+        # QA Test: Validate database statistics, schema inspection, safe querying, and vacuum
+        database.init_db()
+        stats = database.get_database_stats()
+        self.assertIn("total_records", stats)
+        self.assertIn("credit_count", stats)
+        self.assertIn("sales_count", stats)
+        self.assertIn("hr_count", stats)
+        self.assertIn("processed_count", stats)
+        self.assertIn("pending_count", stats)
+        self.assertIn("file_size_kb", stats)
+        self.assertTrue(stats["total_records"] >= 1)
+
+        schema = database.get_database_schema("operations_history")
+        col_names = [col["name"] for col in schema]
+        self.assertIn("id", col_names)
+        self.assertIn("module_type", col_names)
+        self.assertIn("entity_name", col_names)
+        self.assertIn("is_processed", col_names)
+        self.assertIn("timestamp", col_names)
+
+        # Safe read query execution
+        cols, rows, err = database.execute_safe_query("SELECT id, module_type, entity_name FROM operations_history LIMIT 5;")
+        self.assertIsNone(err)
+        self.assertEqual(cols, ["id", "module_type", "entity_name"])
+        self.assertTrue(len(rows) >= 1)
+
+        # Mutating queries must be strictly blocked for security
+        cols_b, rows_b, err_b = database.execute_safe_query("DROP TABLE operations_history;")
+        self.assertIsNotNone(err_b)
+        self.assertIn("Security Policy Violation", err_b)
+
+        # VACUUM optimization
+        vac_res = database.vacuum_database()
+        self.assertIn("size_before_bytes", vac_res)
+        self.assertIn("size_after_bytes", vac_res)
+
+    def test_it_model_cascade_controls_and_ping(self):
+        # QA Test: Validate AI engine candidate models, dynamic cascade update, and connectivity test
+        import ai_engine
+        self.assertTrue(len(ai_engine.AVAILABLE_MODELS) >= 4)
+        original_models = ai_engine.get_candidate_models()
+        self.assertTrue(len(original_models) >= 1)
+
+        # Test dynamic reordering
+        custom_sequence = ["gemini-3.5-flash", "gemini-1.5-pro", "gemini-3.5-flash-lite"]
+        ai_engine.set_candidate_models(custom_sequence)
+        self.assertEqual(ai_engine.get_candidate_models(), custom_sequence)
+
+        # Test model ping / latency probe (operates safely in demo mode or live if API key present)
+        ping_res = ai_engine.test_model_connectivity("gemini-3.5-flash")
+        self.assertIn("model", ping_res)
+        self.assertIn("status", ping_res)
+        self.assertIn("latency_ms", ping_res)
+        self.assertIn("connected", ping_res)
+        self.assertTrue(ping_res["latency_ms"] >= 0)
+
+        # Restore original cascade
+        ai_engine.set_candidate_models(original_models)
+
+    def test_auto_selection_on_queue_tab_switch_and_no_deskmate_references(self):
+        # QA Test: Verify on_change tab callbacks exist in app.py and no 'DeskMate' references in key modules
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        # Check tab callback keys and on_change bindings
+        self.assertIn("key=\"credit_queue_tab_key\"", app_code)
+        self.assertIn("on_change=on_credit_tab_change", app_code)
+        self.assertIn("key=\"sales_queue_tab_key\"", app_code)
+        self.assertIn("on_change=on_sales_tab_change", app_code)
+        self.assertIn("key=\"hr_queue_tab_key\"", app_code)
+        self.assertIn("on_change=on_hr_tab_change", app_code)
+
+        # Check canvas auto-alignment blocks
+        self.assertIn("active_c_tab = st.session_state.get(\"credit_queue_tab_key\"", app_code)
+        self.assertIn("active_s_tab = st.session_state.get(\"sales_queue_tab_key\"", app_code)
+        self.assertIn("active_h_tab = st.session_state.get(\"hr_queue_tab_key\"", app_code)
+
+        # Check IT tab enhanced sections
+        self.assertIn("AI Model Cascade & Governance", app_code)
+        self.assertIn("Database Explorer & SQL Workbench", app_code)
+        self.assertIn("btn_apply_cascade", app_code)
+        self.assertIn("btn_execute_sql", app_code)
+
+        # Zero "DeskMate" or "Deskmate" in operational files
+        files_to_check = [
+            os.path.join(os.path.dirname(__file__), "..", "app.py"),
+            os.path.join(os.path.dirname(__file__), "..", "auth_rbac.py"),
+            os.path.join(os.path.dirname(__file__), "..", "crm_dispatcher.py"),
+            os.path.join(os.path.dirname(__file__), "..", "README.md"),
+            os.path.join(os.path.dirname(__file__), "..", "Makefile")
+        ]
+        for fpath in files_to_check:
+            with open(fpath, "r", encoding="utf-8") as f:
+                content = f.read()
+            self.assertNotIn("deskmate", content.lower(), f"File {os.path.basename(fpath)} should not contain 'DeskMate'")
+
+
+# Backwards compatibility alias
+TestDeskMateV2Suite = TestNuDeskOpsV2Suite
 
 if __name__ == "__main__":
     unittest.main()

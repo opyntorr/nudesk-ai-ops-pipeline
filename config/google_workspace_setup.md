@@ -36,7 +36,7 @@ Permite a n8n interactuar con la bandeja de entrada del usuario autenticado (ej.
 3. Habilitar la **Gmail API**.
 4. Crear credencial **OAuth Client ID**:
    - Application Type: `Web application`
-   - Name: `n8n DeskMate Bridge`
+   - Name: `n8n nuDesk Ops Bridge`
    - Authorized Redirect URIs:
      - `http://localhost:5678/rest/oauth2-credential/callback`
 5. Copiar el `Client ID` y `Client Secret` en la configuración de credenciales de n8n.

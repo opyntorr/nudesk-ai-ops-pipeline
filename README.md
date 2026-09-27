@@ -1,8 +1,8 @@
-# DeskMate Operations Studio
+# nuDesk Operations Studio
 ### AI-Powered Credit Triage & Sales Acceleration Engine for Financial Services (FinServ)
 **nuDesk MX Technical Assessment | Candidate: Christian Omar Payán Torróntegui**
 
-[![DeskMate Studio CI Pipeline](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml)
+[![nuDesk Ops Studio CI Pipeline](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml)
 
 ---
 
@@ -10,9 +10,9 @@
 
 At **nuDesk MX**, operational teams in Mazatlán, Sinaloa partner with US commercial lenders, regional banks, and factoring firms to streamline debt origination, sales outreach, and underwriting workflows. 
 
-Traditional BPOs scale operational capacity by linearly increasing headcount ("seat count"), resulting in high overhead, employee fatigue on manual data entry, and delayed turnaround times. nuDesk disrupts this paradigm through the **Cyborg Organization Model**: pairing bilingual human specialists with domain-trained AI agents (**DeskMates**) to multiply productivity while safeguarding credit compliance.
+Traditional BPOs scale operational capacity by linearly increasing headcount ("seat count"), resulting in high overhead, employee fatigue on manual data entry, and delayed turnaround times. nuDesk disrupts this paradigm through the **Cyborg Organization Model**: pairing bilingual human specialists with domain-trained AI agents to multiply productivity while safeguarding credit compliance.
 
-**DeskMate Operations Studio** is an enterprise-ready prototype designed to eliminate the two most common operational bottlenecks faced by nuDesk teams:
+**nuDesk Operations Studio** is an enterprise-ready prototype designed to eliminate the two most common operational bottlenecks faced by nuDesk teams:
 
 1. **Credit Operations (Post-Call Discovery Triage):**
    - **The Problem:** Loan officers and discovery agents conduct 15-to-30 minute calls with US business owners. Manually listening to recordings or reading transcripts to extract financial parameters (debt, revenue, equipment quotes, tax liens) and creating underwriting tickets takes 40+ minutes per file.
@@ -89,7 +89,7 @@ nudesk-ai-ops-pipeline/
 ├── requirements.txt            # Minimal, pinned Python dependencies
 ├── docker-compose.yml          # Container configuration for local n8n instance
 ├── n8n_workflow_blueprint.json # Importable workflow blueprint for n8n
-├── app.py                      # V2 Enterprise DeskMate Operations Studio
+├── app.py                      # V2 Enterprise nuDesk Operations Studio
 ├── app_v1_legacy.py            # V1 Prototype reference backup
 ├── auth_rbac.py                # Google Cloud Console OAuth 2.0 & RBAC engine
 ├── database.py                 # SQLite persistent audit trail & operations log

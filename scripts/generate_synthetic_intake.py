@@ -140,7 +140,7 @@ def main():
     print(f"Headline:       {norm['headline_metric']}")
     print(f"Source Channel: {norm['source_channel']}")
     print(f"Record ID:      #{rec_id} (Active SLA Clock Started)")
-    print(f"Triage Status:  Pending (Visible in DeskMate Left Panel)")
+    print(f"Triage Status:  Pending (Visible in nuDesk Queue Panel)")
 
     if args.dispatch_n8n:
         try:

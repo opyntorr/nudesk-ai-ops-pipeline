@@ -9,7 +9,7 @@
         "options": {}
       },
       "id": "node-webhook-1",
-      "name": "Incoming DeskMate Webhook",
+      "name": "Incoming nuDesk Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
@@ -155,7 +155,7 @@
     }
   ],
   "connections": {
-    "Incoming DeskMate Webhook": {
+    "Incoming nuDesk Webhook": {
       "main": [
         [
           {
