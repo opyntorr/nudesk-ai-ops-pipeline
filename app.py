@@ -9,6 +9,9 @@ import streamlit as st
 from dotenv import load_dotenv
 
 # Internal modular imports
+import importlib
+import styles.nudesk_theme
+importlib.reload(styles.nudesk_theme)
 from styles.nudesk_theme import get_nudesk_css
 import auth_rbac
 from auth_rbac import PRESET_WORKSPACE_PERSONAS
@@ -471,12 +474,8 @@ with tabs[0]:
             with col_cu2:
                 uploaded_doc = st.file_uploader(
                     "Upload Financial File:",
-                    type=["txt", "pdf", "csv", "md"],
                     key=f"c_file_{st.session_state.active_credit_id}"
                 )
-
-            if doc_note_val:
-                st.caption(f"Verified Attachment: {doc_note_val}")
 
         # Centered Primary Action Button
         col_cbl, col_cbbtn, col_cbr = st.columns([1, 2, 1])
@@ -817,8 +816,6 @@ with tabs[1]:
                 placeholder="https://company.com/freight-aging.pdf",
                 key=f"s_url_{st.session_state.active_sales_id}"
             )
-            if s_doc_note:
-                st.caption(f"Verified Attachment: {s_doc_note}")
 
         col_sbl, col_sbbtn, col_sbr = st.columns([1, 2, 1])
         with col_sbbtn:
@@ -1140,8 +1137,6 @@ with tabs[2]:
                 placeholder="https://linkedin.com/in/candidate",
                 key=f"h_url_{st.session_state.active_hr_id}"
             )
-            if h_doc_note:
-                st.caption(f"Verified Attachment: {h_doc_note}")
 
         col_hbl, col_hbbtn, col_hbr = st.columns([1, 2, 1])
         with col_hbbtn:

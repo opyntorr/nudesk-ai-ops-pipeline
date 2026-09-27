@@ -368,44 +368,49 @@ def get_nudesk_css(theme: str = "light") -> str:
         align-items: center;
     }}
 
-    /* Clickable Queue Card Hitbox Overlay */
-    div.stElementContainer:has(.queue-card-hitbox),
-    div:has(> div > .queue-card-hitbox) {{
-        margin-bottom: -84px !important;
+    /* Clickable Queue Card Overlay Button - Seamless hitboxes over queue cards */
+    div[class*="st-key-btn_c_select_"],
+    div[class*="st-key-btn_s_select_"],
+    div[class*="st-key-btn_h_select_"] {{
+        margin-top: -88px !important;
         position: relative !important;
-        z-index: 1 !important;
-        pointer-events: none !important;
+        z-index: 10 !important;
+        height: 82px !important;
+        margin-bottom: 0.5rem !important;
     }}
 
-    div.stElementContainer:has(.queue-card-hitbox) + div.stElementContainer:has(button),
-    div:has(> div > .queue-card-hitbox) + div:has(button) {{
-        position: relative !important;
-        z-index: 2 !important;
-        margin-bottom: 0.45rem !important;
-    }}
-
-    div.stElementContainer:has(.queue-card-hitbox) + div.stElementContainer:has(button) button,
-    div:has(> div > .queue-card-hitbox) + div:has(button) button {{
-        height: 78px !important;
-        min-height: 78px !important;
-        max-height: 78px !important;
+    div[class*="st-key-btn_c_select_"] button,
+    div[class*="st-key-btn_s_select_"] button,
+    div[class*="st-key-btn_h_select_"] button {{
         width: 100% !important;
+        height: 82px !important;
+        min-height: 82px !important;
+        max-height: 82px !important;
+        opacity: 0 !important;
+        cursor: pointer !important;
         background: transparent !important;
         border: none !important;
-        color: transparent !important;
-        box-shadow: none !important;
-        cursor: pointer !important;
-        border-radius: 6px !important;
-        padding: 0 !important;
         font-size: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        box-shadow: none !important;
         outline: none !important;
     }}
 
-    div.stElementContainer:has(.queue-card-hitbox):has(+ div.stElementContainer:has(button:hover)) .queue-card,
-    div:has(> div > .queue-card-hitbox):has(+ div:has(button:hover)) .queue-card {{
+    /* Sibling hover: when hovering over the transparent button, highlight the preceding card */
+    div:has(> div > div > .queue-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .queue-card,
+    div[data-testid="stElementContainer"]:has(.queue-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .queue-card {{
         border-color: var(--nd-green) !important;
         background: var(--nd-surface-alt) !important;
-        box-shadow: 0 2px 6px rgba(10, 15, 22, 0.08) !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 5, 0.15) !important;
+    }}
+
+    /* File Uploader Instructions Clean Styling - Only 200MB per file */
+    div[data-testid="stFileUploaderDropzoneInstructions"] span {{
+        font-size: 0.78rem !important;
+        color: var(--nd-muted) !important;
+        font-family: 'Host Grotesk', sans-serif !important;
+        display: inline-block !important;
     }}
 
     /* Executive Log Card with Default Visible Colored KPIs */
