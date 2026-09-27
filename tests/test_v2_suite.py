@@ -8,6 +8,7 @@ import database
 import auth_rbac
 import meeting_queue
 import document_reader
+from styles.nudesk_theme import get_nudesk_css
 
 
 class TestDeskMateV2Suite(unittest.TestCase):
@@ -39,6 +40,50 @@ class TestDeskMateV2Suite(unittest.TestCase):
         it_admin = auth_rbac.get_persona_by_role("it_admin")
         self.assertEqual(it_admin.role_key, "it_admin")
         self.assertTrue(it_admin.permissions["it_admin_settings"])
+
+    def test_google_auth_url_generation(self):
+        url = auth_rbac.get_google_auth_url(
+            client_id="test_client_id_123",
+            redirect_uri="http://localhost:8501"
+        )
+        self.assertTrue(url.startswith("https://accounts.google.com/o/oauth2/v2/auth"))
+        self.assertIn("client_id=test_client_id_123", url)
+        self.assertIn("redirect_uri=http%3A%2F%2Flocalhost%3A8501", url)
+        self.assertIn("response_type=code", url)
+        self.assertIn("openid+email+profile", url)
+
+    def test_create_persona_from_google_user(self):
+        # Test admin mapping
+        admin_data = {
+            "name": "Christian Omar Payán Torróntegui",
+            "email": "omarpayant@gmail.com",
+            "picture": "https://example.com/avatar.png"
+        }
+        admin_persona = auth_rbac.create_persona_from_google_user(admin_data)
+        self.assertEqual(admin_persona.role_key, "it_admin")
+        self.assertTrue(admin_persona.permissions["it_admin_settings"])
+        self.assertEqual(admin_persona.avatar_initials, "CO")
+        self.assertTrue(admin_persona.is_live_google_session)
+
+        # Test standard employee mapping
+        user_data = {
+            "name": "Elena Smith",
+            "email": "elena.smith@clientcorp.com",
+            "picture": ""
+        }
+        user_persona = auth_rbac.create_persona_from_google_user(user_data)
+        self.assertEqual(user_persona.role_key, "underwriter")
+        self.assertFalse(user_persona.permissions["it_admin_settings"])
+        self.assertEqual(user_persona.avatar_initials, "ES")
+
+    def test_theme_css_generation(self):
+        light_css = get_nudesk_css("light")
+        self.assertIn("--nd-green: #059669", light_css)
+        self.assertIn("--nd-bg: #F8FAFC", light_css)
+
+        dark_css = get_nudesk_css("dark")
+        self.assertIn("--nd-green: #10B981", dark_css)
+        self.assertIn("--nd-bg: #0B0F17", dark_css)
 
     def test_database_persistence(self):
         database.init_db()
