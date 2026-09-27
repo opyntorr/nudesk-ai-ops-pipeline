@@ -34,8 +34,8 @@ def get_nudesk_css(theme: str = "light") -> str:
     disabled_text = "#F8FAFC" if is_dark else "#1E293B"
 
     # Tab navigation contrast tokens
-    tab_unselected_color = "#D1DCE5" if is_dark else "#4B5563"
-    tab_selected_color = "#FFFFFF" if is_dark else "#0F172A"
+    tab_unselected_color = "#E2E8F0" if is_dark else "#4B5563"
+    tab_selected_color = "#54D67D" if is_dark else "#3EA258"
     tab_hover_color = "#FFFFFF" if is_dark else "#1E293B"
 
     # NuDesk Authentic Badges (Zero Orange)
@@ -786,34 +786,44 @@ def get_nudesk_css(theme: str = "light") -> str:
         border: 1px solid var(--nd-border) !important;
     }}
 
-    /* Streamlit Tabs Navigation - High Contrast Universal */
-    .stTabs [data-baseweb="tab-list"],
-    div[data-baseweb="tab-list"] {{
+    /* Streamlit Tabs Navigation - React-Aria (Streamlit 1.40+) & BaseWeb Universal */
+    div[data-testid="stTabs"],
+    .stTabs,
+    div[role="tablist"],
+    div[aria-label="Tabs"],
+    .react-aria-TabList {{
         gap: 8px;
         border-bottom: 1px solid var(--nd-border);
         background: transparent !important;
     }}
 
-    .stTabs button[role="tab"],
-    .stTabs [data-baseweb="tab"],
-    button[data-baseweb="tab"],
+    /* Unselected Tabs (Default) */
+    div[data-testid="stTab"],
+    [data-testid="stTab"],
+    .react-aria-Tab,
+    div[role="tab"],
+    [role="tab"],
     button[role="tab"],
-    div[data-baseweb="tab-list"] button {{
+    .stTabs [data-baseweb="tab"],
+    button[data-baseweb="tab"] {{
         padding: 8px 16px !important;
         font-weight: 600 !important;
         color: {tab_unselected_color} !important;
         -webkit-text-fill-color: {tab_unselected_color} !important;
-        border-radius: 6px 6px 0 0 !important;
-        font-family: 'Host Grotesk', sans-serif !important;
         background: transparent !important;
         opacity: 1 !important;
+        cursor: pointer !important;
+        font-family: 'Host Grotesk', sans-serif !important;
     }}
 
-    .stTabs button[role="tab"] *,
-    .stTabs [data-baseweb="tab"] *,
-    button[data-baseweb="tab"] *,
+    div[data-testid="stTab"] *,
+    [data-testid="stTab"] *,
+    .react-aria-Tab *,
+    div[role="tab"] *,
+    [role="tab"] *,
     button[role="tab"] *,
-    div[data-baseweb="tab-list"] button * {{
+    .stTabs [data-baseweb="tab"] *,
+    button[data-baseweb="tab"] * {{
         color: {tab_unselected_color} !important;
         -webkit-text-fill-color: {tab_unselected_color} !important;
         font-size: 0.92rem !important;
@@ -822,32 +832,66 @@ def get_nudesk_css(theme: str = "light") -> str:
         transition: color 0.15s ease-in-out !important;
     }}
 
-    .stTabs button[role="tab"]:hover,
-    .stTabs button[role="tab"]:hover *,
-    .stTabs [data-baseweb="tab"]:hover,
-    .stTabs [data-baseweb="tab"]:hover *,
-    button[data-baseweb="tab"]:hover,
-    button[data-baseweb="tab"]:hover *,
+    /* Hovered Tabs */
+    div[data-testid="stTab"]:hover,
+    div[data-testid="stTab"][data-hovered],
+    [data-testid="stTab"]:hover,
+    [data-testid="stTab"][data-hovered],
+    .react-aria-Tab:hover,
+    .react-aria-Tab[data-hovered],
+    div[role="tab"]:hover,
+    [role="tab"]:hover,
     button[role="tab"]:hover,
+    div[data-testid="stTab"]:hover *,
+    div[data-testid="stTab"][data-hovered] *,
+    [data-testid="stTab"]:hover *,
+    [data-testid="stTab"][data-hovered] *,
+    .react-aria-Tab:hover *,
+    .react-aria-Tab[data-hovered] *,
+    div[role="tab"]:hover *,
+    [role="tab"]:hover *,
     button[role="tab"]:hover * {{
         color: {tab_hover_color} !important;
         -webkit-text-fill-color: {tab_hover_color} !important;
         opacity: 1 !important;
     }}
 
-    .stTabs button[role="tab"][aria-selected="true"],
-    .stTabs button[role="tab"][aria-selected="true"] *,
-    .stTabs [data-baseweb="tab"][aria-selected="true"],
-    .stTabs [data-baseweb="tab"][aria-selected="true"] *,
-    button[data-baseweb="tab"][aria-selected="true"],
-    button[data-baseweb="tab"][aria-selected="true"] *,
+    /* Selected / Active Tabs */
+    div[data-testid="stTab"][data-selected],
+    div[data-testid="stTab"][aria-selected="true"],
+    [data-testid="stTab"][data-selected],
+    [data-testid="stTab"][aria-selected="true"],
+    .react-aria-Tab[data-selected],
+    .react-aria-Tab[aria-selected="true"],
+    div[role="tab"][data-selected],
+    div[role="tab"][aria-selected="true"],
+    [role="tab"][data-selected],
+    [role="tab"][aria-selected="true"],
     button[role="tab"][aria-selected="true"],
-    button[role="tab"][aria-selected="true"] * {{
+    .stTabs [aria-selected="true"],
+    div[data-testid="stTab"][data-selected] *,
+    div[data-testid="stTab"][aria-selected="true"] *,
+    [data-testid="stTab"][data-selected] *,
+    [data-testid="stTab"][aria-selected="true"] *,
+    .react-aria-Tab[data-selected] *,
+    .react-aria-Tab[aria-selected="true"] *,
+    div[role="tab"][data-selected] *,
+    div[role="tab"][aria-selected="true"] *,
+    [role="tab"][data-selected] *,
+    [role="tab"][aria-selected="true"] *,
+    button[role="tab"][aria-selected="true"] *,
+    .stTabs [aria-selected="true"] * {{
         color: {tab_selected_color} !important;
         -webkit-text-fill-color: {tab_selected_color} !important;
         border-bottom: 2.5px solid var(--nd-green) !important;
         font-weight: 700 !important;
         opacity: 1 !important;
+    }}
+
+    div[data-testid="stTab"] .react-aria-SelectionIndicator,
+    .react-aria-Tab .react-aria-SelectionIndicator {{
+        background-color: var(--nd-green) !important;
+        height: 3px !important;
     }}
 
     /* Form Label and Caption Contrast Improvements */

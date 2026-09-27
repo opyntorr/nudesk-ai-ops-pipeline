@@ -595,9 +595,11 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         """QA Test: Verify unselected tabs and transcripts contrast and ai_engine reload safety."""
         # 1. Dark Mode CSS verification
         dark_css = get_nudesk_css("dark")
-        self.assertIn("color: #D1DCE5 !important;", dark_css)
-        self.assertIn("-webkit-text-fill-color: #D1DCE5 !important;", dark_css)
-        self.assertIn('.stTabs button[role="tab"]', dark_css)
+        self.assertIn("color: #E2E8F0 !important;", dark_css)
+        self.assertIn("-webkit-text-fill-color: #E2E8F0 !important;", dark_css)
+        self.assertIn('div[data-testid="stTab"]', dark_css)
+        self.assertIn('.react-aria-Tab', dark_css)
+        self.assertIn('color: #54D67D !important;', dark_css)
         self.assertIn(".stTextArea textarea:disabled", dark_css)
         self.assertIn("-webkit-text-fill-color: #F8FAFC !important;", dark_css)
         self.assertIn("opacity: 1 !important;", dark_css)
@@ -606,6 +608,7 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         light_css = get_nudesk_css("light")
         self.assertIn("color: #4B5563 !important;", light_css)
         self.assertIn("-webkit-text-fill-color: #4B5563 !important;", light_css)
+        self.assertIn("color: #3EA258 !important;", light_css)
         self.assertIn("-webkit-text-fill-color: #1E293B !important;", light_css)
 
         # 3. app.py module reload and safe helper verification
