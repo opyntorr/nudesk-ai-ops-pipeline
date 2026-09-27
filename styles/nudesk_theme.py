@@ -14,45 +14,45 @@ def get_nudesk_css(theme: str = "light") -> str:
     """Generate dynamic CSS tokens based on selected theme mode."""
     is_dark = (theme == "dark")
 
-    # Dynamic variables
-    bg_body = "#18202C" if is_dark else "#F4F7F9"
-    bg_surface = "#222C3D" if is_dark else "#FFFFFF"
-    bg_surface_alt = "#2B384D" if is_dark else "#EDF3F5"
+    # Dynamic variables: #2C3844 background matched directly from nuDesk footer tokens
+    bg_body = "#2C3844" if is_dark else "#F4F7F9"
+    bg_surface = "#364554" if is_dark else "#FFFFFF"
+    bg_surface_alt = "#3F5062" if is_dark else "#EDF3F5"
     text_primary = "#FFFFFF" if is_dark else "#1D242E"
-    text_muted = "#A0B0C4" if is_dark else "#5A6A7E"
-    border_color = "#364559" if is_dark else "#D5E0E8"
-    border_subtle = "#2B384B" if is_dark else "#E5ECF0"
-    header_gradient = "linear-gradient(135deg, #1E2837 0%, #2C394E 100%)" if is_dark else "linear-gradient(135deg, #1E293B 0%, #2C3E50 100%)"
-    brand_green = "#48B46B" if is_dark else "#3EA258"
-    accent_teal = "#3AB7A8" if is_dark else "#2A9D8F"
+    text_muted = "#D1DCE5" if is_dark else "#5A6A7E"
+    border_color = "#576169" if is_dark else "#D5E0E8"
+    border_subtle = "#455361" if is_dark else "#E5ECF0"
+    header_gradient = "linear-gradient(135deg, #242E38 0%, #364554 100%)" if is_dark else "linear-gradient(135deg, #1E293B 0%, #2C3E50 100%)"
+    brand_green = "#54D67D" if is_dark else "#3EA258"
+    accent_teal = "#4AE0D0" if is_dark else "#2A9D8F"
 
     # Input styling
-    input_bg = "#1F2837" if is_dark else "#FFFFFF"
+    input_bg = "#222D37" if is_dark else "#FFFFFF"
     input_text = "#FFFFFF" if is_dark else "#1D242E"
-    input_border = "#3D4F66" if is_dark else "#CBD7E0"
-    disabled_bg = "#1B222E" if is_dark else "#EAEFF2"
-    disabled_text = "#A0B0C4" if is_dark else "#475569"
+    input_border = "#576169" if is_dark else "#CBD7E0"
+    disabled_bg = "#27333F" if is_dark else "#EAEFF2"
+    disabled_text = "#D1DCE5" if is_dark else "#475569"
 
     # NuDesk Authentic Badges (Zero Orange)
-    badge_green_bg = "#123D25" if is_dark else "#EAF7EE"
-    badge_green_txt = "#7BE8A4" if is_dark else "#1E7E34"
-    badge_green_bdr = "#21683D" if is_dark else "#C6E8CF"
+    badge_green_bg = "#1A402B" if is_dark else "#EAF7EE"
+    badge_green_txt = "#86EFAC" if is_dark else "#1E7E34"
+    badge_green_bdr = "#2D6847" if is_dark else "#C6E8CF"
 
-    badge_teal_bg = "#133C39" if is_dark else "#E6F4F3"
-    badge_teal_txt = "#6FE4D9" if is_dark else "#1D6F68"
-    badge_teal_bdr = "#21615B" if is_dark else "#B8E3E0"
+    badge_teal_bg = "#1B4744" if is_dark else "#E6F4F3"
+    badge_teal_txt = "#99F6E4" if is_dark else "#1D6F68"
+    badge_teal_bdr = "#286D67" if is_dark else "#B8E3E0"
 
-    badge_navy_bg = "#26354A" if is_dark else "#EFF3F6"
-    badge_navy_txt = "#E2E8F0" if is_dark else "#2C3E50"
-    badge_navy_bdr = "#3B506E" if is_dark else "#D5E0E8"
+    badge_navy_bg = "#3E4F63" if is_dark else "#EFF3F6"
+    badge_navy_txt = "#F1F5F9" if is_dark else "#2C3E50"
+    badge_navy_bdr = "#576B82" if is_dark else "#D5E0E8"
 
-    badge_red_bg = "#4A1818" if is_dark else "#FEEFEF"
+    badge_red_bg = "#521F1F" if is_dark else "#FEEFEF"
     badge_red_txt = "#FCA5A5" if is_dark else "#A31D1D"
     badge_red_bdr = "#872B2B" if is_dark else "#FCD3D3"
 
-    badge_amber_bg = "#4A3610" if is_dark else "#FEF3C7"
+    badge_amber_bg = "#543C12" if is_dark else "#FEF3C7"
     badge_amber_txt = "#FDE047" if is_dark else "#92400E"
-    badge_amber_bdr = "#855E16" if is_dark else "#FCD34D"
+    badge_amber_bdr = "#8C6316" if is_dark else "#FCD34D"
 
     return f"""
 <style>
@@ -123,7 +123,7 @@ def get_nudesk_css(theme: str = "light") -> str:
 
     .nudesk-header .subtitle {{
         font-size: 0.85rem;
-        color: #A3B5C7 !important;
+        color: #E2E8F0 !important;
         margin-top: 0.2rem;
         font-weight: 500;
     }}
@@ -173,6 +173,12 @@ def get_nudesk_css(theme: str = "light") -> str:
         border-radius: 6px !important;
         font-family: 'Manrope', sans-serif !important;
         font-size: 0.92rem !important;
+    }}
+
+    .stTextInput input::placeholder, .stTextArea textarea::placeholder,
+    div[data-baseweb="input"] input::placeholder, div[data-baseweb="textarea"] textarea::placeholder {{
+        color: var(--nd-muted) !important;
+        opacity: 0.85 !important;
     }}
 
     .stTextInput input:focus, .stTextArea textarea:focus {{
@@ -738,7 +744,7 @@ def get_nudesk_css(theme: str = "light") -> str:
 
     /* Script & Terminal Box */
     .script-box {{
-        background-color: #0C121C;
+        background-color: #202A34;
         color: #F8FAFC;
         padding: 0.95rem 1.2rem;
         border-radius: 6px;
@@ -747,6 +753,23 @@ def get_nudesk_css(theme: str = "light") -> str:
         line-height: 1.6;
         margin-top: 0.5rem;
         border: 1px solid var(--nd-border);
+    }}
+
+    /* Table & DataFrame Text Legibility */
+    div[data-testid="stDataFrame"],
+    div[data-testid="stTable"],
+    div[data-testid="stDataFrame"] * {{
+        color: var(--nd-text) !important;
+    }}
+
+    /* Selectbox & Multiselect Value Text */
+    div[data-baseweb="select"] span,
+    div[data-baseweb="tag"] span {{
+        color: var(--nd-text) !important;
+    }}
+    div[data-baseweb="tag"] {{
+        background-color: var(--nd-surface-alt) !important;
+        border: 1px solid var(--nd-border) !important;
     }}
 
     /* Streamlit Tabs Navigation - High Contrast */
@@ -951,7 +974,7 @@ def get_nudesk_css(theme: str = "light") -> str:
 def configure_altair_donut(chart, theme: str = "light"):
     """Configure transparent background and theme-aware legend/text for Altair charts."""
     is_dark = (theme == "dark")
-    text_color = "#E2E8F0" if is_dark else "#1D242E"
+    text_color = "#F8FAFC" if is_dark else "#1D242E"
     return (
         chart.properties(background="transparent")
         .configure_view(stroke=None)

@@ -88,8 +88,8 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertIn("--nd-bg: #F4F7F9", light_css)
 
         dark_css = get_nudesk_css("dark")
-        self.assertIn("--nd-green: #48B46B", dark_css)
-        self.assertIn("--nd-bg: #18202C", dark_css)
+        self.assertIn("--nd-green: #54D67D", dark_css)
+        self.assertIn("--nd-bg: #2C3844", dark_css)
 
     def test_database_persistence(self):
         database.init_db()
@@ -324,11 +324,11 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
     def test_dark_mode_palette_contrast_and_transparent_charts(self):
         # QA Test: Validate lighter slate palette, button text contrast, and transparent charts
         dark_css = get_nudesk_css("dark")
-        # 1. Slate palette instead of pitch-black
-        self.assertIn("--nd-bg: #18202C", dark_css)
-        self.assertIn("--nd-surface: #222C3D", dark_css)
-        self.assertIn("--nd-surface-alt: #2B384D", dark_css)
-        self.assertIn("--nd-border: #364559", dark_css)
+        # 1. Slate palette matched directly from nuDesk footer tokens
+        self.assertIn("--nd-bg: #2C3844", dark_css)
+        self.assertIn("--nd-surface: #364554", dark_css)
+        self.assertIn("--nd-surface-alt: #3F5062", dark_css)
+        self.assertIn("--nd-border: #576169", dark_css)
 
         # 2. Universal secondary buttons: surface background, high contrast, no white blocks
         self.assertIn('button[data-testid="stBaseButton-secondary"]', dark_css)
@@ -355,7 +355,7 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         styled_chart_dark = configure_altair_donut(base_chart, theme="dark")
         chart_dict_dark = styled_chart_dark.to_dict()
         self.assertEqual(chart_dict_dark.get("background"), "transparent")
-        self.assertEqual(chart_dict_dark.get("config", {}).get("legend", {}).get("labelColor"), "#E2E8F0")
+        self.assertEqual(chart_dict_dark.get("config", {}).get("legend", {}).get("labelColor"), "#F8FAFC")
 
         styled_chart_light = configure_altair_donut(base_chart, theme="light")
         chart_dict_light = styled_chart_light.to_dict()
@@ -474,6 +474,61 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
             with open(fpath, "r", encoding="utf-8") as f:
                 content = f.read()
             self.assertNotIn("deskmate", content.lower(), f"File {os.path.basename(fpath)} should not contain 'DeskMate'")
+
+    def test_dark_mode_text_contrast_and_lightened_typography(self):
+        # QA Test: Validate lightened typography, input placeholders, table contrast and WCAG AAA compliance
+        dark_css = get_nudesk_css("dark")
+
+        # 1. High contrast text tokens in dark mode
+        self.assertIn("--nd-text: #FFFFFF", dark_css)
+        self.assertIn("--nd-muted: #D1DCE5", dark_css)
+        self.assertIn("--nd-green: #54D67D", dark_css)
+        self.assertIn("--nd-teal: #4AE0D0", dark_css)
+
+        # 2. Header subtitle lightened for readability
+        self.assertIn("color: #E2E8F0 !important;", dark_css)
+
+        # 3. Input placeholder contrast rules
+        self.assertIn(".stTextInput input::placeholder", dark_css)
+        self.assertIn("color: var(--nd-muted) !important;", dark_css)
+
+        # 4. Table and DataFrame text legibility
+        self.assertIn('div[data-testid="stDataFrame"]', dark_css)
+
+        # 5. Badge text tokens lightened
+        self.assertIn("#86EFAC", dark_css)  # green badge text
+        self.assertIn("#99F6E4", dark_css)  # teal badge text
+        self.assertIn("#F1F5F9", dark_css)  # navy badge text
+        self.assertIn("#FCA5A5", dark_css)  # red badge text
+        self.assertIn("#FDE047", dark_css)  # amber badge text
+
+        # 6. Verify mathematical WCAG contrast ratio >= 7:1 (AAA) against #2C3844 and #364554
+        def lum(r, g, b):
+            a = []
+            for v in [r, g, b]:
+                v = v / 255.0
+                a.append(v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4)
+            return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]
+
+        def contrast(c1_hex, c2_hex):
+            c1 = tuple(int(c1_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+            c2 = tuple(int(c2_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+            l1, l2 = lum(*c1), lum(*c2)
+            return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05)
+
+        # Primary text (#FFFFFF) contrast on body (#2C3844) and surface (#364554)
+        self.assertGreaterEqual(contrast("#FFFFFF", "#2C3844"), 7.0)
+        self.assertGreaterEqual(contrast("#FFFFFF", "#364554"), 7.0)
+
+        # Muted text (#D1DCE5) contrast on body (#2C3844) and surface (#364554)
+        self.assertGreaterEqual(contrast("#D1DCE5", "#2C3844"), 7.0)
+        self.assertGreaterEqual(contrast("#D1DCE5", "#364554"), 7.0)
+
+        # 7. Check that app.py uses var(--nd-green) in HR recommendation
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+        self.assertIn("color:var(--nd-green);\">{hr_out.recommended_action}</div>", app_code)
 
 
 # Backwards compatibility alias

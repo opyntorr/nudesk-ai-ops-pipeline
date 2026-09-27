@@ -2114,7 +2114,7 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 </div>
 <div class="kpi-card">
 <div class="kpi-label">Recomendación</div>
-<div class="kpi-value" style="font-size:1.05rem; margin-top:0.4rem; color:#3EA258;">{hr_out.recommended_action}</div>
+<div class="kpi-value" style="font-size:1.05rem; margin-top:0.4rem; color:var(--nd-green);">{hr_out.recommended_action}</div>
 <div class="kpi-sub">Hiring Pipeline</div>
 </div>
 </div>""", unsafe_allow_html=True)
