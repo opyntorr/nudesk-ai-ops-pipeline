@@ -20,7 +20,11 @@ Traditional BPOs scale operational capacity by linearly increasing headcount ("s
    - **The Problem:** Business Development Representatives (BDRs) in Mazatlán prospecting US logistics, construction, and manufacturing companies must manually research company viability, assess working capital fit, and draft custom outreach messages.
    - **The Solution:** Ingests raw commercial prospect profiles, computes a lead score from 1 to 100 based on urgency and collateral viability, provides clear underwriting rationale, and generates both an executive cold email draft and a 30-second telephone pitch tailored for high-conversion speed-to-lead dialing.
 
-3. **Enterprise Dispatch & Hyperautomation (n8n & Google Workspace):**
+3. **HR Solutions (Bilingual Talent Screening):**
+   - **The Problem:** Vetting high-volume candidate interviews for English fluency, commercial empathy, and debt qualification skills requires hours of interview review.
+   - **The Solution:** Evaluates CEFR fluency, scores cultural competencies, identifies candidate red flags, and drafts targeted behavioral probing questions for hiring managers.
+
+4. **Enterprise Dispatch & Hyperautomation (n8n & Google Workspace):**
    - Validated data structures are dispatched via HTTP POST webhooks to a local **n8n** orchestration engine (running in Docker), which routes and persists data into Google Sheets (acting as a live CRM/Pipeline tracker) and stages email drafts.
 
 ---
@@ -35,11 +39,13 @@ In this application, the LLM is treated strictly as an interchangeable inference
 - **Strict Data Contracts:** Pydantic schemas enforce type safety and structure at compile and runtime.
 - **Fail-Safe Fallback:** If an API key is absent, expired, or rate-limited, the application gracefully transitions to Demonstration Mode, providing realistic synthetic records without throwing runtime exceptions.
 - **Decoupled Orchestration:** Workflow routing, data transformation, and CRM synchronization are handled by n8n, ensuring that changes to downstream destinations (e.g. migrating from Google Sheets to HubSpot or Salesforce) require zero changes to the core AI engine.
+- **Google Cloud Console OAuth 2.0 & RBAC:** Live Google Workspace Single Sign-On paired with granular role-based access control, isolating sensitive IT configurations from non-technical operators.
+- **Design System & Theme Engine:** WCAG AAA high-contrast minimalist Light Mode default with an instant Dark Mode toggle, styled to match nuDesk brand tokens.
 
 ```text
 +-----------------------------------------------------------------------------------+
 |                           nuDesk Operations Studio                                |
-|                           (Streamlit Front-End)                                   |
+|                 (Streamlit Front-End + High-Contrast Theme)                       |
 +-----------------------------------------------------------------------------------+
            |                                                       |
            | 1. Raw Call Transcript / Lead Info                    | 3. Dispatch JSON
@@ -71,15 +77,19 @@ In this application, the LLM is treated strictly as an interchangeable inference
 
 ```text
 nudesk-ai-ops-pipeline/
+├── .github/
+│   └── workflows/
+│       └── ci.yml              # GitHub Actions CI pipeline (Python 3.10 & 3.11)
 ├── .env.example                # Template for environment configuration
 ├── .gitignore                  # Exclusions (ignoring .env and SQLite DBs)
+├── Makefile                    # Developer commands (install, test, run, tunnel)
 ├── README.md                   # Technical documentation and evaluation brief
 ├── requirements.txt            # Minimal, pinned Python dependencies
 ├── docker-compose.yml          # Container configuration for local n8n instance
 ├── n8n_workflow_blueprint.json # Importable workflow blueprint for n8n
 ├── app.py                      # V2 Enterprise DeskMate Operations Studio
 ├── app_v1_legacy.py            # V1 Prototype reference backup
-├── auth_rbac.py                # Google Workspace SSO & Role-Based Access Control
+├── auth_rbac.py                # Google Cloud Console OAuth 2.0 & RBAC engine
 ├── database.py                 # SQLite persistent audit trail & operations log
 ├── document_reader.py          # Multi-modal collateral ingestion (URLs & files)
 ├── meeting_queue.py            # Automated meeting queue (Read AI / Fireflies simulator)
@@ -88,13 +98,12 @@ nudesk-ai-ops-pipeline/
 ├── crm_dispatcher.py           # Resilient webhook dispatcher to n8n
 ├── mock_data.py                # Benchmark transcripts and candidate records
 ├── styles/
-│   └── nudesk_theme.py         # Design system tokens directly from nudesk.ai
+│   └── nudesk_theme.py         # Design system tokens and Light/Dark theme engine
 ├── scripts/
 │   └── start_tunnel.sh         # One-click Cloudflare HTTPS tunnel for mobile demo
 └── tests/
-    └── test_v2_suite.py        # Automated test suite for schemas, RBAC, and DB
+    └── test_v2_suite.py        # Automated test suite (Pydantic, RBAC, OAuth, DB)
 ```
-
 
 ---
 
@@ -104,72 +113,75 @@ nudesk-ai-ops-pipeline/
 - Python 3.10+ installed
 - Docker & Docker Compose (optional, for local n8n testing)
 - (Optional) Free Google AI Studio API key from [aistudio.google.com](https://aistudio.google.com/)
+- (Optional) Google Cloud Console OAuth 2.0 Credentials for Live Google Login
 
 ### Step 1: Clone and Set Up Virtual Environment
 ```bash
-# Navigate to the project directory
-cd /path/to/nudesk-operations-studio
+git clone https://github.com/opyntorr/nudesk-ai-ops-pipeline.git
+cd nudesk-ai-ops-pipeline
 
-# Create a virtual environment
 python3 -m venv .venv
-
-# Activate virtual environment
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies via Makefile or pip
+make install
 ```
 
-### Step 2: Configure Environment (Optional)
+### Step 2: Configure Environment
 ```bash
 cp .env.example .env
 ```
-- **Live AI Mode:** Open `.env` and paste your `GEMINI_API_KEY` (obtainable for free at [aistudio.google.com](https://aistudio.google.com/)). You can also enter the key directly in the Streamlit web sidebar.
-- **Demonstration Mode (Zero Config):** If left blank, the application launches in 100% transparent **Demonstration Mode**. Evaluators can test all dashboard metrics, inspect risk tiers, generate Asana operational tasks, view sales outreach drafts, and trigger n8n webhooks immediately without needing their own Google Cloud or AI Studio credentials.
+- **Live AI Mode:** Open `.env` and paste your `GEMINI_API_KEY`.
+- **Google OAuth 2.0:** Enter `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from Google Cloud Console. Set Authorized redirect URIs to `http://localhost:8501`.
+- **Demonstration Mode (Zero Config):** If left blank, the application launches in 100% transparent **Demonstration Mode**. Evaluators can test all dashboard metrics, inspect risk tiers, generate Asana tasks, view outreach drafts, and switch between simulated corporate roles.
 
-### Step 3: Run the Streamlit Dashboard
+### Step 3: Run the Dashboard
 ```bash
+make run
+# Or directly:
 streamlit run app.py
 ```
 Open your browser at `http://localhost:8501`.
 
 ---
 
-## 5. Running the Local n8n Orchestrator (Docker)
+## 5. Developer Commands (Makefile)
+
+Common workflows are automated through standard Makefile targets:
+
+| Command | Description |
+|---|---|
+| `make install` | Installs all Python dependencies into the active environment |
+| `make test` | Executes the full automated test suite with verbose reporting |
+| `make run` | Starts the Streamlit dashboard on port 8501 |
+| `make tunnel` | Launches the Cloudflare HTTPS tunnel for cross-device mobile testing |
+| `make docker-up` | Launches the local n8n workflow container in the background |
+| `make docker-down` | Gracefully shuts down the local n8n container |
+| `make clean` | Removes bytecode caches and temporary files |
+
+---
+
+## 6. Continuous Integration (CI/CD)
+
+Every push and Pull Request to this repository triggers an automated CI pipeline via **GitHub Actions** (`.github/workflows/ci.yml`):
+- Verifies clean Python syntax compilation across all operational modules.
+- Executes the full unit test suite on both **Python 3.10** and **Python 3.11**.
+- Guarantees zero regression on Pydantic schemas, RBAC logic, OAuth URL generators, and database operations.
+
+---
+
+## 7. Running the Local n8n Orchestrator (Docker)
 
 To test end-to-end webhook dispatch and Google Workspace routing locally:
 
-### 1. Launch n8n in Docker
-```bash
-docker compose up -d
-```
-
-### 2. Access n8n Visual Editor
-Open `http://localhost:5678/` in your browser. Complete the quick initial admin account setup.
-
-### 3. Import Workflow Blueprint
-1. In the n8n interface, click **Workflows** -> **Import from File**.
-2. Select the `n8n_workflow_blueprint.json` file included in this repository.
-3. Click **Activate Workflow**.
-4. Test clicking the **Dispatch** buttons inside the Streamlit dashboard to watch records flow into the n8n execution log in real time.
-
----
-
-## 6. Demonstration Data Profiles (FinServ US)
-
-The application includes two preloaded, realistic test cases:
-
-- **Credit Operations Demo:** A post-call discovery transcript featuring *Robert Martinez*, owner of *Apex Fleet Repair* (Dallas, TX). The borrower seeks an $85,000 USD equipment term loan for hydraulic lifts against $38,000 USD monthly gross revenue, while disclosing an active IRS tax lien under an approved installment agreement. The system categorizes the file as *Moderate Risk*, isolates the lien, and assigns verification tasks to Credit Analysts and Compliance Officers.
-- **Sales Operations Demo:** A commercial profile for *Sunbelt Logistics LLC* (Phoenix, AZ), a 14-tractor refrigerated fleet with $2.4M USD annual revenue facing 60-day freight broker payment terms. The system scores the lead at *88/100* for Invoice Factoring and generates an executive cold email and telephone script ready for immediate BDR execution.
-
----
-
-## 7. Compliance, Testing & Technical Rigor
-
-- **Type Safety:** All inputs and outputs are governed by Pydantic models.
-- **Automated Test Suite:** Run `python -m unittest tests/test_v2_suite.py` to verify schema serialization, RBAC permissions, meeting queues, and SQLite database persistence.
-- **No Unhandled Crashes:** All network calls, API timeouts, and missing credentials are caught with user-friendly warnings rather than raw tracebacks.
-- **SOC 2 & Privacy Awareness:** Local execution on Docker and model-agnostic payload formatting ensure financial client data can be retained in private infrastructure.
+1. Launch n8n:
+   ```bash
+   make docker-up
+   ```
+2. Access the visual editor at `http://localhost:5678/`.
+3. Click **Workflows** -> **Import from File** and select `n8n_workflow_blueprint.json`.
+4. Click **Activate Workflow**.
+5. Click **Approve & Sync** inside the Streamlit dashboard to watch records flow into n8n in real time.
 
 ---
 
@@ -178,16 +190,13 @@ The application includes two preloaded, realistic test cases:
 To test or demo the dashboard on mobile devices (iOS / Android) or external computers without complex port-forwarding:
 
 ```bash
-# Run the automated tunnel script
-./scripts/start_tunnel.sh
+make tunnel
 ```
-A public HTTPS link (e.g. `https://*.trycloudflare.com`) will be generated to access the dashboard securely from any browser.
+A public HTTPS link (e.g. `https://*.trycloudflare.com`) is generated to access the dashboard securely from any mobile or desktop browser.
 
 ---
 
 ## 9. Authors & Engineering Credits
 
-
 - **Lead Operations & Automation Engineer:** Christian Omar Payán Torróntegui ([@opyntorr](https://github.com/opyntorr))
 - **AI Architecture & Implementation Co-pilot:** Antigravity (Google DeepMind)
-
