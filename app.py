@@ -24,20 +24,61 @@ database.init_db()
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
     page_title="DeskMate Studio | nuDesk MX",
-    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
+# Theme setup (Default to High-Contrast Minimalist Light Mode)
+if "current_theme" not in st.session_state:
+    st.session_state.current_theme = "light"
+
 # Apply nuDesk design system tokens
-st.markdown(get_nudesk_css(), unsafe_allow_html=True)
+st.markdown(get_nudesk_css(theme=st.session_state.current_theme), unsafe_allow_html=True)
+
+# ----------------- GOOGLE OAUTH 2.0 INTEGRATION -----------------
+google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
+google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "")
+google_redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8501")
+
+if "code" in st.query_params:
+    auth_code = st.query_params.get("code")
+    if auth_code and google_client_id and google_client_secret:
+        try:
+            with st.spinner("Authenticating via Google Cloud Console..."):
+                user_info = auth_rbac.exchange_code_for_user(
+                    code=auth_code,
+                    client_id=google_client_id,
+                    client_secret=google_client_secret,
+                    redirect_uri=google_redirect_uri
+                )
+                google_persona = auth_rbac.create_persona_from_google_user(user_info)
+                st.session_state.google_user = user_info
+                st.session_state.authenticated_persona = google_persona
+                st.session_state.active_persona_id = google_persona.id
+                st.query_params.clear()
+                st.rerun()
+        except Exception as auth_err:
+            st.error(f"Google OAuth authorization notice: {str(auth_err)}")
+            st.query_params.clear()
 
 # ----------------- SESSION STATE SETUP -----------------
+if "authenticated_persona" not in st.session_state:
+    st.session_state.authenticated_persona = None
+
+if "google_user" not in st.session_state:
+    st.session_state.google_user = None
+
 if "active_persona_id" not in st.session_state:
     st.session_state.active_persona_id = "usr_underwriter_1"
 
+# Active persona (supports live Google authentication or preset personas)
+persona = auth_rbac.get_persona_by_id(
+    st.session_state.active_persona_id,
+    custom_persona=st.session_state.get("authenticated_persona")
+)
+
 if "last_role_key" not in st.session_state:
-    st.session_state.last_role_key = "underwriter"
+    st.session_state.last_role_key = persona.role_key
 
 if "active_tab_index" not in st.session_state:
     st.session_state.active_tab_index = 0
@@ -49,9 +90,6 @@ if "sales_result" not in st.session_state:
     st.session_state.sales_result = None
 if "hr_result" not in st.session_state:
     st.session_state.hr_result = None
-
-# Active persona
-persona = get_persona_by_id(st.session_state.active_persona_id)
 
 # Detect if role changed to route default tab
 if st.session_state.last_role_key != persona.role_key:
@@ -70,6 +108,10 @@ current_api_key = os.getenv("GEMINI_API_KEY", "")
 current_webhook_url = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/nudesk-triage")
 
 # ----------------- ENTERPRISE BRAND HEADER -----------------
+is_google_active = st.session_state.google_user is not None
+sso_badge_text = "Google OAuth Active" if is_google_active else "RBAC Simulation Mode"
+sso_badge_class = "badge-green" if is_google_active else "badge-navy"
+
 st.markdown(f"""
 <div class="nudesk-header">
     <div>
@@ -77,39 +119,84 @@ st.markdown(f"""
         <div class="subtitle">AI-Workforce Platform for Financial Services — Mazatlán Talent Hub</div>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <span class="nudesk-badge badge-green">Google Workspace Connected</span>
+        <span class="nudesk-badge {sso_badge_class}">{sso_badge_text}</span>
         <span class="nudesk-badge badge-navy">Cyborg Engine V2</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ----------------- IDENTITY & RBAC BANNER -----------------
-persona_options = {p.id: f"{p.name} — {p.role_title} ({p.department})" for p in PRESET_WORKSPACE_PERSONAS}
-col_user, col_switch = st.columns([3, 2])
+col_user, col_switch, col_theme = st.columns([3, 2, 1])
 
 with col_user:
+    badge_label = "Google Workspace" if is_google_active else f"Role: {persona.role_key.upper()}"
+    badge_cls = "badge-green" if is_google_active else "badge-navy"
+
+    if persona.picture_url:
+        avatar_html = f'<img src="{persona.picture_url}" style="width:28px; height:28px; border-radius:50%; border:2px solid #059669; vertical-align:middle; margin-right:8px;" />'
+    else:
+        avatar_html = f'<span class="role-avatar">{persona.avatar_initials}</span>'
+
     st.markdown(f"""
     <div class="role-banner">
         <div class="role-indicator">
-            <span class="role-avatar">{persona.avatar_initials}</span>
+            {avatar_html}
             <span>{persona.name} &bull; <strong>{persona.role_title}</strong> <span style="color:#64748B;">({persona.email})</span></span>
         </div>
         <div>
-            <span class="nudesk-badge badge-navy">Role: {persona.role_key.upper()}</span>
+            <span class="nudesk-badge {badge_cls}">{badge_label}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
+    # Auth action buttons
+    auth_col1, auth_col2 = st.columns([2, 1])
+    with auth_col1:
+        if is_google_active:
+            if st.button("Sign out of Google", key="btn_signout_google", use_container_width=True):
+                st.session_state.google_user = None
+                st.session_state.authenticated_persona = None
+                st.session_state.active_persona_id = "usr_underwriter_1"
+                st.rerun()
+        elif google_client_id:
+            auth_url = auth_rbac.get_google_auth_url(google_client_id, google_redirect_uri)
+            st.link_button("Sign in with Google Workspace", auth_url, use_container_width=True)
+        else:
+            st.caption("Google OAuth credentials unconfigured in .env")
+
 with col_switch:
+    persona_options = {}
+    if st.session_state.authenticated_persona:
+        ap = st.session_state.authenticated_persona
+        persona_options[ap.id] = f"{ap.name} (Live Google Session) — {ap.role_title}"
+    for p in PRESET_WORKSPACE_PERSONAS:
+        persona_options[p.id] = f"{p.name} — {p.role_title} ({p.department})"
+
+    current_id = st.session_state.active_persona_id
+    if current_id not in persona_options:
+        current_id = list(persona_options.keys())[0]
+
     selected_persona_id = st.selectbox(
-        "Switch Google Workspace Identity (RBAC Demo):",
+        "Switch Workspace Identity (RBAC):",
         options=list(persona_options.keys()),
         format_func=lambda pid: persona_options[pid],
-        index=list(persona_options.keys()).index(st.session_state.active_persona_id),
+        index=list(persona_options.keys()).index(current_id),
         help="Simulates Google Workspace SSO login. Changing identity dynamically reconfigures view permissions and access rights."
     )
     if selected_persona_id != st.session_state.active_persona_id:
         st.session_state.active_persona_id = selected_persona_id
+        st.rerun()
+
+with col_theme:
+    theme_choice = st.selectbox(
+        "Theme Mode:",
+        ["Light Mode", "Dark Mode"],
+        index=0 if st.session_state.current_theme == "light" else 1,
+        help="Toggle between High-Contrast Minimalist Light Mode and Enterprise Dark Mode."
+    )
+    chosen_theme_key = "light" if "Light" in theme_choice else "dark"
+    if chosen_theme_key != st.session_state.current_theme:
+        st.session_state.current_theme = chosen_theme_key
         st.rerun()
 
 # ----------------- PERMISSION-GOVERNED NAVIGATION TABS -----------------
