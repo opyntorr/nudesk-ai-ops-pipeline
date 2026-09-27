@@ -50,6 +50,10 @@ def get_nudesk_css(theme: str = "light") -> str:
     badge_red_txt = "#FCA5A5" if is_dark else "#A31D1D"
     badge_red_bdr = "#821F1F" if is_dark else "#FCD3D3"
 
+    badge_amber_bg = "#3D2A0A" if is_dark else "#FEF3C7"
+    badge_amber_txt = "#FCD34D" if is_dark else "#92400E"
+    badge_amber_bdr = "#784A12" if is_dark else "#FCD34D"
+
     return f"""
 <style>
     /* Google Fonts: Host Grotesk & Manrope (nuDesk Official) */
@@ -379,63 +383,99 @@ def get_nudesk_css(theme: str = "light") -> str:
         border-color: var(--nd-green);
     }}
 
-    .kpi-chip-grid {{
+    /* Executive Log Card with Default Visible Large Colored KPIs */
+    .kpi-large-grid {{
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 0.65rem;
-        margin-top: 0.75rem;
+        gap: 0.75rem;
+        margin-top: 0.85rem;
+        margin-bottom: 0.4rem;
     }}
 
-    .kpi-chip {{
+    .kpi-box-large {{
         border-radius: 6px;
-        padding: 0.55rem 0.8rem;
+        padding: 0.65rem 0.95rem;
+        border: 1px solid var(--nd-border);
         display: flex;
         flex-direction: column;
+        justify-content: center;
+        background: var(--nd-surface-alt);
+        min-height: 68px;
     }}
 
-    .kpi-chip-label {{
-        font-size: 0.68rem;
+    .kpi-box-large .kpi-box-label {{
+        font-size: 0.70rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.04em;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.25rem;
         font-family: 'Host Grotesk', sans-serif;
     }}
 
-    .kpi-chip-val {{
-        font-size: 1.05rem;
+    .kpi-box-large .kpi-box-val {{
+        font-size: 1.25rem;
         font-weight: 800;
         line-height: 1.2;
         font-family: 'Host Grotesk', sans-serif;
     }}
 
-    .kpi-chip-green {{
+    /* Green for Good / Low Risk / Compliant */
+    .kpi-box-green {{
         background-color: {badge_green_bg} !important;
-        color: {badge_green_txt} !important;
         border: 1px solid {badge_green_bdr} !important;
     }}
-    .kpi-chip-green .kpi-chip-label {{ color: {badge_green_txt} !important; opacity: 0.85; }}
+    .kpi-box-green .kpi-box-label {{ color: {badge_green_txt} !important; opacity: 0.9; }}
+    .kpi-box-green .kpi-box-val {{ color: {badge_green_txt} !important; }}
 
-    .kpi-chip-teal {{
+    /* Reddish / Warm for Bad numbers / High Risk / Breached SLA */
+    .kpi-box-red {{
+        background-color: {badge_red_bg} !important;
+        border: 1.5px solid {badge_red_bdr} !important;
+    }}
+    .kpi-box-red .kpi-box-label {{ color: {badge_red_txt} !important; font-weight: 800; }}
+    .kpi-box-red .kpi-box-val {{ color: {badge_red_txt} !important; }}
+
+    /* Amber / Warm for Moderate / Nearing SLA / Warnings */
+    .kpi-box-amber {{
+        background-color: {badge_amber_bg} !important;
+        border: 1px solid {badge_amber_bdr} !important;
+    }}
+    .kpi-box-amber .kpi-box-label {{ color: {badge_amber_txt} !important; opacity: 0.9; }}
+    .kpi-box-amber .kpi-box-val {{ color: {badge_amber_txt} !important; }}
+
+    /* Teal for Stability / Experience / Fluency / Ratios */
+    .kpi-box-teal {{
         background-color: {badge_teal_bg} !important;
-        color: {badge_teal_txt} !important;
         border: 1px solid {badge_teal_bdr} !important;
     }}
-    .kpi-chip-teal .kpi-chip-label {{ color: {badge_teal_txt} !important; opacity: 0.85; }}
+    .kpi-box-teal .kpi-box-label {{ color: {badge_teal_txt} !important; opacity: 0.9; }}
+    .kpi-box-teal .kpi-box-val {{ color: {badge_teal_txt} !important; }}
 
-    .kpi-chip-navy {{
+    /* Navy for Capital Facilities / ARR / Actions */
+    .kpi-box-navy {{
         background-color: {badge_navy_bg} !important;
-        color: {badge_navy_txt} !important;
         border: 1px solid {badge_navy_bdr} !important;
     }}
-    .kpi-chip-navy .kpi-chip-label {{ color: {badge_navy_txt} !important; opacity: 0.85; }}
+    .kpi-box-navy .kpi-box-label {{ color: {badge_navy_txt} !important; opacity: 0.85; }}
+    .kpi-box-navy .kpi-box-val {{ color: {badge_navy_txt} !important; }}
 
-    .kpi-chip-red {{
-        background-color: {badge_red_bg} !important;
-        color: {badge_red_txt} !important;
-        border: 1px solid {badge_red_bdr} !important;
+    /* Legacy chip compatibility */
+    .kpi-chip-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.65rem; margin-top: 0.75rem; }}
+    .kpi-chip {{ border-radius: 6px; padding: 0.55rem 0.8rem; display: flex; flex-direction: column; }}
+    .kpi-chip-label {{ font-size: 0.68rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.2rem; font-family: 'Host Grotesk', sans-serif; }}
+    .kpi-chip-val {{ font-size: 1.05rem; font-weight: 800; line-height: 1.2; font-family: 'Host Grotesk', sans-serif; }}
+    .kpi-chip-green {{ background-color: {badge_green_bg} !important; color: {badge_green_txt} !important; border: 1px solid {badge_green_bdr} !important; }}
+    .kpi-chip-teal {{ background-color: {badge_teal_bg} !important; color: {badge_teal_txt} !important; border: 1px solid {badge_teal_bdr} !important; }}
+    .kpi-chip-navy {{ background-color: {badge_navy_bg} !important; color: {badge_navy_txt} !important; border: 1px solid {badge_navy_bdr} !important; }}
+    .kpi-chip-red {{ background-color: {badge_red_bg} !important; color: {badge_red_txt} !important; border: 1px solid {badge_red_bdr} !important; }}
+
+    /* Permanent prevention of emoji activity indicators / spinners */
+    [data-testid="stStatusWidget"],
+    .stStatusWidget,
+    [data-testid="stDecoration"] {{
+        display: none !important;
+        visibility: hidden !important;
     }}
-    .kpi-chip-red .kpi-chip-label {{ color: {badge_red_txt} !important; opacity: 0.85; }}
 
     /* KPI Compact Ribbon */
     .kpi-ribbon {{

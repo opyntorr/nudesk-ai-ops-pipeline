@@ -293,13 +293,10 @@ with tabs[0]:
                     "Window:",
                     list(time_window_choices.keys()),
                     format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.time_window),
+                    index=list(time_window_choices.keys()).index(st.session_state.get("cq_win", "week")),
                     key="cq_win",
                     label_visibility="collapsed"
                 )
-                if cq_win != st.session_state.time_window:
-                    st.session_state.time_window = cq_win
-                    st.rerun()
 
             cq_dir = "asc" if "Oldest" in cq_order else "desc"
             pending_credit_items = database.get_filtered_operations(
@@ -308,7 +305,7 @@ with tabs[0]:
                 sort_by="date",
                 sort_order=cq_dir,
                 status_filter="pending",
-                time_window=st.session_state.time_window
+                time_window=cq_win
             )
 
             # Manual Ad-hoc Action Button
@@ -349,7 +346,7 @@ with tabs[0]:
                 sort_by="date",
                 sort_order="desc",
                 status_filter="processed",
-                time_window=st.session_state.time_window
+                time_window=cq_win
             )
 
             if processed_credit_items:
@@ -609,13 +606,10 @@ with tabs[1]:
                     "Window:",
                     list(time_window_choices.keys()),
                     format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.time_window),
+                    index=list(time_window_choices.keys()).index(st.session_state.get("sq_win", "week")),
                     key="sq_win",
                     label_visibility="collapsed"
                 )
-                if sq_win != st.session_state.time_window:
-                    st.session_state.time_window = sq_win
-                    st.rerun()
 
             sq_dir = "asc" if "Oldest" in sq_order else "desc"
             pending_sales_items = database.get_filtered_operations(
@@ -624,7 +618,7 @@ with tabs[1]:
                 sort_by="date",
                 sort_order=sq_dir,
                 status_filter="pending",
-                time_window=st.session_state.time_window
+                time_window=sq_win
             )
 
             if st.button("+ New Ad-Hoc / Manual Prospect", key="btn_s_manual_entry", use_container_width=True):
@@ -664,7 +658,7 @@ with tabs[1]:
                 sort_by="date",
                 sort_order="desc",
                 status_filter="processed",
-                time_window=st.session_state.time_window
+                time_window=sq_win
             )
 
             if processed_sales_items:
@@ -892,13 +886,10 @@ with tabs[2]:
                     "Window:",
                     list(time_window_choices.keys()),
                     format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.time_window),
+                    index=list(time_window_choices.keys()).index(st.session_state.get("hq_win", "week")),
                     key="hq_win",
                     label_visibility="collapsed"
                 )
-                if hq_win != st.session_state.time_window:
-                    st.session_state.time_window = hq_win
-                    st.rerun()
 
             hq_dir = "asc" if "Oldest" in hq_order else "desc"
             pending_hr_items = database.get_filtered_operations(
@@ -907,7 +898,7 @@ with tabs[2]:
                 sort_by="date",
                 sort_order=hq_dir,
                 status_filter="pending",
-                time_window=st.session_state.time_window
+                time_window=hq_win
             )
 
             if st.button("+ New Ad-Hoc / Manual Screening", key="btn_h_manual_entry", use_container_width=True):
@@ -947,7 +938,7 @@ with tabs[2]:
                 sort_by="date",
                 sort_order="desc",
                 status_filter="processed",
-                time_window=st.session_state.time_window
+                time_window=hq_win
             )
 
             if processed_hr_items:
@@ -1139,13 +1130,23 @@ with tabs[2]:
 # TAB 4: EXECUTIVE KPI DASHBOARD & AUDIT HISTORY
 # =========================================================================
 with tabs[3]:
-    st.markdown("### Executive Overview & Operational Audit Trail")
-    st.markdown(f"Consolidated operations across Credit, Sales, and HR teams in Mazatlán ({time_window_choices[st.session_state.time_window]}).")
+    col_exec_title, col_exec_win = st.columns([7, 3], gap="medium")
+    with col_exec_title:
+        st.markdown("### Executive Overview & Operational Audit Trail")
+        st.caption("Consolidated operations across Credit, Sales, and HR teams in Mazatlán.")
+    with col_exec_win:
+        exec_win = st.selectbox(
+            "Executive Reporting Period:",
+            options=list(time_window_choices.keys()),
+            format_func=lambda k: time_window_choices[k],
+            index=list(time_window_choices.keys()).index(st.session_state.get("exec_win", "all")),
+            key="exec_win"
+        )
 
     all_records = database.get_filtered_operations(
         module_filter="all",
         status_filter="all",
-        time_window=st.session_state.time_window,
+        time_window=exec_win,
         limit=500
     )
     total_ops = len(all_records)
@@ -1157,8 +1158,9 @@ with tabs[3]:
     hr_total = len([r for r in all_records if r["module_type"] == "hr"])
 
     import pandas as pd
+    import altair as alt
 
-    # Calculate capital pipeline totals
+    # Calculate capital pipeline totals dynamically based on the filtered time window
     total_credit_volume = 0
     total_sales_arr = 0
     sla_on_track_count = 0
@@ -1176,11 +1178,7 @@ with tabs[3]:
         except Exception:
             pass
 
-    if total_credit_volume == 0:
-        total_credit_volume = 855000
-    if total_sales_arr == 0:
-        total_sales_arr = 11080000
-    sla_compliance_pct = round((sla_on_track_count / max(1, total_ops)) * 100, 1)
+    sla_compliance_pct = round((sla_on_track_count / max(1, total_ops)) * 100, 1) if total_ops > 0 else 100.0
 
     # Departmental Volume Summary
     st.markdown(f"""<div class="kpi-container">
@@ -1211,12 +1209,12 @@ with tabs[3]:
 <div class="kpi-card">
 <div class="kpi-label">Credit Pipeline Volume</div>
 <div class="kpi-value">${total_credit_volume:,.0f}</div>
-<div class="kpi-sub">Total requested facilities</div>
+<div class="kpi-sub">Requested facilities in window</div>
 </div>
 <div class="kpi-card">
 <div class="kpi-label">Sales Qualified ARR</div>
 <div class="kpi-value">${total_sales_arr:,.0f}</div>
-<div class="kpi-sub">Annual revenue pipeline</div>
+<div class="kpi-sub">Annual revenue pipeline in window</div>
 </div>
 <div class="kpi-card">
 <div class="kpi-label">SLA Compliance Rate</div>
@@ -1230,39 +1228,71 @@ with tabs[3]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-    # High-Contrast Operational Visualizations
+    # High-Contrast Operational Visualizations (Pie / Donut Charts)
     st.markdown("#### Operational Throughput & Portfolio Quality")
     col_c1, col_c2 = st.columns(2, gap="medium")
 
     with col_c1:
-        st.markdown("**Throughput by Department (Pending vs. Synced)**")
-        df_flow = pd.DataFrame({
-            "Department": ["Credit Underwriting", "Commercial Sales", "Talent Screening"],
-            "Pending Triage": [
-                len([r for r in all_records if r["module_type"] == "credit" and r["is_processed"] == 0]),
-                len([r for r in all_records if r["module_type"] == "sales" and r["is_processed"] == 0]),
-                len([r for r in all_records if r["module_type"] == "hr" and r["is_processed"] == 0])
-            ],
-            "Completed & Synced": [
-                len([r for r in all_records if r["module_type"] == "credit" and r["is_processed"] == 1]),
-                len([r for r in all_records if r["module_type"] == "sales" and r["is_processed"] == 1]),
-                len([r for r in all_records if r["module_type"] == "hr" and r["is_processed"] == 1])
-            ]
-        }).set_index("Department")
-        st.bar_chart(df_flow, color=["#2A9D8F", "#3EA258"])
+        st.markdown("**Departmental Operational Share**")
+        if total_ops > 0:
+            df_dept = pd.DataFrame({
+                "Department": ["Credit Underwriting", "Commercial Sales", "Talent Screening"],
+                "Operations": [credit_total, sales_total, hr_total]
+            })
+            df_dept_active = df_dept[df_dept["Operations"] > 0]
+            if not df_dept_active.empty:
+                dept_chart = alt.Chart(df_dept_active).mark_arc(innerRadius=45).encode(
+                    theta=alt.Theta(field="Operations", type="quantitative"),
+                    color=alt.Color(
+                        field="Department",
+                        type="nominal",
+                        scale=alt.Scale(
+                            domain=["Credit Underwriting", "Commercial Sales", "Talent Screening"],
+                            range=["#1E293B", "#2A9D8F", "#3EA258"]
+                        ),
+                        legend=alt.Legend(orient="bottom", title=None)
+                    ),
+                    tooltip=["Department", "Operations"]
+                ).properties(height=260)
+                st.altair_chart(dept_chart, use_container_width=True)
+            else:
+                st.info("No active department records for this period.")
+        else:
+            st.info("No operational records in the selected time period.")
 
     with col_c2:
         st.markdown("**Underwriting Portfolio Risk Distribution**")
         credit_recs = [r for r in all_records if r["module_type"] == "credit"]
         low_risk = len([r for r in credit_recs if "low" in r.get("headline_metric", "").lower() or "low" in r.get("full_output_json", "").lower()])
-        mod_risk = len([r for r in credit_recs if "moderate" in r.get("headline_metric", "").lower() or "moderate" in r.get("full_output_json", "").lower()])
+        mod_risk = len([r for r in credit_recs if "moderate" in r.get("headline_metric", "").lower() or "medium" in r.get("headline_metric", "").lower() or "moderate" in r.get("full_output_json", "").lower()])
         high_risk = len([r for r in credit_recs if "high" in r.get("headline_metric", "").lower() or "high" in r.get("full_output_json", "").lower()])
 
-        df_risk = pd.DataFrame({
-            "Risk Tier": ["Low Risk (Tier 1)", "Moderate (Tier 2)", "High Risk (Senior Review)"],
-            "Active Files": [max(1, low_risk), max(1, mod_risk), max(1, high_risk)]
-        }).set_index("Risk Tier")
-        st.bar_chart(df_risk, color=["#3EA258"])
+        total_risk = low_risk + mod_risk + high_risk
+        if total_risk > 0:
+            df_risk = pd.DataFrame({
+                "Risk Tier": ["Low Risk (Tier 1)", "Moderate (Tier 2)", "High Risk (Review)"],
+                "Files": [low_risk, mod_risk, high_risk]
+            })
+            df_risk_active = df_risk[df_risk["Files"] > 0]
+            if not df_risk_active.empty:
+                risk_chart = alt.Chart(df_risk_active).mark_arc(innerRadius=45).encode(
+                    theta=alt.Theta(field="Files", type="quantitative"),
+                    color=alt.Color(
+                        field="Risk Tier",
+                        type="nominal",
+                        scale=alt.Scale(
+                            domain=["Low Risk (Tier 1)", "Moderate (Tier 2)", "High Risk (Review)"],
+                            range=["#3EA258", "#D97706", "#DC2626"]
+                        ),
+                        legend=alt.Legend(orient="bottom", title=None)
+                    ),
+                    tooltip=["Risk Tier", "Files"]
+                ).properties(height=260)
+                st.altair_chart(risk_chart, use_container_width=True)
+            else:
+                st.info("No credit risk files for this period.")
+        else:
+            st.info("No credit underwriting files in the selected time period.")
 
     st.markdown("#### Operational Log & Cross-Team Audit")
 
@@ -1291,19 +1321,7 @@ with tabs[3]:
             key="exec_status_select"
         )
 
-    col_fwin, col_fsort, col_forder = st.columns([4, 3, 3])
-    with col_fwin:
-        exec_time_window = st.selectbox(
-            "Operational Time Window:",
-            options=list(time_window_choices.keys()),
-            format_func=lambda k: time_window_choices[k],
-            index=list(time_window_choices.keys()).index(st.session_state.time_window),
-            label_visibility="collapsed",
-            key="exec_time_window_select"
-        )
-        if exec_time_window != st.session_state.time_window:
-            st.session_state.time_window = exec_time_window
-            st.rerun()
+    col_fsort, col_forder = st.columns([2, 2])
     with col_fsort:
         exec_sort_by = st.selectbox(
             "Sort Records By:",
@@ -1345,7 +1363,7 @@ with tabs[3]:
         sort_by=sort_field_map[exec_sort_by],
         sort_order="desc" if "Newest" in exec_sort_order else "asc",
         status_filter=status_map[exec_status_filter],
-        time_window=st.session_state.time_window,
+        time_window=exec_win,
         limit=150
     )
 
@@ -1370,30 +1388,40 @@ with tabs[3]:
                 k1_l, k1_v = "Facility Requested", str(data_dict.get("requested_amount", metric_str.split("|")[-1].strip()))
                 if k1_v.isdigit():
                     k1_v = f"${int(k1_v):,} USD"
-                k1_cls = "kpi-chip-navy"
+                k1_cls = "kpi-box-navy"
 
                 k2_l, k2_v = "Risk Rating", str(data_dict.get("risk_tier", metric_str.split("|")[0].strip()))
                 k2_lower = k2_v.lower()
-                if "low" in k2_lower:
-                    k2_cls = "kpi-chip-green"
+                if "high" in k2_lower or "breach" in k2_lower or "elevated" in k2_lower:
+                    k2_cls = "kpi-box-red"
                 elif "moderate" in k2_lower or "medium" in k2_lower:
-                    k2_cls = "kpi-chip-teal"
+                    k2_cls = "kpi-box-amber"
                 else:
-                    k2_cls = "kpi-chip-red"
+                    k2_cls = "kpi-box-green"
 
                 k3_l, k3_v = "Debt Ratio", str(data_dict.get("dti", data_dict.get("dscr", "Verified")))
                 if k3_v != "Verified" and not ("DTI" in k3_v or "DSCR" in k3_v):
                     k3_v = f"{k3_v} DTI"
-                k3_cls = "kpi-chip-teal"
+                k3_lower = k3_v.lower()
+                if any(x in k3_lower for x in ["44%", "45%", "46%", "47%", "48%", "49%", "50%", "high", "breach"]):
+                    k3_cls = "kpi-box-red"
+                elif any(x in k3_lower for x in ["38%", "39%", "40%", "41%", "42%", "43%", "moderate"]):
+                    k3_cls = "kpi-box-amber"
+                else:
+                    k3_cls = "kpi-box-teal"
 
                 k4_l, k4_v = "Collateral Pledged", str(data_dict.get("collateral", "Equipment / Receivables"))
-                k4_cls = "kpi-chip-navy"
+                k4_lower = k4_v.lower()
+                if any(x in k4_lower for x in ["none", "unsecured", "insufficient", "deficit"]):
+                    k4_cls = "kpi-box-red"
+                else:
+                    k4_cls = "kpi-box-navy"
 
             elif rec["module_type"] == "sales":
                 k1_l, k1_v = "Annual Revenue", str(data_dict.get("arr", metric_str.split("|")[-1].strip()))
                 if k1_v.isdigit():
                     k1_v = f"${int(k1_v):,} ARR"
-                k1_cls = "kpi-chip-navy"
+                k1_cls = "kpi-box-navy"
 
                 score_val = data_dict.get("lead_score", 85)
                 try:
@@ -1401,18 +1429,25 @@ with tabs[3]:
                 except Exception:
                     score_num = 85
                 k2_l, k2_v = "Lead Score", f"{score_num} / 100"
-                if score_num >= 90:
-                    k2_cls = "kpi-chip-green"
-                elif score_num >= 75:
-                    k2_cls = "kpi-chip-teal"
+                if score_num < 70:
+                    k2_cls = "kpi-box-red"
+                elif score_num < 85:
+                    k2_cls = "kpi-box-amber"
                 else:
-                    k2_cls = "kpi-chip-red"
+                    k2_cls = "kpi-box-green"
 
                 k3_l, k3_v = "Commercial Fleet", f"{data_dict.get('fleet_size', '12')} Units"
-                k3_cls = "kpi-chip-teal"
+                try:
+                    fleet_num = int(data_dict.get('fleet_size', 12))
+                    if fleet_num < 5:
+                        k3_cls = "kpi-box-amber"
+                    else:
+                        k3_cls = "kpi-box-teal"
+                except Exception:
+                    k3_cls = "kpi-box-teal"
 
                 k4_l, k4_v = "Outreach Staged", "Cold Email & Phone Pitch"
-                k4_cls = "kpi-chip-navy"
+                k4_cls = "kpi-box-navy"
 
             else:  # hr
                 fit_val = data_dict.get("fit_score", data_dict.get("overall_fit_score", 88))
@@ -1421,58 +1456,65 @@ with tabs[3]:
                 except Exception:
                     fit_num = 88
                 k1_l, k1_v = "Candidate Fit", f"{fit_num} / 100"
-                if fit_num >= 90:
-                    k1_cls = "kpi-chip-green"
-                elif fit_num >= 80:
-                    k1_cls = "kpi-chip-teal"
+                if fit_num < 75:
+                    k1_cls = "kpi-box-red"
+                elif fit_num < 85:
+                    k1_cls = "kpi-box-amber"
                 else:
-                    k1_cls = "kpi-chip-red"
+                    k1_cls = "kpi-box-green"
 
                 cefr_val = str(data_dict.get("cefr", data_dict.get("bilingual_fluency", "C1 Advanced")))
                 k2_l, k2_v = "Bilingual Fluency", cefr_val
-                if "c2" in cefr_val.lower() or "c1" in cefr_val.lower():
-                    k2_cls = "kpi-chip-green"
-                elif "b2" in cefr_val.lower():
-                    k2_cls = "kpi-chip-teal"
+                cefr_lower = cefr_val.lower()
+                if any(x in cefr_lower for x in ["b1", "a2", "limited", "basic"]):
+                    k2_cls = "kpi-box-red"
+                elif "b2" in cefr_lower:
+                    k2_cls = "kpi-box-amber"
                 else:
-                    k2_cls = "kpi-chip-red"
+                    k2_cls = "kpi-box-green"
 
                 k3_l, k3_v = "Experience", f"{data_dict.get('experience_years', '4+')} Years"
-                k3_cls = "kpi-chip-teal"
+                k3_cls = "kpi-box-teal"
 
                 k4_l, k4_v = "Recommended Action", str(data_dict.get("action", "Advance to Next Round"))
-                k4_cls = "kpi-chip-navy"
+                act_lower = k4_v.lower()
+                if any(x in act_lower for x in ["reject", "decline"]):
+                    k4_cls = "kpi-box-red"
+                elif any(x in act_lower for x in ["hold", "review"]):
+                    k4_cls = "kpi-box-amber"
+                else:
+                    k4_cls = "kpi-box-navy"
 
             sla = database.calculate_sla_status(time_str, is_processed=rec.get("is_processed", 1))
 
-            # DEFAULT VISIBLE COLOR-CODED KPIS CARD
+            # DEFAULT VISIBLE LARGE COLOR-CODED KPIS CARD
             st.markdown(f"""<div class="exec-log-card">
 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
     <div>
         <span class="nudesk-badge {mod_badge}">{rec['module_type'].upper()}</span>
-        <strong style="font-size:1.02rem; margin-left:0.5rem; color:var(--nd-text);">{entity_str}</strong>
+        <strong style="font-size:1.05rem; margin-left:0.5rem; color:var(--nd-text);">{entity_str}</strong>
         <span class="nudesk-badge {status_badge_cls}" style="margin-left:0.5rem;">{status_str}</span>
     </div>
     <div style="font-size:0.82rem; color:var(--nd-muted);">
         <strong>{rec.get('operator_name', '')}</strong> &bull; {sla['label']} &bull; {time_str}
     </div>
 </div>
-<div class="kpi-chip-grid">
-    <div class="kpi-chip {k1_cls}">
-        <span class="kpi-chip-label">{k1_l}</span>
-        <span class="kpi-chip-val">{k1_v}</span>
+<div class="kpi-large-grid">
+    <div class="kpi-box-large {k1_cls}">
+        <div class="kpi-box-label">{k1_l}</div>
+        <div class="kpi-box-val">{k1_v}</div>
     </div>
-    <div class="kpi-chip {k2_cls}">
-        <span class="kpi-chip-label">{k2_l}</span>
-        <span class="kpi-chip-val">{k2_v}</span>
+    <div class="kpi-box-large {k2_cls}">
+        <div class="kpi-box-label">{k2_l}</div>
+        <div class="kpi-box-val">{k2_v}</div>
     </div>
-    <div class="kpi-chip {k3_cls}">
-        <span class="kpi-chip-label">{k3_l}</span>
-        <span class="kpi-chip-val">{k3_v}</span>
+    <div class="kpi-box-large {k3_cls}">
+        <div class="kpi-box-label">{k3_l}</div>
+        <div class="kpi-box-val">{k3_v}</div>
     </div>
-    <div class="kpi-chip {k4_cls}">
-        <span class="kpi-chip-label">{k4_l}</span>
-        <span class="kpi-chip-val">{k4_v}</span>
+    <div class="kpi-box-large {k4_cls}">
+        <div class="kpi-box-label">{k4_l}</div>
+        <div class="kpi-box-val">{k4_v}</div>
     </div>
 </div>
 </div>""", unsafe_allow_html=True)
