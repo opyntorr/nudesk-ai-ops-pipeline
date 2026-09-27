@@ -53,6 +53,14 @@ if "current_theme" not in st.session_state:
 
 if "time_window" not in st.session_state:
     st.session_state.time_window = "week"
+if "cq_win" not in st.session_state:
+    st.session_state.cq_win = "week"
+if "sq_win" not in st.session_state:
+    st.session_state.sq_win = "week"
+if "hq_win" not in st.session_state:
+    st.session_state.hq_win = "week"
+if "exec_win" not in st.session_state:
+    st.session_state.exec_win = "week"
 
 # Apply nuDesk design system tokens
 st.markdown(get_nudesk_css(theme=st.session_state.current_theme), unsafe_allow_html=True)
@@ -215,7 +223,7 @@ def get_transcript_for_entity(entity_name: str, module_type: str, raw_json_str: 
 
 # ----------------- TIME WINDOW CHOICES -----------------
 time_window_choices = {
-    "week": "This Week (Rolling 7 Days)",
+    "week": "Last 7 Days (Rolling)",
     "today": "Today",
     "month": "This Month (MTD)",
     "all": "All Time"
@@ -328,7 +336,7 @@ with tabs[0]:
             "Credit Reporting Period:",
             options=list(time_window_choices.keys()),
             format_func=lambda k: time_window_choices[k],
-            index=list(time_window_choices.keys()).index(st.session_state.get("cq_win", "all")),
+            index=list(time_window_choices.keys()).index(st.session_state.get("cq_win", "week")),
             key="cq_win",
             label_visibility="visible"
         )
@@ -423,7 +431,7 @@ with tabs[0]:
                     sort_by="date",
                     sort_order="asc",
                     status_filter="pending",
-                    time_window=st.session_state.get("cq_win", "all"),
+                    time_window=st.session_state.get("cq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -435,7 +443,7 @@ with tabs[0]:
                     sort_by="date",
                     sort_order="desc",
                     status_filter="processed",
-                    time_window=st.session_state.get("cq_win", "all"),
+                    time_window=st.session_state.get("cq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -1024,7 +1032,7 @@ with tabs[1]:
             "Sales Reporting Period:",
             options=list(time_window_choices.keys()),
             format_func=lambda k: time_window_choices[k],
-            index=list(time_window_choices.keys()).index(st.session_state.get("sq_win", "all")),
+            index=list(time_window_choices.keys()).index(st.session_state.get("sq_win", "week")),
             key="sq_win",
             label_visibility="visible"
         )
@@ -1117,7 +1125,7 @@ with tabs[1]:
                     sort_by="date",
                     sort_order="asc",
                     status_filter="pending",
-                    time_window=st.session_state.get("sq_win", "all"),
+                    time_window=st.session_state.get("sq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -1129,7 +1137,7 @@ with tabs[1]:
                     sort_by="date",
                     sort_order="desc",
                     status_filter="processed",
-                    time_window=st.session_state.get("sq_win", "all"),
+                    time_window=st.session_state.get("sq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -1650,7 +1658,7 @@ with tabs[2]:
             "HR Reporting Period:",
             options=list(time_window_choices.keys()),
             format_func=lambda k: time_window_choices[k],
-            index=list(time_window_choices.keys()).index(st.session_state.get("hq_win", "all")),
+            index=list(time_window_choices.keys()).index(st.session_state.get("hq_win", "week")),
             key="hq_win",
             label_visibility="visible"
         )
@@ -1762,7 +1770,7 @@ with tabs[2]:
                     sort_by="date",
                     sort_order="asc",
                     status_filter="pending",
-                    time_window=st.session_state.get("hq_win", "all"),
+                    time_window=st.session_state.get("hq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -1774,7 +1782,7 @@ with tabs[2]:
                     sort_by="date",
                     sort_order="desc",
                     status_filter="processed",
-                    time_window=st.session_state.get("hq_win", "all"),
+                    time_window=st.session_state.get("hq_win", "week"),
                     limit=1
                 )
                 if top_items:
@@ -2327,7 +2335,7 @@ with tabs[3]:
             "Executive Reporting Period:",
             options=list(time_window_choices.keys()),
             format_func=lambda k: time_window_choices[k],
-            index=list(time_window_choices.keys()).index(st.session_state.get("exec_win", "all")),
+            index=list(time_window_choices.keys()).index(st.session_state.get("exec_win", "week")),
             key="exec_win"
         )
 

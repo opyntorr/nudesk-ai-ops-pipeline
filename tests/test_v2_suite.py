@@ -680,6 +680,44 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertNotIn("border-bottom: 2.5px solid var(--nd-green)", light_css)
         self.assertIn('div[data-testid="stTab"] .react-aria-SelectionIndicator', light_css)
 
+    def test_default_reporting_period_7_days(self):
+        """QA Test: Ensure default reporting period across all modules is rolling 7 days."""
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        # Check default session state initialization
+        self.assertIn('st.session_state.cq_win = "week"', app_code)
+        self.assertIn('st.session_state.sq_win = "week"', app_code)
+        self.assertIn('st.session_state.hq_win = "week"', app_code)
+        self.assertIn('st.session_state.exec_win = "week"', app_code)
+
+        # Check selectbox fallback defaults to 'week' instead of 'all'
+        self.assertIn('st.session_state.get("cq_win", "week")', app_code)
+        self.assertIn('st.session_state.get("sq_win", "week")', app_code)
+        self.assertIn('st.session_state.get("hq_win", "week")', app_code)
+        self.assertIn('st.session_state.get("exec_win", "week")', app_code)
+
+        # Check that none of the selectbox index lookups fallback to 'all'
+        self.assertNotIn('st.session_state.get("cq_win", "all")', app_code)
+        self.assertNotIn('st.session_state.get("sq_win", "all")', app_code)
+        self.assertNotIn('st.session_state.get("hq_win", "all")', app_code)
+        self.assertNotIn('st.session_state.get("exec_win", "all")', app_code)
+
+        # Check time window choices label for week
+        self.assertIn('"week": "Last 7 Days (Rolling)"', app_code)
+
+        # Verify database queries support default week calculation
+        credit_ops = database.get_filtered_operations(module_filter="credit", time_window="week", limit=50)
+        self.assertIsInstance(credit_ops, list)
+
+        credit_kpis = database.get_department_kpis("credit", time_window="week")
+        self.assertIn("pending_count", credit_kpis)
+        self.assertIn("processed_count", credit_kpis)
+
+        exec_ops = database.get_filtered_operations(module_filter="all", time_window="week", limit=50)
+        self.assertIsInstance(exec_ops, list)
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite
