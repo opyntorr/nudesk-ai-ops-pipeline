@@ -362,11 +362,40 @@ with tabs[0]:
                 time_window=cq_win
             )
 
-            # Manual Ad-hoc Action Button
-            if st.button("+ New Ad-Hoc / Manual Application", key="btn_c_manual_entry", use_container_width=True):
-                st.session_state.active_credit_id = "manual"
-                st.session_state.credit_result = None
-                st.rerun()
+            # Manual Ad-hoc and Synthetic Stream Simulation
+            col_cad1, col_cad2 = st.columns([1, 1])
+            with col_cad1:
+                if st.button("+ Manual Entry", key="btn_c_manual_entry", use_container_width=True):
+                    st.session_state.active_credit_id = "manual"
+                    st.session_state.credit_result = None
+                    st.rerun()
+            with col_cad2:
+                with st.popover("+ Simulate Stream", use_container_width=True):
+                    st.caption("Inject synthetic external webhook payload:")
+                    if st.button("Read AI: Livestock Hauler ($195k)", key="sim_c_readai", use_container_width=True):
+                        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                        p = generate_synthetic_payload("readai", "credit")
+                        f = extract_ingestion_fields(p, "readai", "credit")
+                        new_id = database.ingest_pending_record(
+                            module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                            transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                            doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                        )
+                        st.session_state.active_credit_id = new_id
+                        st.session_state.credit_result = None
+                        st.rerun()
+                    if st.button("Google Drive: Freight Aging PDF", key="sim_c_gdrive", use_container_width=True):
+                        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                        p = generate_synthetic_payload("gdrive", "credit")
+                        f = extract_ingestion_fields(p, "gdrive", "credit")
+                        new_id = database.ingest_pending_record(
+                            module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                            transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                            doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                        )
+                        st.session_state.active_credit_id = new_id
+                        st.session_state.credit_result = None
+                        st.rerun()
 
             if pending_credit_items:
                 for rec in pending_credit_items:
@@ -716,10 +745,27 @@ with tabs[1]:
                 time_window=sq_win
             )
 
-            if st.button("+ New Ad-Hoc / Manual Prospect", key="btn_s_manual_entry", use_container_width=True):
-                st.session_state.active_sales_id = "manual"
-                st.session_state.sales_result = None
-                st.rerun()
+            col_sad1, col_sad2 = st.columns([1, 1])
+            with col_sad1:
+                if st.button("+ Manual Entry", key="btn_s_manual_entry", use_container_width=True):
+                    st.session_state.active_sales_id = "manual"
+                    st.session_state.sales_result = None
+                    st.rerun()
+            with col_sad2:
+                with st.popover("+ Simulate Stream", use_container_width=True):
+                    st.caption("Inject synthetic external webhook payload:")
+                    if st.button("Fireflies: Flatbed Steel ($4.2M)", key="sim_s_fireflies", use_container_width=True):
+                        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                        p = generate_synthetic_payload("fireflies", "sales")
+                        f = extract_ingestion_fields(p, "fireflies", "sales")
+                        new_id = database.ingest_pending_record(
+                            module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                            transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                            doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                        )
+                        st.session_state.active_sales_id = new_id
+                        st.session_state.sales_result = None
+                        st.rerun()
 
             if pending_sales_items:
                 for rec in pending_sales_items:
@@ -1039,10 +1085,27 @@ with tabs[2]:
                 time_window=hq_win
             )
 
-            if st.button("+ New Ad-Hoc / Manual Screening", key="btn_h_manual_entry", use_container_width=True):
-                st.session_state.active_hr_id = "manual"
-                st.session_state.hr_result = None
-                st.rerun()
+            col_had1, col_had2 = st.columns([1, 1])
+            with col_had1:
+                if st.button("+ Manual Entry", key="btn_h_manual_entry", use_container_width=True):
+                    st.session_state.active_hr_id = "manual"
+                    st.session_state.hr_result = None
+                    st.rerun()
+            with col_had2:
+                with st.popover("+ Simulate Stream", use_container_width=True):
+                    st.caption("Inject synthetic external webhook payload:")
+                    if st.button("Read AI: Bilingual Underwriter (C1)", key="sim_h_readai", use_container_width=True):
+                        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                        p = generate_synthetic_payload("readai", "hr")
+                        f = extract_ingestion_fields(p, "readai", "hr")
+                        new_id = database.ingest_pending_record(
+                            module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                            transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                            doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                        )
+                        st.session_state.active_hr_id = new_id
+                        st.session_state.hr_result = None
+                        st.rerun()
 
             if pending_hr_items:
                 for rec in pending_hr_items:
@@ -1732,3 +1795,40 @@ with tabs[4]:
             st.metric("Database Health", "SQLite OK (data/operations_history.db)")
         with col_d3:
             st.metric("Pydantic Schemas", "3 Active (Credit, Sales, HR)")
+
+        st.markdown("#### Synthetic Webhook & Meeting Bot Simulator")
+        st.caption("Demonstration suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive without paid accounts.")
+        col_sim1, col_sim2, col_sim3 = st.columns(3)
+        with col_sim1:
+            if st.button("Fire Read AI Credit Call", use_container_width=True, key="btn_it_sim_readai"):
+                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                p = generate_synthetic_payload("readai", "credit")
+                f = extract_ingestion_fields(p, "readai", "credit")
+                nid = database.ingest_pending_record(
+                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                )
+                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Credit Queue)")
+        with col_sim2:
+            if st.button("Fire Fireflies Sales Call", use_container_width=True, key="btn_it_sim_fireflies"):
+                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                p = generate_synthetic_payload("fireflies", "sales")
+                f = extract_ingestion_fields(p, "fireflies", "sales")
+                nid = database.ingest_pending_record(
+                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                )
+                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Sales Queue)")
+        with col_sim3:
+            if st.button("Fire Google Drive Intake", use_container_width=True, key="btn_it_sim_gdrive"):
+                from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                p = generate_synthetic_payload("gdrive", "credit")
+                f = extract_ingestion_fields(p, "gdrive", "credit")
+                nid = database.ingest_pending_record(
+                    module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                    transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                    doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                )
+                st.success(f"Ingested Record #{nid}: {f['entity_name']} (Drive Intake)")

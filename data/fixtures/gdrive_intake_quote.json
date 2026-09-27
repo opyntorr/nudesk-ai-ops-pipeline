@@ -1,0 +1,14 @@
+{
+  "event": "file_created",
+  "file_id": "1gDrive_intake_883204",
+  "name": "Baja_Cold_Chain_Freight_Bill_Aging.pdf",
+  "folder": "nuDesk_Intake_Credit",
+  "mimeType": "application/pdf",
+  "created_time": "2026-09-26T22:30:00Z",
+  "webViewLink": "https://drive.google.com/file/d/1gDrive_intake_883204/view",
+  "size": 348200,
+  "text_content": "COMMERCIAL FREIGHT BILL AGING REPORT - BAJA CROSS-BORDER COLD CHAIN\nAudit Date: September 2026\nTotal Outstanding Invoices: $210,450.00 USD\nDebtor: Driscoll's Berries & Taylor Farms International\nPayment Terms: Net 45 Days\nStatus: 0-30 Days: $165,000 | 31-60 Days: $45,450 | 90+ Days: $0.00\nCollateral Lien Verification: Clean Title, No Factoring Liens on Record.",
+  "extracted_metric": "$210,450 USD | Produce Freight Invoices",
+  "client_name": "Baja Cold Chain Freight (Otay Mesa, CA)",
+  "department": "credit"
+}

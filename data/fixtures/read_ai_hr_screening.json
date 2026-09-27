@@ -1,0 +1,37 @@
+{
+  "event": "meeting.completed",
+  "meeting_id": "read_hr_77192",
+  "title": "Bilingual Screening Interview - Valeria Beltrán",
+  "platform": "google_meet",
+  "start_time": "2026-09-26T20:00:00Z",
+  "end_time": "2026-09-26T20:30:00Z",
+  "duration_minutes": 30,
+  "organizer": {
+    "name": "Elena Ramos",
+    "email": "elena.ramos@nudesk.ai",
+    "role": "Lead Talent Specialist"
+  },
+  "participants": [
+    {
+      "name": "Elena Ramos",
+      "email": "elena.ramos@nudesk.ai",
+      "role": "host"
+    },
+    {
+      "name": "Valeria Beltrán",
+      "email": "valeria.beltran@talentmail.com",
+      "role": "candidate"
+    }
+  ],
+  "summary": "Valeria Beltrán interviewed for Bilingual Commercial Underwriter position. Demonstrated 5 years experience handling US trucking accounts, fluency in commercial English (C1 CEFR), and strong knowledge of balance sheet debt reconciliation.",
+  "action_items": [
+    "Schedule Case Study with Robert Martinez",
+    "Confirm salary expectation ($2,800 USD/mo)"
+  ],
+  "full_transcript_text": "[00:00:02] Elena Ramos: Good afternoon Valeria. Welcome to the initial screening session for the Commercial Underwriting role at nuDesk Mazatlán Hub.\n[00:00:15] Valeria Beltrán: Thank you Elena. I am very excited about this opportunity. For the past five years, I have been analyzing financial statements, tax returns, and debt schedules for logistics operators in the US Southwest.\n[00:00:45] Elena Ramos: Could you tell me how you handle cases where an applicant attempts to hide secondary MCA debt or factoring liens?\n[00:01:05] Valeria Beltrán: Absolutely. In daily bank statement reconciliations, I immediately look for repeated daily or weekly ACH debits with codes like 'MCA', 'CAP', or 'FND'. Even if not disclosed on the debt schedule, the cash ledger never lies.\n[00:01:30] Elena Ramos: That is precisely what we look for.",
+  "recording_url": "https://app.read.ai/analytics/meetings/read_hr_77192",
+  "bot_source": "Google Meet via Read AI",
+  "headline_metric": "Senior Commercial Underwriter (C1 Fluent)",
+  "client_name": "Valeria Beltrán (Culiacán, Sin.)",
+  "department": "hr"
+}
