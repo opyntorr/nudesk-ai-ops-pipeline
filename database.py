@@ -62,7 +62,9 @@ def init_db() -> None:
     dirty_count = cursor.fetchone()["count"]
     cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE is_processed = 0")
     pending_count = cursor.fetchone()["count"]
-    if dirty_count > 0 or pending_count < 4:
+    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE module_type = 'hr' AND full_output_json LIKE '%candidate_fit_tier%'")
+    hr_schema_count = cursor.fetchone()["count"]
+    if dirty_count > 0 or pending_count < 4 or hr_schema_count == 0:
         cursor.execute("DELETE FROM operations_history")
         seed_organic_benchmarks(conn)
 
@@ -431,9 +433,21 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Incoming Stream",
             "hr",
             "Sofia Valdez (Mazatlán, Sin.)",
-            "Senior Bilingual Credit Analyst",
+            "High Fit (94) | Psico: 92 | Test: 96",
             "Screening call with Elena Ramos. 4 years SME underwriting experience; demonstrated sharp detection of undisclosed MCA debt.",
-            json.dumps({"candidate": "Sofia Valdez", "experience_years": 4, "cefr": "C1", "fit_score": 94, "action": "Advance to Interview"}),
+            json.dumps({
+                "candidate": "Sofia Valdez",
+                "applied_role": "Senior Bilingual Credit Analyst",
+                "application_area": "Credit Underwriting & Risk",
+                "candidate_fit_tier": "High Fit",
+                "candidate_fit_score": 94,
+                "psychometrics_score": 92,
+                "knowledge_test_score": 96,
+                "overall_fit_score": 94,
+                "experience_years": 4,
+                "cefr": "C1",
+                "action": "Advance to Interview"
+            }),
             "Pending Triage",
             0,
             "Google Meet via Read AI",
@@ -445,9 +459,21 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Incoming Stream",
             "hr",
             "Carlos Mendoza (Mazatlán, Sin.)",
-            "Commercial BDR (Logistics)",
+            "High Fit (87) | Psico: 89 | Test: 88",
             "3 years outbound B2B sales experience targeting US logistics carriers. Fluent commercial English with confident objection handling.",
-            json.dumps({"candidate": "Carlos Mendoza", "experience_years": 3, "cefr": "B2+", "fit_score": 87, "action": "Advance to Case Study"}),
+            json.dumps({
+                "candidate": "Carlos Mendoza",
+                "applied_role": "Commercial BDR (Logistics)",
+                "application_area": "Commercial Sales & BDR",
+                "candidate_fit_tier": "High Fit",
+                "candidate_fit_score": 87,
+                "psychometrics_score": 89,
+                "knowledge_test_score": 88,
+                "overall_fit_score": 87,
+                "experience_years": 3,
+                "cefr": "B2+",
+                "action": "Advance to Case Study"
+            }),
             "Pending Triage",
             0,
             "Google Meet via Read AI",
@@ -459,9 +485,21 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Incoming Stream",
             "hr",
             "Valeria Beltrán (Culiacán, Sin.)",
-            "Senior Talent Acquisition Specialist",
+            "High Fit (92) | Psico: 95 | Test: 90",
             "5 years sourcing bilingual underwriting and accounting specialists across Sinaloa and Sonora. Strong recruiter network.",
-            json.dumps({"candidate": "Valeria Beltrán", "experience_years": 5, "cefr": "C1", "fit_score": 92, "action": "Advance to Interview"}),
+            json.dumps({
+                "candidate": "Valeria Beltrán",
+                "applied_role": "Senior Talent Acquisition Specialist",
+                "application_area": "Operations & Accounting",
+                "candidate_fit_tier": "High Fit",
+                "candidate_fit_score": 92,
+                "psychometrics_score": 95,
+                "knowledge_test_score": 90,
+                "overall_fit_score": 92,
+                "experience_years": 5,
+                "cefr": "C1",
+                "action": "Advance to Interview"
+            }),
             "Pending Triage",
             0,
             "Google Meet via Fireflies.ai",
@@ -505,9 +543,20 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Talent Specialist",
             "hr",
             "Mateo Guerrero (Mazatlán, Sin.)",
-            "Score: 88/100 | B2 Commercial BDR",
+            "High Fit (88) | Psico: 85 | Test: 87",
             "Solid cold calling experience in logistics staffing; fluent commercial English with fast speed-to-lead execution.",
-            json.dumps({"fit_score": 88, "cefr": "B2", "action": "Advance to Technical Interview"}),
+            json.dumps({
+                "candidate": "Mateo Guerrero",
+                "applied_role": "Commercial BDR",
+                "application_area": "Commercial Sales & BDR",
+                "candidate_fit_tier": "High Fit",
+                "candidate_fit_score": 88,
+                "psychometrics_score": 85,
+                "knowledge_test_score": 87,
+                "overall_fit_score": 88,
+                "cefr": "B2",
+                "action": "Advance to Technical Interview"
+            }),
             "Synced",
             1,
             "Google Meet / Read AI",
@@ -547,9 +596,20 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Talent Specialist",
             "hr",
             "Mariana Ochoa (Culiacán, Sin.)",
-            "Score: 91/100 | C2 Lead Specialist",
+            "High Fit (91) | Psico: 94 | Test: 93",
             "Over 6 years financial analysis and underwriting leadership; exceptional cross-border commercial lending communication.",
-            json.dumps({"fit_score": 91, "cefr": "C2", "action": "Direct Offer Recommended"}),
+            json.dumps({
+                "candidate": "Mariana Ochoa",
+                "applied_role": "Senior Underwriting Lead",
+                "application_area": "Credit Underwriting & Risk",
+                "candidate_fit_tier": "High Fit",
+                "candidate_fit_score": 91,
+                "psychometrics_score": 94,
+                "knowledge_test_score": 93,
+                "overall_fit_score": 91,
+                "cefr": "C2",
+                "action": "Direct Offer Recommended"
+            }),
             "Synced",
             1,
             "Google Meet / Read AI",
@@ -589,9 +649,20 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Talent Specialist",
             "hr",
             "Diego Carvajal (Mazatlán, Sin.)",
-            "Score: 86/100 | B2 Credit Analyst",
+            "Moderate Fit (86) | Psico: 84 | Test: 82",
             "3 years banking documentation review in Mazatlán. Good understanding of balance sheet ratios and asset collateral.",
-            json.dumps({"fit_score": 86, "cefr": "B2", "action": "Advance to Case Study"}),
+            json.dumps({
+                "candidate": "Diego Carvajal",
+                "applied_role": "Junior Credit Analyst",
+                "application_area": "Credit Underwriting & Risk",
+                "candidate_fit_tier": "Moderate Fit",
+                "candidate_fit_score": 86,
+                "psychometrics_score": 84,
+                "knowledge_test_score": 82,
+                "overall_fit_score": 86,
+                "cefr": "B2",
+                "action": "Advance to Case Study"
+            }),
             "Synced",
             1,
             "Google Meet / Read AI",
@@ -648,4 +719,38 @@ def ingest_pending_record(
         source_channel=source_channel,
         analyst_notes=""
     )
+
+
+def get_candidate_area(record: Dict[str, Any]) -> str:
+    """
+    Extract or intelligently infer the functional application area for an HR candidate record.
+    Returns one of:
+      - 'Credit Underwriting & Risk'
+      - 'Commercial Sales & BDR'
+      - 'Operations & Accounting'
+      - 'Technology & Systems'
+    """
+    try:
+        raw = record.get("full_output_json", "{}")
+        d = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        if isinstance(d, dict) and d.get("application_area"):
+            return d["application_area"]
+    except Exception:
+        pass
+
+    text = (
+        str(record.get("headline_metric", "")) + " " +
+        str(record.get("entity_name", "")) + " " +
+        str(record.get("assessment_summary", ""))
+    ).lower()
+
+    if any(k in text for k in ["credit", "underwriter", "underwriting", "risk", "analyst", "mca"]):
+        return "Credit Underwriting & Risk"
+    elif any(k in text for k in ["bdr", "sales", "outreach", "commercial", "calling"]):
+        return "Commercial Sales & BDR"
+    elif any(k in text for k in ["operations", "accounting", "recruiter", "talent", "hr", "sourcing"]):
+        return "Operations & Accounting"
+    elif any(k in text for k in ["technology", "systems", "it", "dev", "engineer", "software"]):
+        return "Technology & Systems"
+    return "Credit Underwriting & Risk"
 

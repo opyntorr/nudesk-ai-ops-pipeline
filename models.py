@@ -56,8 +56,40 @@ class SalesLeadOutput(BaseModel):
 class HRTalentOutput(BaseModel):
     candidate_name: str = Field(description="Full name of candidate interviewed")
     applied_role: str = Field(description="Role applied for within nuDesk or lending client team")
+    application_area: Literal[
+        "Credit Underwriting & Risk",
+        "Commercial Sales & BDR",
+        "Operations & Accounting",
+        "Technology & Systems"
+    ] = Field(
+        default="Credit Underwriting & Risk",
+        description="Functional operational area within the financial services hub"
+    )
+    candidate_fit_tier: Literal["High Fit", "Moderate Fit", "Low Fit"] = Field(
+        default="High Fit",
+        description="Qualitative AI evaluation tier of overall candidate suitability for the role and culture"
+    )
+    candidate_fit_score: int = Field(
+        default=88,
+        description="Qualitative candidate fit evaluation score from 1 to 100",
+        ge=1,
+        le=100
+    )
+    psychometrics_score: int = Field(
+        default=85,
+        description="Calificación de pruebas psicométricas y perfil de personalidad laboral (0 a 100)",
+        ge=0,
+        le=100
+    )
+    knowledge_test_score: int = Field(
+        default=85,
+        description="Calificación en test técnico de conocimientos específicos del área financiera (0 a 100)",
+        ge=0,
+        le=100
+    )
     overall_fit_score: int = Field(
-        description="Score from 1 to 100 assessing technical capability, bilingual fluency, and culture fit",
+        default=88,
+        description="Composite fit score (1 to 100) assessing technical capability, fluency, and culture fit",
         ge=1,
         le=100
     )
@@ -66,7 +98,10 @@ class HRTalentOutput(BaseModel):
         "C1 Advanced Professional",
         "B2 Working Proficiency",
         "Below Target"
-    ] = Field(description="Assessed English fluency for US lending communication")
+    ] = Field(
+        default="C1 Advanced Professional",
+        description="Assessed English fluency for US lending communication"
+    )
     executive_summary: str = Field(
         description="2-3 sentence overview of candidate strengths, background fit, and communication style"
     )

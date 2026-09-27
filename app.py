@@ -291,8 +291,8 @@ with tabs[0]:
     import pandas as pd
     import altair as alt
 
-    # Top Section: Key Metrics Ribbon & Underwriting Risk Donut Chart
-    col_c_stats, col_c_donut = st.columns([7, 5], gap="medium")
+    # Top Section: Key Metrics Ribbon & Dual Donut Visualizations (Status + Risk)
+    col_c_stats, col_c_donut_status, col_c_donut_risk = st.columns([4, 4, 4], gap="medium")
     with col_c_stats:
         st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
 <div class="kpi-card" style="padding:0.75rem 1rem;">
@@ -307,7 +307,32 @@ with tabs[0]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with col_c_donut:
+    with col_c_donut_status:
+        tot_c_ops = credit_kpis['pending_count'] + credit_kpis['processed_count']
+        if tot_c_ops > 0:
+            df_c_status = pd.DataFrame({
+                "Status": ["Completed", "Pending"],
+                "Files": [credit_kpis['processed_count'], credit_kpis['pending_count']]
+            })
+            df_c_status = df_c_status[df_c_status["Files"] > 0]
+            c_status_chart = alt.Chart(df_c_status).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Files", type="quantitative"),
+                color=alt.Color(
+                    field="Status",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["Completed", "Pending"],
+                        range=["#3EA258", "#D97706"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Status", "Files"]
+            ).properties(height=110)
+            st.altair_chart(c_status_chart, width="stretch")
+        else:
+            st.info("No credit files in this period.")
+
+    with col_c_donut_risk:
         low_c = len([r for r in credit_records if "low" in r.get("headline_metric", "").lower() or "low" in r.get("full_output_json", "").lower()])
         mod_c = len([r for r in credit_records if "moderate" in r.get("headline_metric", "").lower() or "medium" in r.get("headline_metric", "").lower() or "moderate" in r.get("full_output_json", "").lower()])
         high_c = len([r for r in credit_records if "high" in r.get("headline_metric", "").lower() or "high" in r.get("full_output_json", "").lower()])
@@ -333,7 +358,7 @@ with tabs[0]:
             ).properties(height=110)
             st.altair_chart(c_chart, width="stretch")
         else:
-            st.info("No credit files in this period.")
+            st.info("No risk files in this period.")
 
     # Master-Detail Split Workspace
     col_c_queue, col_c_canvas = st.columns([5, 7])
@@ -436,15 +461,89 @@ with tabs[0]:
             if processed_credit_items:
                 for rec in processed_credit_items:
                     sla = database.calculate_sla_status(rec["timestamp"], is_processed=1)
-                    with st.expander(f"{rec['entity_name']} — {rec['headline_metric']}"):
-                        st.markdown(f"""<div style="margin-bottom:0.5rem;">
-<span class="nudesk-badge badge-green">{rec['dispatch_status']}</span>
-<span style="font-size:0.8rem; color:#64748B; margin-left:0.5rem;">Resolved {sla['label']} &bull; {rec['operator_name']}</span>
+                    metric_str = rec.get("headline_metric", "")
+                    entity_str = rec.get("entity_name", "")
+                    time_str = rec.get("timestamp", "")
+
+                    data_dict = {}
+                    try:
+                        data_dict = json.loads(rec.get("full_output_json", "{}"))
+                    except Exception:
+                        pass
+
+                    k1_l, k1_v = "Facility Requested", str(data_dict.get("requested_amount", metric_str.split("|")[-1].strip()))
+                    if k1_v.isdigit():
+                        k1_v = f"${int(k1_v):,} USD"
+                    k1_cls = "kpi-box-navy"
+
+                    k2_l, k2_v = "Risk Rating", str(data_dict.get("risk_tier", metric_str.split("|")[0].strip()))
+                    k2_lower = k2_v.lower()
+                    if "high" in k2_lower or "breach" in k2_lower or "elevated" in k2_lower:
+                        k2_cls = "kpi-box-red"
+                    elif "moderate" in k2_lower or "medium" in k2_lower:
+                        k2_cls = "kpi-box-amber"
+                    else:
+                        k2_cls = "kpi-box-green"
+
+                    k3_l, k3_v = "Debt Ratio", str(data_dict.get("dti", data_dict.get("dscr", "Verified")))
+                    if k3_v != "Verified" and not ("DTI" in k3_v or "DSCR" in k3_v):
+                        k3_v = f"{k3_v} DTI"
+                    k3_lower = k3_v.lower()
+                    if any(x in k3_lower for x in ["44%", "45%", "46%", "47%", "48%", "49%", "50%", "high", "breach"]):
+                        k3_cls = "kpi-box-red"
+                    elif any(x in k3_lower for x in ["38%", "39%", "40%", "41%", "42%", "43%", "moderate"]):
+                        k3_cls = "kpi-box-amber"
+                    else:
+                        k3_cls = "kpi-box-teal"
+
+                    k4_l, k4_v = "Collateral Pledged", str(data_dict.get("collateral", "Equipment / Receivables"))
+                    k4_lower = k4_v.lower()
+                    if any(x in k4_lower for x in ["none", "unsecured", "insufficient", "deficit"]):
+                        k4_cls = "kpi-box-red"
+                    else:
+                        k4_cls = "kpi-box-navy"
+
+                    st.markdown(f"""<div class="exec-log-card" style="margin-bottom:0.5rem;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem;">
+    <div>
+        <span class="nudesk-badge badge-navy">CREDIT</span>
+        <strong style="font-size:0.98rem; margin-left:0.4rem; color:var(--nd-text);">{entity_str}</strong>
+        <span class="nudesk-badge badge-green" style="margin-left:0.4rem;">{rec['dispatch_status']}</span>
+    </div>
+    <div style="font-size:0.78rem; color:var(--nd-muted);">
+        {sla['label']} &bull; {time_str}
+    </div>
+</div>
+<div class="kpi-large-grid">
+    <div class="kpi-box-large {k1_cls}">
+        <div class="kpi-box-label">{k1_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k1_v}</div>
+    </div>
+    <div class="kpi-box-large {k2_cls}">
+        <div class="kpi-box-label">{k2_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k2_v}</div>
+    </div>
+    <div class="kpi-box-large {k3_cls}">
+        <div class="kpi-box-label">{k3_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k3_v}</div>
+    </div>
+    <div class="kpi-box-large {k4_cls}">
+        <div class="kpi-box-label">{k4_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k4_v}</div>
+    </div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+                    with st.expander(f"Details & Assessment ({entity_str})", expanded=False):
                         st.markdown("**Executive Memo:**")
                         st.write(rec.get("assessment_summary", ""))
                         if rec.get("analyst_notes"):
-                            st.markdown(f"**Underwriter Sign-Off:** *{rec['analyst_notes']}*")
+                            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:3px solid var(--nd-green); padding:0.55rem 0.85rem; border-radius:4px; margin-top:0.4rem; font-size:0.85rem;">
+<strong>Underwriter Sign-Off:</strong> <em>{rec['analyst_notes']}</em>
+</div>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div style="margin-top:0.5rem; font-size:0.78rem; color:var(--nd-muted);">
+Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')}
+</div>""", unsafe_allow_html=True)
             else:
                 st.info("No processed underwriting memos found in this timeframe.")
 
@@ -673,8 +772,8 @@ with tabs[1]:
     sales_kpis = database.get_department_kpis("sales", time_window=sq_win)
     sales_records = database.get_filtered_operations(module_filter="sales", time_window=sq_win, limit=200)
 
-    # Top Section: Key Metrics Ribbon & Sales Lead Quality Donut Chart
-    col_s_stats, col_s_donut = st.columns([7, 5], gap="medium")
+    # Top Section: Key Metrics Ribbon & Dual Donut Visualizations (Status + Lead Quality)
+    col_s_stats, col_s_donut_status, col_s_donut_tier = st.columns([4, 4, 4], gap="medium")
     with col_s_stats:
         st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
 <div class="kpi-card" style="padding:0.75rem 1rem;">
@@ -689,7 +788,32 @@ with tabs[1]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with col_s_donut:
+    with col_s_donut_status:
+        tot_s_ops = sales_kpis['pending_count'] + sales_kpis['processed_count']
+        if tot_s_ops > 0:
+            df_s_status = pd.DataFrame({
+                "Status": ["Completed", "Pending"],
+                "Leads": [sales_kpis['processed_count'], sales_kpis['pending_count']]
+            })
+            df_s_status = df_s_status[df_s_status["Leads"] > 0]
+            s_status_chart = alt.Chart(df_s_status).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Leads", type="quantitative"),
+                color=alt.Color(
+                    field="Status",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["Completed", "Pending"],
+                        range=["#3EA258", "#D97706"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Status", "Leads"]
+            ).properties(height=110)
+            st.altair_chart(s_status_chart, width="stretch")
+        else:
+            st.info("No leads in this period.")
+
+    with col_s_donut_tier:
         hot_s = len([r for r in sales_records if any(k in r.get("full_output_json", "") for k in ['"lead_score": 9', '"lead_score": 88', '"lead_score": 89', '"lead_score": 90', '"lead_score": 92', '"lead_score": 94', '"lead_score": 95']) or "9" in r.get("headline_metric", "").split("|")[0]])
         warm_s = len([r for r in sales_records if any(k in r.get("full_output_json", "") for k in ['"lead_score": 7', '"lead_score": 80', '"lead_score": 82', '"lead_score": 84', '"lead_score": 85'])])
         cold_s = max(0, len(sales_records) - (hot_s + warm_s))
@@ -806,14 +930,88 @@ with tabs[1]:
             if processed_sales_items:
                 for rec in processed_sales_items:
                     sla = database.calculate_sla_status(rec["timestamp"], is_processed=1)
-                    with st.expander(f"{rec['entity_name']} — {rec['headline_metric']}"):
-                        st.markdown(f"""<div style="margin-bottom:0.5rem;">
-<span class="nudesk-badge badge-green">{rec['dispatch_status']}</span>
-<span style="font-size:0.8rem; color:#64748B; margin-left:0.5rem;">Synced {sla['label']} &bull; {rec['operator_name']}</span>
+                    metric_str = rec.get("headline_metric", "")
+                    entity_str = rec.get("entity_name", "")
+                    time_str = rec.get("timestamp", "")
+
+                    data_dict = {}
+                    try:
+                        data_dict = json.loads(rec.get("full_output_json", "{}"))
+                    except Exception:
+                        pass
+
+                    k1_l, k1_v = "Annual Revenue", str(data_dict.get("arr", metric_str.split("|")[-1].strip()))
+                    if k1_v.isdigit():
+                        k1_v = f"${int(k1_v):,} ARR"
+                    k1_cls = "kpi-box-navy"
+
+                    score_val = data_dict.get("lead_score", 85)
+                    try:
+                        score_num = int(score_val)
+                    except Exception:
+                        score_num = 85
+                    k2_l, k2_v = "Lead Score", f"{score_num} / 100"
+                    if score_num < 70:
+                        k2_cls = "kpi-box-red"
+                    elif score_num < 85:
+                        k2_cls = "kpi-box-amber"
+                    else:
+                        k2_cls = "kpi-box-green"
+
+                    k3_l, k3_v = "Commercial Fleet", f"{data_dict.get('fleet_size', '12')} Units"
+                    try:
+                        fleet_num = int(data_dict.get('fleet_size', 12))
+                        if fleet_num < 5:
+                            k3_cls = "kpi-box-amber"
+                        else:
+                            k3_cls = "kpi-box-teal"
+                    except Exception:
+                        k3_cls = "kpi-box-teal"
+
+                    k4_l, k4_v = "Outreach Staged", "Cold Email & Phone Pitch"
+                    k4_cls = "kpi-box-navy"
+
+                    st.markdown(f"""<div class="exec-log-card" style="margin-bottom:0.5rem;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem;">
+    <div>
+        <span class="nudesk-badge badge-teal">SALES</span>
+        <strong style="font-size:0.98rem; margin-left:0.4rem; color:var(--nd-text);">{entity_str}</strong>
+        <span class="nudesk-badge badge-green" style="margin-left:0.4rem;">{rec['dispatch_status']}</span>
+    </div>
+    <div style="font-size:0.78rem; color:var(--nd-muted);">
+        {sla['label']} &bull; {time_str}
+    </div>
+</div>
+<div class="kpi-large-grid">
+    <div class="kpi-box-large {k1_cls}">
+        <div class="kpi-box-label">{k1_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k1_v}</div>
+    </div>
+    <div class="kpi-box-large {k2_cls}">
+        <div class="kpi-box-label">{k2_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k2_v}</div>
+    </div>
+    <div class="kpi-box-large {k3_cls}">
+        <div class="kpi-box-label">{k3_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k3_v}</div>
+    </div>
+    <div class="kpi-box-large {k4_cls}">
+        <div class="kpi-box-label">{k4_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k4_v}</div>
+    </div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+                    with st.expander(f"Details & Assessment ({entity_str})", expanded=False):
+                        st.markdown("**Executive Assessment Summary:**")
                         st.write(rec.get("assessment_summary", ""))
                         if rec.get("analyst_notes"):
-                            st.markdown(f"**BDR Sign-Off:** *{rec['analyst_notes']}*")
+                            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:3px solid var(--nd-green); padding:0.55rem 0.85rem; border-radius:4px; margin-top:0.4rem; font-size:0.85rem;">
+<strong>BDR Sign-Off:</strong> <em>{rec['analyst_notes']}</em>
+</div>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div style="margin-top:0.5rem; font-size:0.78rem; color:var(--nd-muted);">
+Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')}
+</div>""", unsafe_allow_html=True)
             else:
                 st.info("No qualified leads found in this timeframe.")
 
@@ -1013,8 +1211,8 @@ with tabs[2]:
     hr_kpis = database.get_department_kpis("hr", time_window=hq_win)
     hr_records = database.get_filtered_operations(module_filter="hr", time_window=hq_win, limit=200)
 
-    # Top Section: Key Metrics Ribbon & Bilingual Fluency Donut Chart
-    col_h_stats, col_h_donut = st.columns([7, 5], gap="medium")
+    # Top Section: Key Metrics Ribbon & Dual Donut Visualizations (Status + Candidate Fit)
+    col_h_stats, col_h_donut_status, col_h_donut_fit = st.columns([4, 4, 4], gap="medium")
     with col_h_stats:
         st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
 <div class="kpi-card" style="padding:0.75rem 1rem;">
@@ -1029,35 +1227,79 @@ with tabs[2]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-    with col_h_donut:
-        c1_h = len([r for r in hr_records if "c1" in r.get("full_output_json", "").lower() or "c2" in r.get("full_output_json", "").lower() or "c1" in r.get("headline_metric", "").lower()])
-        b2_h = len([r for r in hr_records if "b2" in r.get("full_output_json", "").lower() or "b2" in r.get("headline_metric", "").lower()])
-        basic_h = max(0, len(hr_records) - (c1_h + b2_h))
-        if len(hr_records) == 0:
-            c1_h, b2_h, basic_h = 0, 0, 0
-        tot_h = c1_h + b2_h + basic_h
-        if tot_h > 0:
-            df_h_tier = pd.DataFrame({
-                "Fluency Level": ["C1/C2 Advanced", "B2 Operational", "Review / Basic"],
-                "Candidates": [max(1, c1_h), max(1, b2_h), max(0, basic_h)]
+    with col_h_donut_status:
+        tot_h_ops = hr_kpis['pending_count'] + hr_kpis['processed_count']
+        if tot_h_ops > 0:
+            df_h_status = pd.DataFrame({
+                "Status": ["Completed", "Pending"],
+                "Candidates": [hr_kpis['processed_count'], hr_kpis['pending_count']]
             })
-            df_h_tier = df_h_tier[df_h_tier["Candidates"] > 0]
-            h_chart = alt.Chart(df_h_tier).mark_arc(innerRadius=36).encode(
+            df_h_status = df_h_status[df_h_status["Candidates"] > 0]
+            h_status_chart = alt.Chart(df_h_status).mark_arc(innerRadius=36).encode(
                 theta=alt.Theta(field="Candidates", type="quantitative"),
                 color=alt.Color(
-                    field="Fluency Level",
+                    field="Status",
                     type="nominal",
                     scale=alt.Scale(
-                        domain=["C1/C2 Advanced", "B2 Operational", "Review / Basic"],
+                        domain=["Completed", "Pending"],
+                        range=["#3EA258", "#D97706"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Status", "Candidates"]
+            ).properties(height=110)
+            st.altair_chart(h_status_chart, width="stretch")
+        else:
+            st.info("No candidates in this period.")
+
+    with col_h_donut_fit:
+        high_fit_h = 0
+        mod_fit_h = 0
+        low_fit_h = 0
+        for r in hr_records:
+            raw = r.get("full_output_json", "{}")
+            d = {}
+            try:
+                d = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                pass
+            tier = str(d.get("candidate_fit_tier", "")).lower()
+            score = d.get("candidate_fit_score", d.get("fit_score", d.get("overall_fit_score", 0)))
+            try:
+                score_int = int(score)
+            except Exception:
+                score_int = 0
+
+            if "high" in tier or score_int >= 85:
+                high_fit_h += 1
+            elif "moderate" in tier or score_int >= 70:
+                mod_fit_h += 1
+            else:
+                low_fit_h += 1
+
+        tot_fit_h = high_fit_h + mod_fit_h + low_fit_h
+        if tot_fit_h > 0:
+            df_h_fit = pd.DataFrame({
+                "Candidate Fit": ["High Fit (>=85)", "Moderate Fit (70-84)", "Low Fit (<70)"],
+                "Candidates": [max(1, high_fit_h), max(1, mod_fit_h), max(0, low_fit_h)]
+            })
+            df_h_fit = df_h_fit[df_h_fit["Candidates"] > 0]
+            h_fit_chart = alt.Chart(df_h_fit).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Candidates", type="quantitative"),
+                color=alt.Color(
+                    field="Candidate Fit",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["High Fit (>=85)", "Moderate Fit (70-84)", "Low Fit (<70)"],
                         range=["#3EA258", "#D97706", "#DC2626"]
                     ),
                     legend=alt.Legend(orient="right", title=None)
                 ),
-                tooltip=["Fluency Level", "Candidates"]
+                tooltip=["Candidate Fit", "Candidates"]
             ).properties(height=110)
-            st.altair_chart(h_chart, width="stretch")
+            st.altair_chart(h_fit_chart, width="stretch")
         else:
-            st.info("No candidates screened in this period.")
+            st.info("No candidate fit evaluations in this period.")
 
     col_h_queue, col_h_canvas = st.columns([5, 7])
 
@@ -1069,9 +1311,16 @@ with tabs[2]:
         ])
 
         with hr_queue_tabs[0]:
-            col_hq_s, col_hq_o = st.columns([6, 4])
+            col_hq_s, col_hq_area, col_hq_o = st.columns([4, 4, 3])
             with col_hq_s:
                 hq_search = st.text_input("Filter Candidates:", placeholder="Search candidate, role...", key="hq_search", label_visibility="collapsed")
+            with col_hq_area:
+                hq_area = st.selectbox(
+                    "Area Filter:",
+                    ["All Areas", "Credit Underwriting & Risk", "Commercial Sales & BDR", "Operations & Accounting", "Technology & Systems"],
+                    key="hq_area_filter",
+                    label_visibility="collapsed"
+                )
             with col_hq_o:
                 hq_order = st.selectbox("Sort:", ["Oldest First (FIFO)", "Newest First"], index=0, key="hq_order", label_visibility="collapsed")
 
@@ -1084,6 +1333,8 @@ with tabs[2]:
                 status_filter="pending",
                 time_window=hq_win
             )
+            if hq_area != "All Areas":
+                pending_hr_items = [r for r in pending_hr_items if database.get_candidate_area(r) == hq_area]
 
             col_had1, col_had2 = st.columns([1, 1])
             with col_had1:
@@ -1119,7 +1370,7 @@ with tabs[2]:
 <div class="queue-entity">{rec['entity_name']}</div>
 <div class="queue-metric">{rec['headline_metric']}</div>
 <div class="queue-meta">
-<span><span class="nudesk-badge {sla['color']}">{sla['label']}</span> &bull; {rec['source_channel']}</span>
+<span><span class="nudesk-badge {sla['color']}">{sla['label']}</span> &bull; {database.get_candidate_area(rec)}</span>
 <span style="font-weight:{'700' if is_active else '400'}; color:{'var(--nd-green)' if is_active else 'var(--nd-muted)'};">{status_indicator}</span>
 </div>
 </div>
@@ -1130,10 +1381,20 @@ with tabs[2]:
                         st.session_state.hr_result = None
                         st.rerun()
             else:
-                st.info("Pending candidate screening queue is clear.")
+                st.info("Pending candidate screening queue is clear for this filter.")
 
         with hr_queue_tabs[1]:
-            hp_search = st.text_input("Filter Talent Pipeline:", placeholder="Search screened candidates...", key="hp_search")
+            col_hp_s, col_hp_area = st.columns([6, 5])
+            with col_hp_s:
+                hp_search = st.text_input("Filter Talent Pipeline:", placeholder="Search screened candidates...", key="hp_search", label_visibility="collapsed")
+            with col_hp_area:
+                hp_area = st.selectbox(
+                    "Filter by Area:",
+                    ["All Areas", "Credit Underwriting & Risk", "Commercial Sales & BDR", "Operations & Accounting", "Technology & Systems"],
+                    key="hp_area_filter",
+                    label_visibility="collapsed"
+                )
+
             processed_hr_items = database.get_filtered_operations(
                 module_filter="hr",
                 search_query=hp_search,
@@ -1142,20 +1403,110 @@ with tabs[2]:
                 status_filter="processed",
                 time_window=hq_win
             )
+            if hp_area != "All Areas":
+                processed_hr_items = [r for r in processed_hr_items if database.get_candidate_area(r) == hp_area]
 
             if processed_hr_items:
                 for rec in processed_hr_items:
                     sla = database.calculate_sla_status(rec["timestamp"], is_processed=1)
-                    with st.expander(f"{rec['entity_name']} — {rec['headline_metric']}"):
-                        st.markdown(f"""<div style="margin-bottom:0.5rem;">
-<span class="nudesk-badge badge-green">{rec['dispatch_status']}</span>
-<span style="font-size:0.8rem; color:#64748B; margin-left:0.5rem;">Evaluated {sla['label']} &bull; {rec['operator_name']}</span>
+                    metric_str = rec.get("headline_metric", "")
+                    entity_str = rec.get("entity_name", "")
+                    time_str = rec.get("timestamp", "")
+
+                    data_dict = {}
+                    try:
+                        data_dict = json.loads(rec.get("full_output_json", "{}"))
+                    except Exception:
+                        pass
+
+                    fit_tier = str(data_dict.get("candidate_fit_tier", "High Fit"))
+                    fit_score = data_dict.get("candidate_fit_score", data_dict.get("fit_score", data_dict.get("overall_fit_score", 90)))
+                    try:
+                        fit_num = int(fit_score)
+                    except Exception:
+                        fit_num = 90
+
+                    k1_l, k1_v = "Candidate Fit", f"{fit_tier} ({fit_num}/100)"
+                    if fit_num < 75 or "low" in fit_tier.lower():
+                        k1_cls = "kpi-box-red"
+                    elif fit_num < 85 or "moderate" in fit_tier.lower():
+                        k1_cls = "kpi-box-amber"
+                    else:
+                        k1_cls = "kpi-box-green"
+
+                    psico_val = data_dict.get("psychometrics_score", 88)
+                    try:
+                        psico_num = int(psico_val)
+                    except Exception:
+                        psico_num = 88
+                    k2_l, k2_v = "Psicométricos", f"{psico_num} / 100"
+                    if psico_num < 70:
+                        k2_cls = "kpi-box-red"
+                    elif psico_num < 80:
+                        k2_cls = "kpi-box-amber"
+                    else:
+                        k2_cls = "kpi-box-teal"
+
+                    know_val = data_dict.get("knowledge_test_score", 90)
+                    try:
+                        know_num = int(know_val)
+                    except Exception:
+                        know_num = 90
+                    k3_l, k3_v = "Test Conocimientos", f"{know_num} / 100"
+                    if know_num < 70:
+                        k3_cls = "kpi-box-red"
+                    elif know_num < 80:
+                        k3_cls = "kpi-box-amber"
+                    else:
+                        k3_cls = "kpi-box-green"
+
+                    cand_area = database.get_candidate_area(rec)
+                    k4_l, k4_v = "Área Funcional", cand_area
+                    k4_cls = "kpi-box-navy"
+
+                    st.markdown(f"""<div class="exec-log-card" style="margin-bottom:0.5rem;">
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.4rem;">
+    <div>
+        <span class="nudesk-badge badge-green">HR TALENT</span>
+        <strong style="font-size:0.98rem; margin-left:0.4rem; color:var(--nd-text);">{entity_str}</strong>
+        <span class="nudesk-badge badge-green" style="margin-left:0.4rem;">{rec['dispatch_status']}</span>
+    </div>
+    <div style="font-size:0.78rem; color:var(--nd-muted);">
+        {sla['label']} &bull; {time_str}
+    </div>
+</div>
+<div class="kpi-large-grid">
+    <div class="kpi-box-large {k1_cls}">
+        <div class="kpi-box-label">{k1_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k1_v}</div>
+    </div>
+    <div class="kpi-box-large {k2_cls}">
+        <div class="kpi-box-label">{k2_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k2_v}</div>
+    </div>
+    <div class="kpi-box-large {k3_cls}">
+        <div class="kpi-box-label">{k3_l}</div>
+        <div class="kpi-box-val" style="font-size:1.05rem;">{k3_v}</div>
+    </div>
+    <div class="kpi-box-large {k4_cls}">
+        <div class="kpi-box-label">{k4_l}</div>
+        <div class="kpi-box-val" style="font-size:0.92rem; overflow:hidden; text-overflow:ellipsis;">{k4_v}</div>
+    </div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+                    with st.expander(f"Details & Assessment ({entity_str})", expanded=False):
+                        st.markdown("**Screening Assessment Summary:**")
                         st.write(rec.get("assessment_summary", ""))
                         if rec.get("analyst_notes"):
-                            st.markdown(f"**Recruiter Notes:** *{rec['analyst_notes']}*")
+                            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:3px solid var(--nd-green); padding:0.55rem 0.85rem; border-radius:4px; margin-top:0.4rem; font-size:0.85rem;">
+<strong>Recruiter Notes:</strong> <em>{rec['analyst_notes']}</em>
+</div>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div style="margin-top:0.5rem; font-size:0.78rem; color:var(--nd-muted);">
+Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')}
+</div>""", unsafe_allow_html=True)
             else:
-                st.info("No candidate scorecards found in this timeframe.")
+                st.info("No candidate scorecards found for this filter.")
 
     # ---------------- RIGHT PANEL: HR DECISION CANVAS ----------------
     with col_h_canvas:
@@ -1243,20 +1594,26 @@ with tabs[2]:
             else:
                 st.success(f"{status_msg}")
 
+            fit_color = "#3EA258" if hr_out.candidate_fit_tier == "High Fit" else ("#D97706" if hr_out.candidate_fit_tier == "Moderate Fit" else "#DC2626")
             st.markdown(f"""<div class="kpi-container">
 <div class="kpi-card">
-<div class="kpi-label">Candidate Fit Score</div>
-<div class="kpi-value">{hr_out.overall_fit_score} / 100</div>
-<div class="kpi-sub">Suitability Rating</div>
+<div class="kpi-label">Candidate Fit (AI)</div>
+<div class="kpi-value" style="color:{fit_color}; font-size:1.2rem;">{hr_out.candidate_fit_tier}</div>
+<div class="kpi-sub">Score: {hr_out.candidate_fit_score} / 100</div>
 </div>
 <div class="kpi-card">
-<div class="kpi-label">Bilingual Fluency</div>
-<div class="kpi-value" style="font-size:1.25rem; margin-top:0.35rem;">{hr_out.bilingual_fluency_rating}</div>
-<div class="kpi-sub">US Lending Alignment</div>
+<div class="kpi-label">Calificación Psicométricos</div>
+<div class="kpi-value">{hr_out.psychometrics_score} / 100</div>
+<div class="kpi-sub">Personality & Diligence</div>
 </div>
 <div class="kpi-card">
-<div class="kpi-label">Recommendation</div>
-<div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem; color:#3EA258;">{hr_out.recommended_action}</div>
+<div class="kpi-label">Test de Conocimientos</div>
+<div class="kpi-value">{hr_out.knowledge_test_score} / 100</div>
+<div class="kpi-sub">{hr_out.application_area}</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Recomendación</div>
+<div class="kpi-value" style="font-size:1.05rem; margin-top:0.4rem; color:#3EA258;">{hr_out.recommended_action}</div>
 <div class="kpi-sub">Hiring Pipeline</div>
 </div>
 </div>""", unsafe_allow_html=True)
@@ -1265,7 +1622,7 @@ with tabs[2]:
             st.markdown(f"""<div class="studio-card">
 <div class="studio-card-header">
 <span class="studio-card-title">{hr_out.candidate_name}</span>
-<span class="nudesk-badge badge-green">{hr_out.applied_role}</span>
+<span class="nudesk-badge badge-green">{hr_out.applied_role} &bull; {hr_out.application_area}</span>
 </div>
 <p style="color:var(--nd-text); font-size:0.9rem; line-height:1.6;">{hr_out.executive_summary}</p>
 </div>""", unsafe_allow_html=True)
@@ -1291,13 +1648,14 @@ with tabs[2]:
             col_hap_l, col_hap_btn, col_hap_r = st.columns([1, 2, 1])
             with col_hap_btn:
                 if st.button("Advance Candidate & Sign-Off (Auto-Advance)", type="primary", width="stretch", key="btn_h_dispatch"):
+                    headline_str = f"{hr_out.candidate_fit_tier} ({hr_out.candidate_fit_score}) | Psico: {hr_out.psychometrics_score} | Test: {hr_out.knowledge_test_score}"
                     if is_manual_h or not active_hr_rec:
                         rec_id = database.save_operation(
                             operator_name=persona.name,
                             operator_role=persona.role_title,
                             module_type="hr",
                             entity_name=f"{hr_out.candidate_name} ({hr_out.applied_role})",
-                            headline_metric=f"Score: {hr_out.overall_fit_score}/100 | {hr_out.bilingual_fluency_rating}",
+                            headline_metric=headline_str,
                             assessment_summary=hr_out.executive_summary,
                             full_output_json=hr_out.model_dump(),
                             dispatch_status="Synced",
@@ -1310,7 +1668,7 @@ with tabs[2]:
                         database.mark_operation_processed(
                             record_id=rec_id,
                             dispatch_status="Synced",
-                            headline_metric=f"Score: {hr_out.overall_fit_score}/100 | {hr_out.bilingual_fluency_rating}",
+                            headline_metric=headline_str,
                             assessment_summary=hr_out.executive_summary,
                             full_output_json=hr_out.model_dump(),
                             operator_name=persona.name,
@@ -1652,40 +2010,49 @@ with tabs[3]:
                 k4_cls = "kpi-box-navy"
 
             else:  # hr
-                fit_val = data_dict.get("fit_score", data_dict.get("overall_fit_score", 88))
+                fit_tier = str(data_dict.get("candidate_fit_tier", "High Fit"))
+                fit_val = data_dict.get("candidate_fit_score", data_dict.get("fit_score", data_dict.get("overall_fit_score", 88)))
                 try:
                     fit_num = int(fit_val)
                 except Exception:
                     fit_num = 88
-                k1_l, k1_v = "Candidate Fit", f"{fit_num} / 100"
-                if fit_num < 75:
+                k1_l, k1_v = "Candidate Fit", f"{fit_tier} ({fit_num}/100)"
+                if fit_num < 75 or "low" in fit_tier.lower():
                     k1_cls = "kpi-box-red"
-                elif fit_num < 85:
+                elif fit_num < 85 or "moderate" in fit_tier.lower():
                     k1_cls = "kpi-box-amber"
                 else:
                     k1_cls = "kpi-box-green"
 
-                cefr_val = str(data_dict.get("cefr", data_dict.get("bilingual_fluency", "C1 Advanced")))
-                k2_l, k2_v = "Bilingual Fluency", cefr_val
-                cefr_lower = cefr_val.lower()
-                if any(x in cefr_lower for x in ["b1", "a2", "limited", "basic"]):
+                psico_val = data_dict.get("psychometrics_score", 88)
+                try:
+                    psico_num = int(psico_val)
+                except Exception:
+                    psico_num = 88
+                k2_l, k2_v = "Psicométricos", f"{psico_num} / 100"
+                if psico_num < 70:
                     k2_cls = "kpi-box-red"
-                elif "b2" in cefr_lower:
+                elif psico_num < 80:
                     k2_cls = "kpi-box-amber"
                 else:
-                    k2_cls = "kpi-box-green"
+                    k2_cls = "kpi-box-teal"
 
-                k3_l, k3_v = "Experience", f"{data_dict.get('experience_years', '4+')} Years"
-                k3_cls = "kpi-box-teal"
-
-                k4_l, k4_v = "Recommended Action", str(data_dict.get("action", "Advance to Next Round"))
-                act_lower = k4_v.lower()
-                if any(x in act_lower for x in ["reject", "decline"]):
-                    k4_cls = "kpi-box-red"
-                elif any(x in act_lower for x in ["hold", "review"]):
-                    k4_cls = "kpi-box-amber"
+                know_val = data_dict.get("knowledge_test_score", 90)
+                try:
+                    know_num = int(know_val)
+                except Exception:
+                    know_num = 90
+                k3_l, k3_v = "Test Conocimientos", f"{know_num} / 100"
+                if know_num < 70:
+                    k3_cls = "kpi-box-red"
+                elif know_num < 80:
+                    k3_cls = "kpi-box-amber"
                 else:
-                    k4_cls = "kpi-box-navy"
+                    k3_cls = "kpi-box-green"
+
+                cand_area = database.get_candidate_area(rec)
+                k4_l, k4_v = "Área Funcional", cand_area
+                k4_cls = "kpi-box-navy"
 
             sla = database.calculate_sla_status(time_str, is_processed=rec.get("is_processed", 1))
 

@@ -219,8 +219,12 @@ Cross-reference the interview claims with these resume credentials.
         prompt = f"""You are a Lead Talent Assessment Officer at nuDesk MX in Mazatlan, Sinaloa.
 We recruit and train bilingual financial services analysts, underwriters, and BDRs for US financial institutions.
 Analyze the following candidate screening interview transcript (captured via Read AI in Google Meet).
-Evaluate the candidate's technical skills, bilingual communication fluency, red flags, and determine whether
-to advance them to the Hiring Manager round. Formulate 3 sharp case-study questions for the next round.
+Evaluate:
+1. Application Area: Classify candidate into one of ['Credit Underwriting & Risk', 'Commercial Sales & BDR', 'Operations & Accounting', 'Technology & Systems'].
+2. Qualitative Candidate Fit: Provide an AI qualitative evaluation tier ('High Fit', 'Moderate Fit', 'Low Fit') and a granular score (1-100) reflecting holistic cultural and analytical fit.
+3. Psychometrics Score (0-100): Evaluate professional demeanor, stress tolerance, coachability, and problem-solving mindset.
+4. Technical Knowledge Test Score (0-100): Evaluate mastery of financial calculations, loan terms, sales objection handling, or operational accounting.
+5. Recommendation & Case-Study Questions: Formulate 3 sharp questions for the Hiring Manager round.
 
 INTERVIEW TRANSCRIPT:
 \"\"\"

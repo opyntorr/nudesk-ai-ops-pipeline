@@ -26,6 +26,11 @@ class TestDeskMateV2Suite(unittest.TestCase):
         # HR
         self.assertEqual(MOCK_FALLBACK_HR.candidate_name, "Sofia Valdez")
         self.assertTrue(1 <= MOCK_FALLBACK_HR.overall_fit_score <= 100)
+        self.assertEqual(MOCK_FALLBACK_HR.candidate_fit_tier, "High Fit")
+        self.assertTrue(1 <= MOCK_FALLBACK_HR.candidate_fit_score <= 100)
+        self.assertTrue(0 <= MOCK_FALLBACK_HR.psychometrics_score <= 100)
+        self.assertTrue(0 <= MOCK_FALLBACK_HR.knowledge_test_score <= 100)
+        self.assertEqual(MOCK_FALLBACK_HR.application_area, "Credit Underwriting & Risk")
         self.assertIn(MOCK_FALLBACK_HR.bilingual_fluency_rating, [
             "C2 Native / Bilingual",
             "C1 Advanced Professional",
@@ -193,6 +198,65 @@ class TestDeskMateV2Suite(unittest.TestCase):
             self.assertIn(f["module_type"], ["credit", "sales", "hr"])
             self.assertTrue(len(f["entity_name"]) > 0)
             self.assertTrue(len(f["transcript_text"]) > 0)
+
+    def test_hr_talent_qualitative_parameters(self):
+        # QA Test: Validate HR model handles qualitative fit, psychometrics, and knowledge test
+        sample_hr = HRTalentOutput(
+            candidate_name="Lucia Beltran",
+            applied_role="Risk Analyst",
+            application_area="Credit Underwriting & Risk",
+            candidate_fit_tier="Moderate Fit",
+            candidate_fit_score=79,
+            psychometrics_score=82,
+            knowledge_test_score=78,
+            executive_summary="Competent candidate with moderate credit experience.",
+            technical_competencies=["Financial Analysis", "Cash Flow Modeling"],
+            behavioral_red_flags=[],
+            recommended_action="Hold for Alternate Pipeline",
+            next_interview_focus_questions=["Explain your DSCR calculation method."]
+        )
+        self.assertEqual(sample_hr.candidate_fit_tier, "Moderate Fit")
+        self.assertEqual(sample_hr.candidate_fit_score, 79)
+        self.assertEqual(sample_hr.psychometrics_score, 82)
+        self.assertEqual(sample_hr.knowledge_test_score, 78)
+        self.assertEqual(sample_hr.application_area, "Credit Underwriting & Risk")
+
+    def test_hr_candidate_area_inference_and_filtering(self):
+        # QA Test: Validate area extraction and inference from database records
+        database.init_db()
+        hr_records = database.get_filtered_operations(module_filter="hr", time_window="all")
+        self.assertTrue(len(hr_records) >= 3, "Expected at least 3 HR records in test database")
+
+        areas = set()
+        for r in hr_records:
+            area = database.get_candidate_area(r)
+            self.assertIn(area, [
+                "Credit Underwriting & Risk",
+                "Commercial Sales & BDR",
+                "Operations & Accounting",
+                "Technology & Systems"
+            ])
+            areas.add(area)
+
+        # Confirm multiple functional areas are represented
+        self.assertTrue(len(areas) >= 2, "Expected diverse functional application areas in HR records")
+
+    def test_processed_leads_colored_kpis_and_dual_donuts(self):
+        # QA Test: Verify app.py contains KPI cards in processed tabs and dual donut charts
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        # Check dual donut column definitions across department tabs
+        self.assertIn("col_c_donut_status, col_c_donut_risk", code)
+        self.assertIn("col_s_donut_status, col_s_donut_tier", code)
+        self.assertIn("col_h_donut_status, col_h_donut_fit", code)
+
+        # Check processed audit tabs use colored KPI boxes and exec-log-card
+        self.assertIn("hq_area_filter", code)
+        self.assertIn("hp_area_filter", code)
+        self.assertIn("kpi-large-grid", code)
+        self.assertIn("kpi-box-large", code)
 
 
 if __name__ == "__main__":
