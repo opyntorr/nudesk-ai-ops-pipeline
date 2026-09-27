@@ -2312,6 +2312,12 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
                                 analyst_notes=h_analyst_note
                             )
 
+                        crm_dispatcher.dispatch_to_n8n(
+                            webhook_url=current_webhook_url,
+                            payload={**hr_out.model_dump(), "analyst_notes": h_analyst_note},
+                            flow_type="hr"
+                        )
+
                         next_pending_h = database.get_next_pending_operation("hr", exclude_id=rec_id)
                         st.session_state.hr_result = None
                         if next_pending_h:
@@ -2913,12 +2919,74 @@ with tabs[4]:
             This generates an instant, secure Cloudflare HTTPS URL without requiring router port-forwarding.
             """)
 
-            st.markdown("#### Synthetic Webhook & Meeting Bot Simulator")
-            st.caption("Demonstration suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive without paid accounts.")
-            col_sim1, col_sim2, col_sim3 = st.columns(3)
-            with col_sim1:
-                if st.button("Fire Read AI Credit Call", width="stretch", key="btn_it_sim_readai"):
-                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+            st.markdown("#### Live Inbound Bot & Webhook Ingestion Studio")
+            st.caption("Demonstration and testing suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive with live SLA tracking and optional n8n webhook dispatch.")
+
+            # n8n Connectivity Diagnostics
+            col_diag1, col_diag2 = st.columns([7, 3], gap="medium")
+            with col_diag1:
+                inbound_webhook_url = st.text_input(
+                    "n8n Inbound Webhook URL (Meeting Bot / File Intake):",
+                    value=os.getenv("N8N_INBOUND_WEBHOOK_URL", "http://localhost:5678/webhook/incoming-meeting"),
+                    key="txt_inbound_webhook_url",
+                    help="Target webhook for incoming meeting bots and Google Drive watchers in n8n."
+                )
+            with col_diag2:
+                st.write("")
+                st.write("")
+                btn_ping_inbound = st.button("Test n8n Webhook Status", width="stretch", key="btn_ping_n8n_inbound")
+
+            if btn_ping_inbound:
+                try:
+                    # Test container health
+                    h_res = requests.get("http://localhost:5678/healthz", timeout=2)
+                    container_ok = (h_res.status_code == 200)
+                except Exception:
+                    container_ok = False
+
+                if not container_ok:
+                    st.error("n8n container is unreachable on port 5678. Ensure Docker container is running ('docker compose up -d').")
+                else:
+                    try:
+                        w_res = requests.post(inbound_webhook_url, json={"test": True, "ping": "nuDesk Diagnostics"}, timeout=3)
+                        if w_res.status_code in [200, 201]:
+                            st.success(f"n8n Webhook is active and receiving requests (HTTP {w_res.status_code}).")
+                        elif w_res.status_code == 404:
+                            st.warning("n8n container is healthy, but the intake workflow is currently inactive. Open http://localhost:5678 and toggle the workflow switch to 'Active' (green).")
+                        else:
+                            st.info(f"n8n container responded with HTTP {w_res.status_code}.")
+                    except Exception as e:
+                        st.warning(f"Container online, but webhook call failed: {str(e)[:80]}")
+
+            forward_to_n8n = st.checkbox(
+                "Forward ingested payload to n8n webhook",
+                value=False,
+                key="chk_sim_forward_n8n",
+                help="When enabled, posts the simulated bot payload to the inbound webhook URL in addition to injecting it into the local database."
+            )
+
+            st.markdown("---")
+            st.markdown("##### Simulated Ingestion Scenarios")
+
+            from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+
+            col_sc1, col_sc2 = st.columns(2, gap="medium")
+
+            with col_sc1:
+                # Scenario 1: Credit Underwriting
+                st.markdown("""<div class="studio-card" style="margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Read AI &bull; Credit Discovery Call</span>
+                <span class="nudesk-badge badge-blue">Credit Operations</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Entity:</strong> Calafia Cross-Border Freight (Tijuana, BC)<br>
+                <strong>Facility:</strong> $220,000 USD | Working Capital & Accounts Receivable<br>
+                <strong>Source:</strong> Google Meet via Read AI Bot Stream
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject Credit Discovery Stream", width="stretch", key="btn_sim_credit_stream"):
                     p = generate_synthetic_payload("readai", "credit")
                     f = extract_ingestion_fields(p, "readai", "credit")
                     nid = database.ingest_pending_record(
@@ -2926,10 +2994,76 @@ with tabs[4]:
                         transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
                         doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
                     )
-                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Credit Queue)")
-            with col_sim2:
-                if st.button("Fire Fireflies Sales Call", width="stretch", key="btn_it_sim_fireflies"):
-                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                    st.session_state.active_credit_id = nid
+                    st.session_state.credit_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            r = requests.post(inbound_webhook_url, json=p, timeout=3)
+                            disp_note = f" | n8n: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n unreachable ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into Credit Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Credit Operations (Underwriting)' tab to evaluate and stage this file.")
+
+                with st.expander("View Read AI Credit JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("readai", "credit"))
+
+                # Scenario 3: HR Talent Screening
+                st.markdown("""<div class="studio-card" style="margin-top:1rem; margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Read AI &bull; Bilingual Talent Screening</span>
+                <span class="nudesk-badge badge-amber">HR Talent Solutions</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Candidate:</strong> Valeria Beltrán (Culiacán, Sin.)<br>
+                <strong>Role:</strong> Senior Commercial Underwriter &bull; C1 Fluency<br>
+                <strong>Source:</strong> Google Meet via Read AI Bot Stream
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject HR Screening Stream", width="stretch", key="btn_sim_hr_stream"):
+                    p = generate_synthetic_payload("readai", "hr")
+                    f = extract_ingestion_fields(p, "readai", "hr")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.session_state.active_hr_id = nid
+                    st.session_state.hr_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            r = requests.post(inbound_webhook_url, json=p, timeout=3)
+                            disp_note = f" | n8n: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n unreachable ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into HR Screening Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Talent Operations (HR Screening)' tab to evaluate candidate competencies.")
+
+                with st.expander("View Read AI HR JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("readai", "hr"))
+
+            with col_sc2:
+                # Scenario 2: Sales Commercial Freight
+                st.markdown("""<div class="studio-card" style="margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Fireflies.ai &bull; Commercial Freight Outreach</span>
+                <span class="nudesk-badge badge-green">Commercial Sales</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Entity:</strong> Pacific Cold Chain Logistics (Ensenada, BC)<br>
+                <strong>ARR:</strong> $3,500,000 USD &bull; Perishable Freight Carrier<br>
+                <strong>Source:</strong> Zoom via Fireflies.ai Bot Stream
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject Sales BDR Stream", width="stretch", key="btn_sim_sales_stream"):
                     p = generate_synthetic_payload("fireflies", "sales")
                     f = extract_ingestion_fields(p, "fireflies", "sales")
                     nid = database.ingest_pending_record(
@@ -2937,10 +3071,37 @@ with tabs[4]:
                         transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
                         doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
                     )
-                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Sales Queue)")
-            with col_sim3:
-                if st.button("Fire Google Drive Intake", width="stretch", key="btn_it_sim_gdrive"):
-                    from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+                    st.session_state.active_sales_id = nid
+                    st.session_state.sales_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            r = requests.post(inbound_webhook_url, json=p, timeout=3)
+                            disp_note = f" | n8n: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n unreachable ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into Sales Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Commercial Sales (BDR Outreach)' tab to score lead and stage Gmail draft.")
+
+                with st.expander("View Fireflies Sales JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("fireflies", "sales"))
+
+                # Scenario 4: Google Drive Document Intake
+                st.markdown("""<div class="studio-card" style="margin-top:1rem; margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Google Drive &bull; Financial Audit Packet</span>
+                <span class="nudesk-badge badge-blue">Document Watcher</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Entity:</strong> Apex Fleet Repair (San Diego, CA)<br>
+                <strong>File:</strong> 2026_Q3_Financial_Statements_Audit.pdf (1.2 MB)<br>
+                <strong>Source:</strong> Google Drive Folder Intake Watcher
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject Google Drive Intake File", width="stretch", key="btn_sim_gdrive_stream"):
                     p = generate_synthetic_payload("gdrive", "credit")
                     f = extract_ingestion_fields(p, "gdrive", "credit")
                     nid = database.ingest_pending_record(
@@ -2948,4 +3109,19 @@ with tabs[4]:
                         transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
                         doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
                     )
-                    st.success(f"Ingested Record #{nid}: {f['entity_name']} (Drive Intake)")
+                    st.session_state.active_credit_id = nid
+                    st.session_state.credit_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            r = requests.post(inbound_webhook_url, json=p, timeout=3)
+                            disp_note = f" | n8n: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n unreachable ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into Credit Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Credit Operations (Underwriting)' tab to review financial statements.")
+
+                with st.expander("View Google Drive Ingestion JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("gdrive", "credit"))

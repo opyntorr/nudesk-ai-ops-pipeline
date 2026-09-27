@@ -718,6 +718,98 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         exec_ops = database.get_filtered_operations(module_filter="all", time_window="week", limit=50)
         self.assertIsInstance(exec_ops, list)
 
+    def test_hr_dispatch_to_n8n(self):
+        """QA Test: Verify HR candidate sign-off dispatches to n8n webhook and handles payload."""
+        import crm_dispatcher
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        # Check that HR calls crm_dispatcher.dispatch_to_n8n
+        self.assertIn('crm_dispatcher.dispatch_to_n8n(', app_code)
+        self.assertIn('flow_type="hr"', app_code)
+
+        # Test dispatch_to_n8n directly with HR payload in simulation mode
+        hr_payload = {
+            "candidate_name": "Valeria Beltran",
+            "applied_role": "Senior Commercial Underwriter",
+            "bilingual_fluency_rating": "C1 Advanced Professional",
+            "candidate_fit_score": 92,
+            "recommended_action": "Advance to Technical Case Study",
+            "analyst_notes": "High proficiency in US trucking MCA detection"
+        }
+        success, msg, enriched = crm_dispatcher.dispatch_to_n8n(
+            webhook_url=None,
+            payload=hr_payload,
+            flow_type="hr"
+        )
+        self.assertTrue(success)
+        self.assertEqual(enriched["flow_type"], "hr")
+        self.assertEqual(enriched["data"]["candidate_name"], "Valeria Beltran")
+
+    def test_live_inbound_bot_simulation_studio(self):
+        """QA Test: Verify Live Inbound Bot & Webhook Ingestion Studio across Read AI, Fireflies, and Google Drive."""
+        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+
+        # Test Read AI Credit payload
+        p_c = generate_synthetic_payload("readai", "credit")
+        f_c = extract_ingestion_fields(p_c, "readai", "credit")
+        self.assertEqual(f_c["module_type"], "credit")
+        self.assertTrue(len(f_c["entity_name"]) > 0)
+        self.assertIn("Read AI", f_c["source_channel"])
+
+        # Test Fireflies Sales payload
+        p_s = generate_synthetic_payload("fireflies", "sales")
+        f_s = extract_ingestion_fields(p_s, "fireflies", "sales")
+        self.assertEqual(f_s["module_type"], "sales")
+        self.assertTrue(len(f_s["entity_name"]) > 0)
+        self.assertIn("Fireflies", f_s["source_channel"])
+
+        # Test Read AI HR payload
+        p_h = generate_synthetic_payload("readai", "hr")
+        f_h = extract_ingestion_fields(p_h, "readai", "hr")
+        self.assertEqual(f_h["module_type"], "hr")
+        self.assertTrue(len(f_h["entity_name"]) > 0)
+        self.assertIn("Read AI", f_h["source_channel"])
+
+        # Test Google Drive Intake payload
+        p_d = generate_synthetic_payload("gdrive", "credit")
+        f_d = extract_ingestion_fields(p_d, "gdrive", "credit")
+        self.assertEqual(f_d["module_type"], "credit")
+        self.assertIn("Google Drive", f_d["source_channel"])
+
+        # Test ingestion into pending queue and SLA calculation
+        test_rec_id = database.ingest_pending_record(
+            module_type="credit",
+            entity_name="Calafia Cross-Border Freight Test",
+            headline_metric="$220,000 USD | Working Capital",
+            transcript_text="[00:00:01] Discovery call test transcript.",
+            assessment_summary="Awaiting test underwriting review",
+            source_channel="Google Meet via Read AI",
+            doc_url="https://example.com/test-calafia.pdf",
+            doc_note="Test Freight Intake"
+        )
+        self.assertIsInstance(test_rec_id, int)
+        rec = database.get_operation_by_id(test_rec_id)
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec["is_processed"], 0)
+        sla = database.calculate_sla_status(rec["timestamp"])
+        self.assertIn("label", sla)
+        self.assertIn("tier", sla)
+        self.assertIn("color", sla)
+
+        # Verify studio UI presence in app.py
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        self.assertIn("Live Inbound Bot & Webhook Ingestion Studio", app_code)
+        self.assertIn("Inject Credit Discovery Stream", app_code)
+        self.assertIn("Inject Sales BDR Stream", app_code)
+        self.assertIn("Inject HR Screening Stream", app_code)
+        self.assertIn("Inject Google Drive Intake File", app_code)
+        self.assertIn("Test n8n Webhook Status", app_code)
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite
