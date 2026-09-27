@@ -364,6 +364,79 @@ def get_nudesk_css(theme: str = "light") -> str:
         align-items: center;
     }}
 
+    /* Executive Log Card with Default Visible Colored KPIs */
+    .exec-log-card {{
+        background: var(--nd-surface);
+        border: 1px solid var(--nd-border);
+        border-radius: 8px;
+        padding: 0.95rem 1.15rem;
+        margin-bottom: 0.35rem;
+        transition: border-color 0.15s ease-in-out;
+        box-shadow: 0 1px 3px rgba(10, 15, 22, 0.03);
+    }}
+
+    .exec-log-card:hover {{
+        border-color: var(--nd-green);
+    }}
+
+    .kpi-chip-grid {{
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.65rem;
+        margin-top: 0.75rem;
+    }}
+
+    .kpi-chip {{
+        border-radius: 6px;
+        padding: 0.55rem 0.8rem;
+        display: flex;
+        flex-direction: column;
+    }}
+
+    .kpi-chip-label {{
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: 0.2rem;
+        font-family: 'Host Grotesk', sans-serif;
+    }}
+
+    .kpi-chip-val {{
+        font-size: 1.05rem;
+        font-weight: 800;
+        line-height: 1.2;
+        font-family: 'Host Grotesk', sans-serif;
+    }}
+
+    .kpi-chip-green {{
+        background-color: {badge_green_bg} !important;
+        color: {badge_green_txt} !important;
+        border: 1px solid {badge_green_bdr} !important;
+    }}
+    .kpi-chip-green .kpi-chip-label {{ color: {badge_green_txt} !important; opacity: 0.85; }}
+
+    .kpi-chip-teal {{
+        background-color: {badge_teal_bg} !important;
+        color: {badge_teal_txt} !important;
+        border: 1px solid {badge_teal_bdr} !important;
+    }}
+    .kpi-chip-teal .kpi-chip-label {{ color: {badge_teal_txt} !important; opacity: 0.85; }}
+
+    .kpi-chip-navy {{
+        background-color: {badge_navy_bg} !important;
+        color: {badge_navy_txt} !important;
+        border: 1px solid {badge_navy_bdr} !important;
+    }}
+    .kpi-chip-navy .kpi-chip-label {{ color: {badge_navy_txt} !important; opacity: 0.85; }}
+
+    .kpi-chip-red {{
+        background-color: {badge_red_bg} !important;
+        color: {badge_red_txt} !important;
+        border: 1px solid {badge_red_bdr} !important;
+    }}
+    .kpi-chip-red .kpi-chip-label {{ color: {badge_red_txt} !important; opacity: 0.85; }}
+
     /* KPI Compact Ribbon */
     .kpi-ribbon {{
         display: flex;
