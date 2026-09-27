@@ -397,9 +397,45 @@ def get_nudesk_css(theme: str = "light") -> str:
         outline: none !important;
     }}
 
+    /* Clickable Processed Card Overlay Button - Seamless hitboxes over processed cards */
+    div[class*="st-key-btn_cp_select_"],
+    div[class*="st-key-btn_sp_select_"],
+    div[class*="st-key-btn_hp_select_"] {{
+        margin-top: -215px !important;
+        position: relative !important;
+        z-index: 10 !important;
+        height: 205px !important;
+        margin-bottom: 0.5rem !important;
+    }}
+
+    div[class*="st-key-btn_cp_select_"] button,
+    div[class*="st-key-btn_sp_select_"] button,
+    div[class*="st-key-btn_hp_select_"] button {{
+        width: 100% !important;
+        height: 205px !important;
+        min-height: 205px !important;
+        max-height: 205px !important;
+        opacity: 0 !important;
+        cursor: pointer !important;
+        background: transparent !important;
+        border: none !important;
+        font-size: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }}
+
     /* Sibling hover: when hovering over the transparent button, highlight the preceding card */
     div:has(> div > div > .queue-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .queue-card,
     div[data-testid="stElementContainer"]:has(.queue-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .queue-card {{
+        border-color: var(--nd-green) !important;
+        background: var(--nd-surface-alt) !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 5, 0.15) !important;
+    }}
+
+    div:has(> div > div > .exec-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .exec-log-card,
+    div[data-testid="stElementContainer"]:has(.exec-card-hitbox):has(+ div[class*="st-key-btn_"]:hover) .exec-log-card {{
         border-color: var(--nd-green) !important;
         background: var(--nd-surface-alt) !important;
         box-shadow: 0 2px 8px rgba(0, 200, 5, 0.15) !important;
@@ -426,6 +462,13 @@ def get_nudesk_css(theme: str = "light") -> str:
 
     .exec-log-card:hover {{
         border-color: var(--nd-green);
+    }}
+
+    .exec-log-card.active {{
+        border-left: 4px solid var(--nd-green) !important;
+        border-color: var(--nd-green) !important;
+        background: var(--nd-surface-alt) !important;
+        box-shadow: 0 1px 4px rgba(10, 15, 22, 0.08);
     }}
 
     /* Executive Log Card with Default Visible Large Colored KPIs */

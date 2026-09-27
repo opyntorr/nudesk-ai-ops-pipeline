@@ -258,8 +258,72 @@ class TestDeskMateV2Suite(unittest.TestCase):
         self.assertIn("kpi-large-grid", code)
         self.assertIn("kpi-box-large", code)
 
+    def test_processed_cards_direct_click_hitboxes_and_no_expander(self):
+        # QA Test: Validate removal of Details & Assessment expander and presence of direct click hitboxes
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        # Guarantee 'Details & Assessment' expander is completely removed from processed queue tabs
+        credit_processed_section = code.split("with credit_queue_tabs[1]:")[1].split("with col_c_canvas:")[0]
+        sales_processed_section = code.split("with sales_queue_tabs[1]:")[1].split("with col_s_canvas:")[0]
+        hr_processed_section = code.split("with hr_queue_tabs[1]:")[1].split("with col_h_canvas:")[0]
+
+        self.assertNotIn("Details & Assessment", credit_processed_section, "Credit processed queue should not contain Details & Assessment expander")
+        self.assertNotIn("Details & Assessment", sales_processed_section, "Sales processed queue should not contain Details & Assessment expander")
+        self.assertNotIn("Details & Assessment", hr_processed_section, "HR processed queue should not contain Details & Assessment expander")
+
+        # Verify transparent overlay buttons for processed cards in Credit, Sales, and HR
+        self.assertIn("btn_cp_select_", code, "app.py must contain btn_cp_select_ for credit processed cards")
+        self.assertIn("btn_sp_select_", code, "app.py must contain btn_sp_select_ for sales processed cards")
+        self.assertIn("btn_hp_select_", code, "app.py must contain btn_hp_select_ for hr processed cards")
+
+        # Verify CSS styling has overlays and hitboxes in nudesk_theme.py
+        theme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "styles", "nudesk_theme.py"))
+        with open(theme_path, "r", encoding="utf-8") as f:
+            theme_css = f.read()
+        self.assertIn("st-key-btn_cp_select_", theme_css)
+        self.assertIn("st-key-btn_sp_select_", theme_css)
+        self.assertIn("st-key-btn_hp_select_", theme_css)
+        self.assertIn(".exec-card-hitbox", theme_css)
+        self.assertIn(".exec-log-card.active", theme_css)
+
+    def test_canvas_dual_mode_processed_dossier_vs_pending(self):
+        # QA Test: Verify decision canvas renders historical dossier when processed card is selected
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        # Verify dual-mode condition checks in Credit, Sales, and HR canvases
+        self.assertIn("is_processed_c = (active_credit_rec is not None and active_credit_rec.get(\"is_processed\") == 1)", code)
+        self.assertIn("is_processed_s = (active_sales_rec is not None and active_sales_rec.get(\"is_processed\") == 1)", code)
+        self.assertIn("is_processed_h = (active_hr_rec is not None and active_hr_rec.get(\"is_processed\") == 1)", code)
+
+        # Verify return-to-pending buttons exist in processed canvas mode
+        self.assertIn("btn_c_return_pending", code)
+        self.assertIn("btn_s_return_pending", code)
+        self.assertIn("btn_h_return_pending", code)
+
+        # Verify archived transcript expanders exist for auditing historical records
+        self.assertIn("Archived Call Transcript & Supporting Records", code)
+        self.assertIn("Archived Sales Interaction & Notes", code)
+        self.assertIn("Archived Candidate Interview Transcript & CV Notes", code)
+
+    def test_database_processed_records_integrity(self):
+        # QA Test: Verify database retrieval of processed operations across modules
+        database.init_db()
+        for mod in ["credit", "sales", "hr"]:
+            records = database.get_filtered_operations(module_filter=mod, status_filter="processed", time_window="all")
+            self.assertTrue(len(records) >= 1, f"Expected at least 1 processed record for module {mod}")
+            for r in records:
+                self.assertEqual(r["is_processed"], 1)
+                self.assertTrue(bool(r["entity_name"]))
+                self.assertTrue(bool(r["headline_metric"]))
+                self.assertTrue(bool(r["assessment_summary"]))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
