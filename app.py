@@ -18,6 +18,8 @@ from models import CreditTriageOutput, SalesLeadOutput, HRTalentOutput
 import ai_engine
 import crm_dispatcher
 import database
+import importlib
+importlib.reload(database)
 import document_reader
 
 load_dotenv()
@@ -108,18 +110,15 @@ current_webhook_url = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhoo
 # ----------------- CLEAN BRAND HEADER -----------------
 is_google_active = st.session_state.google_user is not None
 google_status_html = '<span class="nudesk-badge badge-green">Google Workspace Connected</span>' if is_google_active else ''
+header_right_html = f'<div style="display:flex; gap:0.5rem; align-items:center;">{google_status_html}</div>' if google_status_html else ''
 
-st.markdown(f"""
-<div class="nudesk-header">
-    <div>
-        <h1>nuDesk | DeskMate Operations Studio</h1>
-        <div class="subtitle">AI-Workforce Platform for Financial Services — Mazatlán Talent Hub</div>
-    </div>
-    <div style="display: flex; gap: 0.5rem; align-items: center;">
-        {google_status_html}
-    </div>
+st.markdown(f"""<div class="nudesk-header">
+<div>
+<h1>nuDesk | DeskMate Operations Studio</h1>
+<div class="subtitle">AI-Workforce Platform for Financial Services — Mazatlán Talent Hub</div>
 </div>
-""", unsafe_allow_html=True)
+{header_right_html}
+</div>""", unsafe_allow_html=True)
 
 # ----------------- WORKSPACE IDENTITY & TIME WINDOW BANNER -----------------
 col_user, col_switch, col_window, col_theme = st.columns([3, 2, 2, 1])
@@ -133,17 +132,15 @@ with col_user:
     else:
         avatar_html = f'<span class="role-avatar">{persona.avatar_initials}</span>'
 
-    st.markdown(f"""
-    <div class="role-banner">
-        <div class="role-indicator">
-            {avatar_html}
-            <span>{persona.name} &bull; <strong>{persona.role_title}</strong> <span style="color:#64748B;">({persona.email})</span></span>
-        </div>
-        <div>
-            <span class="nudesk-badge {badge_cls}">{badge_label}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="role-banner">
+<div class="role-indicator">
+{avatar_html}
+<span>{persona.name} &bull; <strong>{persona.role_title}</strong> <span style="color:#64748B;">({persona.email})</span></span>
+</div>
+<div>
+<span class="nudesk-badge {badge_cls}">{badge_label}</span>
+</div>
+</div>""", unsafe_allow_html=True)
 
     if is_google_active:
         if st.button("Sign out of Google", key="btn_signout_google", use_container_width=True):
@@ -235,12 +232,10 @@ def render_operational_queue(
         # Single-line card summary
         expander_label = f"{entity_title}   |   {metric_str}   |   {time_str}"
         with st.expander(expander_label, expanded=False):
-            st.markdown(f"""
-            <div style="margin-bottom:0.75rem;">
-                <span class="nudesk-badge {badge_cls}">{status_label}</span>
-                <span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {source_str} &bull; Handled by: {operator_str}</span>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div style="margin-bottom:0.75rem;">
+<span class="nudesk-badge {badge_cls}">{status_label}</span>
+<span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {source_str} &bull; Handled by: {operator_str}</span>
+</div>""", unsafe_allow_html=True)
 
             col_detail, col_payload = st.columns([3, 2])
             with col_detail:
@@ -284,30 +279,28 @@ with tabs[0]:
 
     # Departmental KPIs for Credit
     credit_kpis = database.get_department_kpis("credit", time_window=st.session_state.time_window)
-    st.markdown(f"""
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-label">Pending Intake Queue</div>
-            <div class="kpi-value">{credit_kpis['pending_count']}</div>
-            <div class="kpi-sub">Oldest calls prioritized (FIFO)</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Processed Underwriting Memos</div>
-            <div class="kpi-value">{credit_kpis['processed_count']}</div>
-            <div class="kpi-sub">Synced to LOS & Asana</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Avg Underwriting Time Saved</div>
-            <div class="kpi-value">~38 min</div>
-            <div class="kpi-sub">Per equipment/factoring file</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Timeframe Active</div>
-            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
-            <div class="kpi-sub">Mazatlán Lending Desk</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="kpi-container">
+<div class="kpi-card">
+<div class="kpi-label">Pending Intake Queue</div>
+<div class="kpi-value">{credit_kpis['pending_count']}</div>
+<div class="kpi-sub">Oldest calls prioritized (FIFO)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Processed Underwriting Memos</div>
+<div class="kpi-value">{credit_kpis['processed_count']}</div>
+<div class="kpi-sub">Synced to LOS & Asana</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Avg Underwriting Time Saved</div>
+<div class="kpi-value">~38 min</div>
+<div class="kpi-sub">Per equipment/factoring file</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Timeframe Active</div>
+<div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+<div class="kpi-sub">Mazatlán Lending Desk</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # Dual Log Queues
     st.markdown("#### Operational Activity Log")
@@ -567,30 +560,28 @@ with tabs[1]:
 
     # Departmental KPIs for Sales
     sales_kpis = database.get_department_kpis("sales", time_window=st.session_state.time_window)
-    st.markdown(f"""
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-label">Pending Lead Queue</div>
-            <div class="kpi-value">{sales_kpis['pending_count']}</div>
-            <div class="kpi-sub">Oldest leads prioritized (FIFO)</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Qualified Commercial Leads</div>
-            <div class="kpi-value">{sales_kpis['processed_count']}</div>
-            <div class="kpi-sub">Synced to CRM & Gmail</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Avg Lead Fit Score</div>
-            <div class="kpi-value">86 / 100</div>
-            <div class="kpi-sub">Factoring & term lines</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Timeframe Active</div>
-            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
-            <div class="kpi-sub">Mazatlán BDR Desk</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="kpi-container">
+<div class="kpi-card">
+<div class="kpi-label">Pending Lead Queue</div>
+<div class="kpi-value">{sales_kpis['pending_count']}</div>
+<div class="kpi-sub">Oldest leads prioritized (FIFO)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Qualified Commercial Leads</div>
+<div class="kpi-value">{sales_kpis['processed_count']}</div>
+<div class="kpi-sub">Synced to CRM & Gmail</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Avg Lead Fit Score</div>
+<div class="kpi-value">86 / 100</div>
+<div class="kpi-sub">Factoring & term lines</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Timeframe Active</div>
+<div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+<div class="kpi-sub">Mazatlán BDR Desk</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # Dual Log Queues
     st.markdown("#### Operational Activity Log")
@@ -820,30 +811,28 @@ with tabs[2]:
 
     # Departmental KPIs for HR
     hr_kpis = database.get_department_kpis("hr", time_window=st.session_state.time_window)
-    st.markdown(f"""
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-label">Pending Screening Queue</div>
-            <div class="kpi-value">{hr_kpis['pending_count']}</div>
-            <div class="kpi-sub">Oldest screenings prioritized (FIFO)</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Candidates Evaluated</div>
-            <div class="kpi-value">{hr_kpis['processed_count']}</div>
-            <div class="kpi-sub">Synced to Talent Pipeline</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Average Fit Score</div>
-            <div class="kpi-value">89 / 100</div>
-            <div class="kpi-sub">C1/C2 bilingual proficiency</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Timeframe Active</div>
-            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
-            <div class="kpi-sub">Mazatlán Recruiting Hub</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="kpi-container">
+<div class="kpi-card">
+<div class="kpi-label">Pending Screening Queue</div>
+<div class="kpi-value">{hr_kpis['pending_count']}</div>
+<div class="kpi-sub">Oldest screenings prioritized (FIFO)</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Candidates Evaluated</div>
+<div class="kpi-value">{hr_kpis['processed_count']}</div>
+<div class="kpi-sub">Synced to Talent Pipeline</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Average Fit Score</div>
+<div class="kpi-value">89 / 100</div>
+<div class="kpi-sub">C1/C2 bilingual proficiency</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Timeframe Active</div>
+<div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+<div class="kpi-sub">Mazatlán Recruiting Hub</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # Dual Log Queues
     st.markdown("#### Operational Activity Log")
@@ -1084,30 +1073,28 @@ with tabs[3]:
     sales_total = len([r for r in all_records if r["module_type"] == "sales"])
     hr_total = len([r for r in all_records if r["module_type"] == "hr"])
 
-    st.markdown(f"""
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-label">Total Operational Volume</div>
-            <div class="kpi-value">{total_ops}</div>
-            <div class="kpi-sub">{pending_total} Pending Queue | {processed_total} Processed</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Credit Underwriting Files</div>
-            <div class="kpi-value">{credit_total}</div>
-            <div class="kpi-sub">Equipment & factoring files</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">Commercial Leads Qualified</div>
-            <div class="kpi-value">{sales_total}</div>
-            <div class="kpi-sub">Outreach drafts staged</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-label">HR Candidate Screenings</div>
-            <div class="kpi-value">{hr_total}</div>
-            <div class="kpi-sub">Bilingual Mazatlán talent</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"""<div class="kpi-container">
+<div class="kpi-card">
+<div class="kpi-label">Total Operational Volume</div>
+<div class="kpi-value">{total_ops}</div>
+<div class="kpi-sub">{pending_total} Pending Queue | {processed_total} Processed</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Credit Underwriting Files</div>
+<div class="kpi-value">{credit_total}</div>
+<div class="kpi-sub">Equipment & factoring files</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">Commercial Leads Qualified</div>
+<div class="kpi-value">{sales_total}</div>
+<div class="kpi-sub">Outreach drafts staged</div>
+</div>
+<div class="kpi-card">
+<div class="kpi-label">HR Candidate Screenings</div>
+<div class="kpi-value">{hr_total}</div>
+<div class="kpi-sub">Bilingual Mazatlán talent</div>
+</div>
+</div>""", unsafe_allow_html=True)
 
     # Multi-Filter Controls Row
     st.markdown("#### Operational Log")
@@ -1187,13 +1174,11 @@ with tabs[3]:
             # Single-line card summary with expander
             exp_label = f"[{rec['module_type'].upper()}]   {entity_str}   |   {metric_str}   |   {time_str}"
             with st.expander(exp_label, expanded=False):
-                st.markdown(f"""
-                <div style="margin-bottom:0.6rem;">
-                    <span class="nudesk-badge {mod_badge}">{rec['module_type'].upper()}</span>
-                    <span class="nudesk-badge {status_badge_cls}" style="margin-left:0.4rem;">{status_str}</span>
-                    <span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')} ({rec.get('operator_role', '')})</span>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div style="margin-bottom:0.6rem;">
+<span class="nudesk-badge {mod_badge}">{rec['module_type'].upper()}</span>
+<span class="nudesk-badge {status_badge_cls}" style="margin-left:0.4rem;">{status_str}</span>
+<span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')} ({rec.get('operator_role', '')})</span>
+</div>""", unsafe_allow_html=True)
 
                 col_e1, col_e2 = st.columns([3, 2])
                 with col_e1:
