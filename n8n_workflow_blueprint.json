@@ -134,8 +134,8 @@
     {
       "parameters": {
         "operation": "create",
-        "name": "Underwriting Follow-Up: {{ $json.company_name }}",
-        "notes": "Facility: ${{ $json.loan_amount_usd }} USD\nRisk Tier: {{ $json.risk_tier }}\nDTI: {{ $json.dti_ratio }}\nCollateral: {{ $json.collateral }}\n\nExecutive Summary:\n{{ $json.executive_summary }}\n\nAnalyst Notes:\n{{ $json.analyst_notes }}\n\nOperator: {{ $json.operator }}"
+        "name": "=Underwriting Follow-Up: {{ $json.company_name }}",
+        "notes": "=Facility: ${{ $json.loan_amount_usd }} USD\nRisk Tier: {{ $json.risk_tier }}\nDTI: {{ $json.dti_ratio }}\nCollateral: {{ $json.collateral }}\n\nExecutive Summary:\n{{ $json.executive_summary }}\n\nRed Flags:\n{{ $json.red_flags }}\n\nAnalyst Notes:\n{{ $json.analyst_notes }}\n\nOperator: {{ $json.operator }}"
       },
       "id": "node-credit-asana-5",
       "name": "Asana - Create Underwriting Task",
@@ -164,8 +164,10 @@
     },
     {
       "parameters": {
-        "operation": "createDraft",
+        "resource": "draft",
+        "operation": "create",
         "subject": "={{ $json.draft_email_subject }}",
+        "emailType": "text",
         "message": "={{ $json.draft_email_body }}",
         "options": {}
       },
@@ -196,8 +198,10 @@
     },
     {
       "parameters": {
-        "operation": "createDraft",
+        "resource": "draft",
+        "operation": "create",
         "subject": "=nuDesk Talent Hub - Seguimiento de Entrevista: {{ $json.candidate_name }}",
+        "emailType": "text",
         "message": "=Estimado/a {{ $json.candidate_name }},\n\nGracias por su tiempo en la entrevista de preselección para la posición de {{ $json.target_role }}.\n\nHemos registrado su perfil con nivel de inglés CEFR {{ $json.cefr_level }} y score técnico de {{ $json.competency_score }}/100.\n\nNos pondremos en contacto para coordinar la siguiente etapa del proceso.\n\nAtentamente,\n{{ $json.operator }}\nnuDesk Talent Hub — Mazatlán Operations",
         "options": {}
       },
