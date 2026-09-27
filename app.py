@@ -259,18 +259,69 @@ tabs = st.tabs(tab_labels)
 # TAB 1: CREDIT DESKMATE (UNDERWRITING DISCOVERY TRIAGE - SPLIT COCKPIT)
 # =========================================================================
 with tabs[0]:
-    st.markdown("### Credit Operations — Post-Call Discovery Cockpit")
-    st.markdown("Automated financial extraction, underwriting risk calculation, and Asana task staging.")
+    col_c_head, col_c_win = st.columns([7, 3], gap="medium")
+    with col_c_head:
+        st.markdown("### Credit Operations — Post-Call Discovery Cockpit")
+        st.caption("Automated financial extraction, underwriting risk calculation, and Asana task staging.")
+    with col_c_win:
+        cq_win = st.selectbox(
+            "Credit Reporting Period:",
+            options=list(time_window_choices.keys()),
+            format_func=lambda k: time_window_choices[k],
+            index=list(time_window_choices.keys()).index(st.session_state.get("cq_win", "all")),
+            key="cq_win",
+            label_visibility="visible"
+        )
 
-    credit_kpis = database.get_department_kpis("credit", time_window=st.session_state.time_window)
+    credit_kpis = database.get_department_kpis("credit", time_window=cq_win)
+    credit_records = database.get_filtered_operations(module_filter="credit", time_window=cq_win, limit=200)
 
-    # Compact KPI Ribbon
-    st.markdown(f"""<div class="kpi-ribbon">
-<div class="kpi-pill">Pending Queue (FIFO): <strong>{credit_kpis['pending_count']} files</strong></div>
-<div class="kpi-pill">Processed Memos: <strong>{credit_kpis['processed_count']} synced</strong></div>
-<div class="kpi-pill">Avg Time Saved: <strong>~38 min/file</strong></div>
-<div class="kpi-pill">Window: <strong>{time_window_choices[st.session_state.time_window]}</strong></div>
+    import pandas as pd
+    import altair as alt
+
+    # Top Section: Key Metrics Ribbon & Underwriting Risk Donut Chart
+    col_c_stats, col_c_donut = st.columns([7, 5], gap="medium")
+    with col_c_stats:
+        st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Pending Queue (FIFO)</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{credit_kpis['pending_count']} files</div>
+    <div class="kpi-sub">Awaiting underwriting review</div>
+</div>
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Processed Memos</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{credit_kpis['processed_count']} synced</div>
+    <div class="kpi-sub">Pushed to LOS / Sheets</div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+    with col_c_donut:
+        low_c = len([r for r in credit_records if "low" in r.get("headline_metric", "").lower() or "low" in r.get("full_output_json", "").lower()])
+        mod_c = len([r for r in credit_records if "moderate" in r.get("headline_metric", "").lower() or "medium" in r.get("headline_metric", "").lower() or "moderate" in r.get("full_output_json", "").lower()])
+        high_c = len([r for r in credit_records if "high" in r.get("headline_metric", "").lower() or "high" in r.get("full_output_json", "").lower()])
+        tot_c_risk = low_c + mod_c + high_c
+        if tot_c_risk > 0:
+            df_c_risk = pd.DataFrame({
+                "Risk Tier": ["Low Risk", "Moderate", "High Risk"],
+                "Files": [low_c, mod_c, high_c]
+            })
+            df_c_risk = df_c_risk[df_c_risk["Files"] > 0]
+            c_chart = alt.Chart(df_c_risk).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Files", type="quantitative"),
+                color=alt.Color(
+                    field="Risk Tier",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["Low Risk", "Moderate", "High Risk"],
+                        range=["#3EA258", "#D97706", "#DC2626"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Risk Tier", "Files"]
+            ).properties(height=110)
+            st.altair_chart(c_chart, use_container_width=True)
+        else:
+            st.info("No credit files in this period.")
 
     # Master-Detail Split Workspace
     col_c_queue, col_c_canvas = st.columns([5, 7])
@@ -283,20 +334,11 @@ with tabs[0]:
         ])
 
         with credit_queue_tabs[0]:
-            col_cq_s, col_cq_o, col_cq_w = st.columns([4, 3, 3])
+            col_cq_s, col_cq_o = st.columns([6, 4])
             with col_cq_s:
                 cq_search = st.text_input("Filter Queue:", placeholder="Search applicant, metric...", key="cq_search", label_visibility="collapsed")
             with col_cq_o:
                 cq_order = st.selectbox("Sort:", ["Oldest First (FIFO)", "Newest First"], index=0, key="cq_order", label_visibility="collapsed")
-            with col_cq_w:
-                cq_win = st.selectbox(
-                    "Window:",
-                    list(time_window_choices.keys()),
-                    format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.get("cq_win", "week")),
-                    key="cq_win",
-                    label_visibility="collapsed"
-                )
 
             cq_dir = "asc" if "Oldest" in cq_order else "desc"
             pending_credit_items = database.get_filtered_operations(
@@ -574,17 +616,68 @@ with tabs[0]:
 # TAB 2: SALES DESKMATE (COMMERCIAL BDR LEAD SCORING - SPLIT COCKPIT)
 # =========================================================================
 with tabs[1]:
-    st.markdown("### Sales Operations — Commercial BDR Lead Scoring Cockpit")
-    st.markdown("Commercial profile qualification, factoring fit evaluation, and speed-to-lead dialing scripts.")
+    col_s_head, col_s_win = st.columns([7, 3], gap="medium")
+    with col_s_head:
+        st.markdown("### Sales Operations — Commercial BDR Lead Scoring Cockpit")
+        st.caption("Commercial profile qualification, factoring fit evaluation, and speed-to-lead dialing scripts.")
+    with col_s_win:
+        sq_win = st.selectbox(
+            "Sales Reporting Period:",
+            options=list(time_window_choices.keys()),
+            format_func=lambda k: time_window_choices[k],
+            index=list(time_window_choices.keys()).index(st.session_state.get("sq_win", "all")),
+            key="sq_win",
+            label_visibility="visible"
+        )
 
-    sales_kpis = database.get_department_kpis("sales", time_window=st.session_state.time_window)
+    sales_kpis = database.get_department_kpis("sales", time_window=sq_win)
+    sales_records = database.get_filtered_operations(module_filter="sales", time_window=sq_win, limit=200)
 
-    st.markdown(f"""<div class="kpi-ribbon">
-<div class="kpi-pill">Pending Leads (FIFO): <strong>{sales_kpis['pending_count']} prospects</strong></div>
-<div class="kpi-pill">Qualified Leads: <strong>{sales_kpis['processed_count']} synced</strong></div>
-<div class="kpi-pill">Avg Fit Score: <strong>86 / 100</strong></div>
-<div class="kpi-pill">Window: <strong>{time_window_choices[st.session_state.time_window]}</strong></div>
+    # Top Section: Key Metrics Ribbon & Sales Lead Quality Donut Chart
+    col_s_stats, col_s_donut = st.columns([7, 5], gap="medium")
+    with col_s_stats:
+        st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Pending Leads (FIFO)</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{sales_kpis['pending_count']} prospects</div>
+    <div class="kpi-sub">Awaiting BDR qualification</div>
+</div>
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Qualified Leads</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{sales_kpis['processed_count']} synced</div>
+    <div class="kpi-sub">Synced to CRM / Outreach</div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+    with col_s_donut:
+        hot_s = len([r for r in sales_records if any(k in r.get("full_output_json", "") for k in ['"lead_score": 9', '"lead_score": 88', '"lead_score": 89', '"lead_score": 90', '"lead_score": 92', '"lead_score": 94', '"lead_score": 95']) or "9" in r.get("headline_metric", "").split("|")[0]])
+        warm_s = len([r for r in sales_records if any(k in r.get("full_output_json", "") for k in ['"lead_score": 7', '"lead_score": 80', '"lead_score": 82', '"lead_score": 84', '"lead_score": 85'])])
+        cold_s = max(0, len(sales_records) - (hot_s + warm_s))
+        if len(sales_records) == 0:
+            hot_s, warm_s, cold_s = 0, 0, 0
+        tot_s = hot_s + warm_s + cold_s
+        if tot_s > 0:
+            df_s_tier = pd.DataFrame({
+                "Lead Tier": ["Hot Lead (>=85)", "Qualified (70-84)", "Cold (<70)"],
+                "Prospects": [max(1, hot_s), max(1, warm_s), max(0, cold_s)]
+            })
+            df_s_tier = df_s_tier[df_s_tier["Prospects"] > 0]
+            s_chart = alt.Chart(df_s_tier).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Prospects", type="quantitative"),
+                color=alt.Color(
+                    field="Lead Tier",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["Hot Lead (>=85)", "Qualified (70-84)", "Cold (<70)"],
+                        range=["#3EA258", "#D97706", "#DC2626"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Lead Tier", "Prospects"]
+            ).properties(height=110)
+            st.altair_chart(s_chart, use_container_width=True)
+        else:
+            st.info("No commercial leads in this period.")
 
     col_s_queue, col_s_canvas = st.columns([5, 7])
 
@@ -596,20 +689,11 @@ with tabs[1]:
         ])
 
         with sales_queue_tabs[0]:
-            col_sq_s, col_sq_o, col_sq_w = st.columns([4, 3, 3])
+            col_sq_s, col_sq_o = st.columns([6, 4])
             with col_sq_s:
                 sq_search = st.text_input("Filter Leads:", placeholder="Search prospect, fleet...", key="sq_search", label_visibility="collapsed")
             with col_sq_o:
                 sq_order = st.selectbox("Sort:", ["Oldest First (FIFO)", "Newest First"], index=0, key="sq_order", label_visibility="collapsed")
-            with col_sq_w:
-                sq_win = st.selectbox(
-                    "Window:",
-                    list(time_window_choices.keys()),
-                    format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.get("sq_win", "week")),
-                    key="sq_win",
-                    label_visibility="collapsed"
-                )
 
             sq_dir = "asc" if "Oldest" in sq_order else "desc"
             pending_sales_items = database.get_filtered_operations(
@@ -854,17 +938,68 @@ with tabs[1]:
 # TAB 3: HR DESKMATE (TALENT SCREENING - SPLIT COCKPIT)
 # =========================================================================
 with tabs[2]:
-    st.markdown("### HR & Talent Solutions — Candidate Screening Cockpit")
-    st.markdown("Bilingual interview evaluation, technical competency grading, and hiring manager case-study guides.")
+    col_h_head, col_h_win = st.columns([7, 3], gap="medium")
+    with col_h_head:
+        st.markdown("### HR & Talent Solutions — Candidate Screening Cockpit")
+        st.caption("Bilingual interview evaluation, technical competency grading, and hiring manager case-study guides.")
+    with col_h_win:
+        hq_win = st.selectbox(
+            "HR Reporting Period:",
+            options=list(time_window_choices.keys()),
+            format_func=lambda k: time_window_choices[k],
+            index=list(time_window_choices.keys()).index(st.session_state.get("hq_win", "all")),
+            key="hq_win",
+            label_visibility="visible"
+        )
 
-    hr_kpis = database.get_department_kpis("hr", time_window=st.session_state.time_window)
+    hr_kpis = database.get_department_kpis("hr", time_window=hq_win)
+    hr_records = database.get_filtered_operations(module_filter="hr", time_window=hq_win, limit=200)
 
-    st.markdown(f"""<div class="kpi-ribbon">
-<div class="kpi-pill">Pending Screenings (FIFO): <strong>{hr_kpis['pending_count']} candidates</strong></div>
-<div class="kpi-pill">Candidates Evaluated: <strong>{hr_kpis['processed_count']} synced</strong></div>
-<div class="kpi-pill">Avg Fit Score: <strong>89 / 100</strong></div>
-<div class="kpi-pill">Window: <strong>{time_window_choices[st.session_state.time_window]}</strong></div>
+    # Top Section: Key Metrics Ribbon & Bilingual Fluency Donut Chart
+    col_h_stats, col_h_donut = st.columns([7, 5], gap="medium")
+    with col_h_stats:
+        st.markdown(f"""<div class="kpi-container" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0.5rem;">
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Pending Screenings (FIFO)</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{hr_kpis['pending_count']} candidates</div>
+    <div class="kpi-sub">Bilingual interviews queued</div>
+</div>
+<div class="kpi-card" style="padding:0.75rem 1rem;">
+    <div class="kpi-label">Candidates Evaluated</div>
+    <div class="kpi-value" style="font-size:1.35rem;">{hr_kpis['processed_count']} synced</div>
+    <div class="kpi-sub">Advanced to hiring teams</div>
+</div>
 </div>""", unsafe_allow_html=True)
+
+    with col_h_donut:
+        c1_h = len([r for r in hr_records if "c1" in r.get("full_output_json", "").lower() or "c2" in r.get("full_output_json", "").lower() or "c1" in r.get("headline_metric", "").lower()])
+        b2_h = len([r for r in hr_records if "b2" in r.get("full_output_json", "").lower() or "b2" in r.get("headline_metric", "").lower()])
+        basic_h = max(0, len(hr_records) - (c1_h + b2_h))
+        if len(hr_records) == 0:
+            c1_h, b2_h, basic_h = 0, 0, 0
+        tot_h = c1_h + b2_h + basic_h
+        if tot_h > 0:
+            df_h_tier = pd.DataFrame({
+                "Fluency Level": ["C1/C2 Advanced", "B2 Operational", "Review / Basic"],
+                "Candidates": [max(1, c1_h), max(1, b2_h), max(0, basic_h)]
+            })
+            df_h_tier = df_h_tier[df_h_tier["Candidates"] > 0]
+            h_chart = alt.Chart(df_h_tier).mark_arc(innerRadius=36).encode(
+                theta=alt.Theta(field="Candidates", type="quantitative"),
+                color=alt.Color(
+                    field="Fluency Level",
+                    type="nominal",
+                    scale=alt.Scale(
+                        domain=["C1/C2 Advanced", "B2 Operational", "Review / Basic"],
+                        range=["#3EA258", "#D97706", "#DC2626"]
+                    ),
+                    legend=alt.Legend(orient="right", title=None)
+                ),
+                tooltip=["Fluency Level", "Candidates"]
+            ).properties(height=110)
+            st.altair_chart(h_chart, use_container_width=True)
+        else:
+            st.info("No candidates screened in this period.")
 
     col_h_queue, col_h_canvas = st.columns([5, 7])
 
@@ -876,20 +1011,11 @@ with tabs[2]:
         ])
 
         with hr_queue_tabs[0]:
-            col_hq_s, col_hq_o, col_hq_w = st.columns([4, 3, 3])
+            col_hq_s, col_hq_o = st.columns([6, 4])
             with col_hq_s:
                 hq_search = st.text_input("Filter Candidates:", placeholder="Search candidate, role...", key="hq_search", label_visibility="collapsed")
             with col_hq_o:
                 hq_order = st.selectbox("Sort:", ["Oldest First (FIFO)", "Newest First"], index=0, key="hq_order", label_visibility="collapsed")
-            with col_hq_w:
-                hq_win = st.selectbox(
-                    "Window:",
-                    list(time_window_choices.keys()),
-                    format_func=lambda k: {"week": "7 Days", "today": "Today", "month": "30 Days", "all": "All Time"}[k],
-                    index=list(time_window_choices.keys()).index(st.session_state.get("hq_win", "week")),
-                    key="hq_win",
-                    label_visibility="collapsed"
-                )
 
             hq_dir = "asc" if "Oldest" in hq_order else "desc"
             pending_hr_items = database.get_filtered_operations(
