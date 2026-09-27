@@ -318,6 +318,104 @@ def get_nudesk_css(theme: str = "light") -> str:
         border-color: var(--nd-green);
     }}
 
+    /* Cockpit Queue Cards & Split Layout */
+    .queue-card {{
+        background: var(--nd-surface);
+        border: 1px solid var(--nd-border);
+        border-radius: 6px;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.45rem;
+        transition: all 0.15s ease-in-out;
+        border-left: 3px solid transparent;
+    }}
+
+    .queue-card:hover {{
+        border-color: var(--nd-green);
+        background: var(--nd-surface-alt);
+    }}
+
+    .queue-card.active {{
+        border-left: 4px solid var(--nd-green) !important;
+        background: var(--nd-surface-alt) !important;
+        box-shadow: 0 1px 4px rgba(10, 15, 22, 0.08);
+    }}
+
+    .queue-entity {{
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--nd-text);
+        font-family: 'Host Grotesk', sans-serif;
+    }}
+
+    .queue-metric {{
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: var(--nd-green);
+        font-family: 'Host Grotesk', sans-serif;
+        margin-top: 0.15rem;
+    }}
+
+    .queue-meta {{
+        font-size: 0.78rem;
+        color: var(--nd-muted);
+        margin-top: 0.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }}
+
+    /* KPI Compact Ribbon */
+    .kpi-ribbon {{
+        display: flex;
+        gap: 0.65rem;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+    }}
+
+    .kpi-pill {{
+        background: var(--nd-surface);
+        border: 1px solid var(--nd-border);
+        border-radius: 6px;
+        padding: 0.45rem 0.85rem;
+        font-size: 0.82rem;
+        color: var(--nd-muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }}
+
+    .kpi-pill strong {{
+        color: var(--nd-text);
+        font-size: 0.92rem;
+    }}
+
+    /* Active Cockpit Canvas Header */
+    .cockpit-header {{
+        background: var(--nd-surface);
+        border: 1px solid var(--nd-border);
+        border-radius: 8px;
+        padding: 0.95rem 1.25rem;
+        margin-bottom: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-left: 4px solid var(--nd-green);
+    }}
+
+    .cockpit-title {{
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--nd-text);
+        font-family: 'Host Grotesk', sans-serif;
+        margin: 0;
+    }}
+
+    .cockpit-sub {{
+        font-size: 0.82rem;
+        color: var(--nd-muted);
+        margin-top: 0.15rem;
+    }}
+
     .log-left {{
         display: flex;
         align-items: center;

@@ -42,13 +42,15 @@ def init_db() -> None:
     """)
     conn.commit()
 
-    # Schema migration if table already existed without is_processed or source_channel
+    # Schema migration if table already existed without is_processed, source_channel, or analyst_notes
     cursor.execute("PRAGMA table_info(operations_history)")
     existing_cols = [row["name"] for row in cursor.fetchall()]
     if "is_processed" not in existing_cols:
         cursor.execute("ALTER TABLE operations_history ADD COLUMN is_processed INTEGER DEFAULT 1")
     if "source_channel" not in existing_cols:
         cursor.execute("ALTER TABLE operations_history ADD COLUMN source_channel TEXT DEFAULT 'Google Meet / Read AI'")
+    if "analyst_notes" not in existing_cols:
+        cursor.execute("ALTER TABLE operations_history ADD COLUMN analyst_notes TEXT DEFAULT ''")
     conn.commit()
 
     # Clean legacy dummy test records
@@ -75,7 +77,8 @@ def save_operation(
     full_output_json: Dict[str, Any],
     dispatch_status: str = "Synced to n8n / Sheets",
     is_processed: int = 1,
-    source_channel: str = "Google Meet / Read AI"
+    source_channel: str = "Google Meet / Read AI",
+    analyst_notes: str = ""
 ) -> int:
     conn = get_connection()
     cursor = conn.cursor()
@@ -84,8 +87,8 @@ def save_operation(
         INSERT INTO operations_history (
             timestamp, operator_name, operator_role, module_type,
             entity_name, headline_metric, assessment_summary,
-            full_output_json, dispatch_status, is_processed, source_channel
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            full_output_json, dispatch_status, is_processed, source_channel, analyst_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         timestamp,
         operator_name,
@@ -97,7 +100,8 @@ def save_operation(
         json.dumps(full_output_json, ensure_ascii=False),
         dispatch_status,
         is_processed,
-        source_channel
+        source_channel,
+        analyst_notes
     ))
     record_id = cursor.lastrowid
     conn.commit()
@@ -112,7 +116,8 @@ def mark_operation_processed(
     assessment_summary: Optional[str] = None,
     full_output_json: Optional[Dict[str, Any]] = None,
     operator_name: Optional[str] = None,
-    operator_role: Optional[str] = None
+    operator_role: Optional[str] = None,
+    analyst_notes: Optional[str] = None
 ) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
@@ -134,6 +139,9 @@ def mark_operation_processed(
     if operator_role is not None:
         updates.append("operator_role = ?")
         params.append(operator_role)
+    if analyst_notes is not None:
+        updates.append("analyst_notes = ?")
+        params.append(analyst_notes)
 
     updates.append("timestamp = ?")
     params.append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
@@ -243,6 +251,64 @@ def get_department_kpis(module_type: str, time_window: str = "week") -> Dict[str
         "pending": pending,
         "processed": processed
     }
+
+
+def calculate_sla_status(timestamp_str: str, is_processed: int = 0) -> Dict[str, str]:
+    """Calculate elapsed SLA and badge category for triage items."""
+    try:
+        record_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        elapsed = datetime.now() - record_time
+        mins = max(0, int(elapsed.total_seconds() / 60))
+
+        if mins < 60:
+            time_label = f"{mins}m ago"
+        elif mins < 1440:
+            hrs = int(mins / 60)
+            time_label = f"{hrs}h {mins % 60}m ago"
+        else:
+            days = int(mins / 1440)
+            time_label = f"{days}d ago"
+
+        if is_processed == 1:
+            return {"label": time_label, "tier": "SYNCED", "color": "badge-green"}
+        if mins > 120:
+            return {"label": f"SLA {time_label}", "tier": "BREACH", "color": "badge-red"}
+        elif mins > 30:
+            return {"label": time_label, "tier": "ATTENTION", "color": "badge-teal"}
+        return {"label": time_label, "tier": "NEW", "color": "badge-green"}
+    except Exception:
+        return {"label": timestamp_str, "tier": "NORMAL", "color": "badge-navy"}
+
+
+def get_next_pending_operation(module_type: str, exclude_id: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Retrieve the next oldest pending operation in FIFO order to auto-advance."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if exclude_id is not None:
+        cursor.execute("""
+            SELECT * FROM operations_history
+            WHERE module_type = ? AND is_processed = 0 AND id != ?
+            ORDER BY timestamp ASC LIMIT 1
+        """, (module_type.lower(), exclude_id))
+    else:
+        cursor.execute("""
+            SELECT * FROM operations_history
+            WHERE module_type = ? AND is_processed = 0
+            ORDER BY timestamp ASC LIMIT 1
+        """, (module_type.lower(),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def get_operation_by_id(record_id: int) -> Optional[Dict[str, Any]]:
+    """Retrieve a single operation by ID."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM operations_history WHERE id = ?", (record_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 
 def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:

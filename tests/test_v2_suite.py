@@ -96,12 +96,27 @@ class TestDeskMateV2Suite(unittest.TestCase):
             headline_metric="Low Risk | $50k",
             assessment_summary="Viable test profile",
             full_output_json={"test": True},
-            is_processed=1
+            is_processed=1,
+            analyst_notes="Special equipment lien verified"
         )
         self.assertIsInstance(rec_id, int)
         recent = database.get_filtered_operations(module_filter="credit", search_query="Benchmark Enterprise", time_window="all")
         self.assertTrue(len(recent) >= 1)
         self.assertEqual(recent[0]["entity_name"], "Benchmark Enterprise LLC")
+        self.assertEqual(recent[0]["analyst_notes"], "Special equipment lien verified")
+
+    def test_sla_and_queue_advancement(self):
+        sla_recent = database.calculate_sla_status("2026-09-26 21:00:00", is_processed=0)
+        self.assertIn("tier", sla_recent)
+        self.assertIn(sla_recent["tier"], ["NEW", "ATTENTION", "BREACH"])
+
+        sla_synced = database.calculate_sla_status("2026-09-26 15:00:00", is_processed=1)
+        self.assertEqual(sla_synced["tier"], "SYNCED")
+        self.assertEqual(sla_synced["color"], "badge-green")
+
+        next_pending = database.get_next_pending_operation("credit")
+        self.assertIsNotNone(next_pending)
+        self.assertEqual(next_pending["is_processed"], 0)
 
     def test_meeting_queue(self):
         self.assertTrue(len(meeting_queue.INCOMING_MEETINGS_QUEUE) >= 3)

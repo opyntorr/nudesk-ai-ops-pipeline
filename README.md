@@ -2,6 +2,8 @@
 ### AI-Powered Credit Triage & Sales Acceleration Engine for Financial Services (FinServ)
 **nuDesk MX Technical Assessment | Candidate: Christian Omar Payán Torróntegui**
 
+[![DeskMate Studio CI Pipeline](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/opyntorr/nudesk-ai-ops-pipeline/actions/workflows/ci.yml)
+
 ---
 
 ## 1. Executive Summary & Business Context
