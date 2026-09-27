@@ -368,6 +368,46 @@ def get_nudesk_css(theme: str = "light") -> str:
         align-items: center;
     }}
 
+    /* Clickable Queue Card Hitbox Overlay */
+    div.stElementContainer:has(.queue-card-hitbox),
+    div:has(> div > .queue-card-hitbox) {{
+        margin-bottom: -84px !important;
+        position: relative !important;
+        z-index: 1 !important;
+        pointer-events: none !important;
+    }}
+
+    div.stElementContainer:has(.queue-card-hitbox) + div.stElementContainer:has(button),
+    div:has(> div > .queue-card-hitbox) + div:has(button) {{
+        position: relative !important;
+        z-index: 2 !important;
+        margin-bottom: 0.45rem !important;
+    }}
+
+    div.stElementContainer:has(.queue-card-hitbox) + div.stElementContainer:has(button) button,
+    div:has(> div > .queue-card-hitbox) + div:has(button) button {{
+        height: 78px !important;
+        min-height: 78px !important;
+        max-height: 78px !important;
+        width: 100% !important;
+        background: transparent !important;
+        border: none !important;
+        color: transparent !important;
+        box-shadow: none !important;
+        cursor: pointer !important;
+        border-radius: 6px !important;
+        padding: 0 !important;
+        font-size: 0 !important;
+        outline: none !important;
+    }}
+
+    div.stElementContainer:has(.queue-card-hitbox):has(+ div.stElementContainer:has(button:hover)) .queue-card,
+    div:has(> div > .queue-card-hitbox):has(+ div:has(button:hover)) .queue-card {{
+        border-color: var(--nd-green) !important;
+        background: var(--nd-surface-alt) !important;
+        box-shadow: 0 2px 6px rgba(10, 15, 22, 0.08) !important;
+    }}
+
     /* Executive Log Card with Default Visible Colored KPIs */
     .exec-log-card {{
         background: var(--nd-surface);

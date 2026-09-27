@@ -362,18 +362,19 @@ with tabs[0]:
                     is_active = (st.session_state.active_credit_id == rec["id"])
                     active_cls = "active" if is_active else ""
 
-                    st.markdown(f"""<div class="queue-card {active_cls}">
+                    status_indicator = "ACTIVE IN CANVAS" if is_active else rec["timestamp"]
+                    st.markdown(f"""<div class="queue-card-hitbox">
+<div class="queue-card {active_cls}">
 <div class="queue-entity">{rec['entity_name']}</div>
 <div class="queue-metric">{rec['headline_metric']}</div>
 <div class="queue-meta">
 <span><span class="nudesk-badge {sla['color']}">{sla['label']}</span> &bull; {rec['source_channel']}</span>
-<span>{rec['timestamp']}</span>
+<span style="font-weight:{'700' if is_active else '400'}; color:{'var(--nd-green)' if is_active else 'var(--nd-muted)'};">{status_indicator}</span>
+</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    btn_label = "Active in Canvas" if is_active else "Select for Triage"
-                    btn_type = "primary" if is_active else "secondary"
-                    if st.button(btn_label, key=f"btn_c_select_{rec['id']}", type=btn_type, use_container_width=True):
+                    if st.button("Select", key=f"btn_c_select_{rec['id']}", use_container_width=True):
                         st.session_state.active_credit_id = rec["id"]
                         st.session_state.credit_result = None
                         st.rerun()
@@ -716,18 +717,19 @@ with tabs[1]:
                     is_active = (st.session_state.active_sales_id == rec["id"])
                     active_cls = "active" if is_active else ""
 
-                    st.markdown(f"""<div class="queue-card {active_cls}">
+                    status_indicator = "ACTIVE IN CANVAS" if is_active else rec["timestamp"]
+                    st.markdown(f"""<div class="queue-card-hitbox">
+<div class="queue-card {active_cls}">
 <div class="queue-entity">{rec['entity_name']}</div>
 <div class="queue-metric">{rec['headline_metric']}</div>
 <div class="queue-meta">
 <span><span class="nudesk-badge {sla['color']}">{sla['label']}</span> &bull; {rec['source_channel']}</span>
-<span>{rec['timestamp']}</span>
+<span style="font-weight:{'700' if is_active else '400'}; color:{'var(--nd-green)' if is_active else 'var(--nd-muted)'};">{status_indicator}</span>
+</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    btn_label = "Active in Canvas" if is_active else "Select for Outreach"
-                    btn_type = "primary" if is_active else "secondary"
-                    if st.button(btn_label, key=f"btn_s_select_{rec['id']}", type=btn_type, use_container_width=True):
+                    if st.button("Select", key=f"btn_s_select_{rec['id']}", use_container_width=True):
                         st.session_state.active_sales_id = rec["id"]
                         st.session_state.sales_result = None
                         st.rerun()
@@ -1038,18 +1040,19 @@ with tabs[2]:
                     is_active = (st.session_state.active_hr_id == rec["id"])
                     active_cls = "active" if is_active else ""
 
-                    st.markdown(f"""<div class="queue-card {active_cls}">
+                    status_indicator = "ACTIVE IN CANVAS" if is_active else rec["timestamp"]
+                    st.markdown(f"""<div class="queue-card-hitbox">
+<div class="queue-card {active_cls}">
 <div class="queue-entity">{rec['entity_name']}</div>
 <div class="queue-metric">{rec['headline_metric']}</div>
 <div class="queue-meta">
 <span><span class="nudesk-badge {sla['color']}">{sla['label']}</span> &bull; {rec['source_channel']}</span>
-<span>{rec['timestamp']}</span>
+<span style="font-weight:{'700' if is_active else '400'}; color:{'var(--nd-green)' if is_active else 'var(--nd-muted)'};">{status_indicator}</span>
+</div>
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    btn_label = "Active in Canvas" if is_active else "Select for Evaluation"
-                    btn_type = "primary" if is_active else "secondary"
-                    if st.button(btn_label, key=f"btn_h_select_{rec['id']}", type=btn_type, use_container_width=True):
+                    if st.button("Select", key=f"btn_h_select_{rec['id']}", use_container_width=True):
                         st.session_state.active_hr_id = rec["id"]
                         st.session_state.hr_result = None
                         st.rerun()
