@@ -584,6 +584,34 @@ def get_nudesk_css(theme: str = "light") -> str:
         background-color: #348E4D !important;
     }}
 
+    /* Top Bar Popovers (Settings and User Profile) */
+    div[data-testid="stPopover"] > button {{
+        border-radius: 6px !important;
+        font-family: 'Host Grotesk', 'Manrope', sans-serif !important;
+        font-weight: 700 !important;
+        font-size: 0.88rem !important;
+        border: 1px solid var(--nd-border) !important;
+        background-color: var(--nd-surface) !important;
+        color: var(--nd-text) !important;
+        padding: 0.45rem 0.95rem !important;
+        transition: all 0.15s ease-in-out !important;
+    }}
+
+    div[data-testid="stPopover"] > button:hover {{
+        border-color: var(--nd-green) !important;
+        background-color: var(--nd-surface-alt) !important;
+        color: var(--nd-green) !important;
+    }}
+
+    div[data-testid="stPopoverBody"] {{
+        background-color: var(--nd-surface) !important;
+        color: var(--nd-text) !important;
+        border: 1px solid var(--nd-border) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 8px 24px rgba(10, 15, 22, 0.25) !important;
+        padding: 1rem !important;
+    }}
+
     /* Responsive adjustments */
     @media (max-width: 768px) {{
         .nudesk-header {{

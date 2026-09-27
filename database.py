@@ -54,13 +54,15 @@ def init_db() -> None:
     conn.commit()
 
     # Clean legacy dummy test records
-    cursor.execute("DELETE FROM operations_history WHERE entity_name LIKE '%Test Enterprise%'")
+    cursor.execute("DELETE FROM operations_history WHERE entity_name LIKE '%Test Enterprise%' OR entity_name LIKE '%Benchmark Enterprise%' OR operator_name = 'Unit Test Operator'")
     conn.commit()
 
-    # Seed organic benchmarks if pending records are absent or total count is low
+    # Seed organic benchmarks if pending records are absent, total count is low, or dirty records exist
+    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE dispatch_status LIKE '%n8n%' OR entity_name LIKE '%Benchmark Enterprise%'")
+    dirty_count = cursor.fetchone()["count"]
     cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE is_processed = 0")
     pending_count = cursor.fetchone()["count"]
-    if pending_count < 5:
+    if dirty_count > 0 or pending_count < 4:
         cursor.execute("DELETE FROM operations_history")
         seed_organic_benchmarks(conn)
 
@@ -75,7 +77,7 @@ def save_operation(
     headline_metric: str,
     assessment_summary: str,
     full_output_json: Dict[str, Any],
-    dispatch_status: str = "Synced to n8n / Sheets",
+    dispatch_status: str = "Synced",
     is_processed: int = 1,
     source_channel: str = "Google Meet / Read AI",
     analyst_notes: str = ""
@@ -111,7 +113,7 @@ def save_operation(
 
 def mark_operation_processed(
     record_id: int,
-    dispatch_status: str = "Synced to n8n / LOS",
+    dispatch_status: str = "Synced",
     headline_metric: Optional[str] = None,
     assessment_summary: Optional[str] = None,
     full_output_json: Optional[Dict[str, Any]] = None,
@@ -333,10 +335,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Apex Fleet Repair (Dallas, TX)",
             "$85,000 USD | Equipment Term Loan",
             "Owner Robert Martinez seeking hydraulic lift financing. $38k monthly revenue. Verified tax lien installment in place.",
-            json.dumps({"requested_amount": 85000, "collateral": "Rotary Lift Heavy Hydraulic", "status": "pending_triage"}),
-            "Pending Intake",
+            json.dumps({"requested_amount": 85000, "collateral": "Rotary Lift Heavy Hydraulic", "status": "pending_triage", "dti": 0.28, "risk_tier": "Low Risk"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus(42),
@@ -346,10 +349,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Gulf Coast Marine Welding (Galveston, TX)",
             "$140,000 USD | Working Capital Line",
             "Shipyard subcontractor needing weekly payroll float against verified 45-day marine repair contracts. No UCC liens.",
-            json.dumps({"requested_amount": 140000, "collateral": "Commercial receivables", "status": "pending_triage"}),
-            "Pending Intake",
+            json.dumps({"requested_amount": 140000, "collateral": "Commercial Receivables", "status": "pending_triage", "dti": 0.31, "risk_tier": "Low Risk"}),
+            "Pending Triage",
             0,
-            "Google Meet via Fireflies.ai"
+            "Google Meet via Fireflies.ai",
+            ""
         ),
         (
             t_minus_hours(3),
@@ -359,10 +363,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Rio Grande Distribution (Laredo, TX)",
             "$210,000 USD | Freight Factoring",
             "Cross-border carrier with 18 refrigerated trailers. 55-day broker payment terms. High intent for spot factoring line.",
-            json.dumps({"requested_amount": 210000, "collateral": "Freight invoices", "status": "pending_triage"}),
-            "Pending Intake",
+            json.dumps({"requested_amount": 210000, "collateral": "Freight Invoices", "status": "pending_triage", "dscr": 1.42, "risk_tier": "Low Risk"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus_hours(5),
@@ -372,10 +377,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Red River Heavy Fabrication (Tulsa, OK)",
             "$220,000 USD | CNC Machinery Expansion",
             "High revenue volatility ($110k - $24k/mo); multiple active MCA daily debit positions detected on bank statements.",
-            json.dumps({"risk_tier": "High Risk", "requested_amount": 220000, "mca_stacking_detected": True}),
-            "Flagged for Senior Review",
+            json.dumps({"risk_tier": "High Risk", "requested_amount": 220000, "mca_stacking_detected": True, "collateral": "CNC Machinery"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            "Requires senior underwriter exception approval due to existing MCA liens."
         ),
         (
             t_minus(22),
@@ -385,10 +391,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Sunbelt Logistics LLC (Phoenix, AZ)",
             "$2.4M ARR | 14 Tractor Fleet",
             "Marcus Vance (Managing Director) requesting 90-day freight billing line. Urgent liquidity need for driver recruitment.",
-            json.dumps({"arr": 2400000, "fleet_size": 14, "status": "pending_lead_qualification"}),
-            "Pending Lead Qualification",
+            json.dumps({"arr": 2400000, "fleet_size": 14, "lead_score": 92, "status": "pending_lead_qualification"}),
+            "Pending Triage",
             0,
-            "Google Meet via Fireflies.ai"
+            "Google Meet via Fireflies.ai",
+            ""
         ),
         (
             t_minus_hours(1),
@@ -398,10 +405,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Baja Cross-Border Cold Chain (Otay Mesa, CA)",
             "$1.6M ARR | 8 Refrigerated Reefers",
             "Diana Navarro seeking non-recourse factoring line for perishable produce shipments across Tijuana-San Diego corridor.",
-            json.dumps({"arr": 1600000, "fleet_size": 8, "status": "pending_lead_qualification"}),
-            "Pending Lead Qualification",
+            json.dumps({"arr": 1600000, "fleet_size": 8, "lead_score": 86, "status": "pending_lead_qualification"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus_hours(4),
@@ -411,10 +419,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Alamo Industrial Coatings (San Antonio, TX)",
             "$980,000 ARR | Municipal Painting",
             "Jorge Villarreal requesting progress billing advance against municipal water tower rehabilitation project.",
-            json.dumps({"arr": 980000, "status": "pending_lead_qualification"}),
-            "Pending Lead Qualification",
+            json.dumps({"arr": 980000, "fleet_size": 4, "lead_score": 79, "status": "pending_lead_qualification"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus(35),
@@ -424,10 +433,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Sofia Valdez (Mazatlán, Sin.)",
             "Senior Bilingual Credit Analyst",
             "Screening call with Elena Ramos. 4 years SME underwriting experience; demonstrated sharp detection of undisclosed MCA debt.",
-            json.dumps({"candidate": "Sofia Valdez", "experience_years": 4, "cefr": "C1", "status": "pending_screening_review"}),
-            "Pending Screening Review",
+            json.dumps({"candidate": "Sofia Valdez", "experience_years": 4, "cefr": "C1", "fit_score": 94, "action": "Advance to Interview"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus_hours(2),
@@ -437,10 +447,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Carlos Mendoza (Mazatlán, Sin.)",
             "Commercial BDR (Logistics)",
             "3 years outbound B2B sales experience targeting US logistics carriers. Fluent commercial English with confident objection handling.",
-            json.dumps({"candidate": "Carlos Mendoza", "experience_years": 3, "cefr": "B2+", "status": "pending_screening_review"}),
-            "Pending Screening Review",
+            json.dumps({"candidate": "Carlos Mendoza", "experience_years": 3, "cefr": "B2+", "fit_score": 87, "action": "Advance to Case Study"}),
+            "Pending Triage",
             0,
-            "Google Meet via Read AI"
+            "Google Meet via Read AI",
+            ""
         ),
         (
             t_minus_hours(6),
@@ -450,10 +461,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Valeria Beltrán (Culiacán, Sin.)",
             "Senior Talent Acquisition Specialist",
             "5 years sourcing bilingual underwriting and accounting specialists across Sinaloa and Sonora. Strong recruiter network.",
-            json.dumps({"candidate": "Valeria Beltrán", "experience_years": 5, "cefr": "C1", "status": "pending_screening_review"}),
-            "Pending Screening Review",
+            json.dumps({"candidate": "Valeria Beltrán", "experience_years": 5, "cefr": "C1", "fit_score": 92, "action": "Advance to Interview"}),
+            "Pending Triage",
             0,
-            "Google Meet via Fireflies.ai"
+            "Google Meet via Fireflies.ai",
+            ""
         ),
 
         # -------------------------------------------------------------
@@ -467,10 +479,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Lone Star Cold Storage (Houston, TX)",
             "Low Risk | $150k USD",
             "Refrigerated warehousing expansion with $95k monthly revenues and 0.22 DTI ratio. Clean UCC lien history verified.",
-            json.dumps({"risk_tier": "Low Risk", "amount": 150000, "dti": 0.22}),
-            "Synced to n8n / LOS",
+            json.dumps({"risk_tier": "Low Risk", "requested_amount": 150000, "dti": 0.22, "collateral": "Warehouse Equipment"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "Verified 3 years tax returns and bank statements; 0.22 DTI confirmed."
         ),
         (
             t_minus_hours(3),
@@ -480,10 +493,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Desert Express Freight (El Paso, TX)",
             "Score: 88/100 | $1.8M ARR",
             "Regional dry-van carrier qualified for non-recourse factoring line. Cold email draft staged in Gmail for morning send.",
-            json.dumps({"lead_score": 88, "facility": 200000}),
-            "Synced to n8n / Sales CRM",
+            json.dumps({"lead_score": 88, "arr": 1800000, "fleet_size": 12}),
+            "Synced",
             1,
-            "Google Meet / Fireflies.ai"
+            "Google Meet / Fireflies.ai",
+            "Qualified for 90-day non-recourse line; tailored cold email staged."
         ),
         (
             t_minus_hours(4),
@@ -493,10 +507,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Mateo Guerrero (Mazatlán, Sin.)",
             "Score: 88/100 | B2 Commercial BDR",
             "Solid cold calling experience in logistics staffing; fluent commercial English with fast speed-to-lead execution.",
-            json.dumps({"fit_score": 88, "action": "Advance to Technical Interview"}),
-            "Synced to HR Pipeline",
+            json.dumps({"fit_score": 88, "cefr": "B2", "action": "Advance to Technical Interview"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "Demonstrated strong commercial objection handling; advanced to HM case study."
         ),
         (
             t_minus_hours(7),
@@ -506,10 +521,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Pacific Shore Drywall (San Diego, CA)",
             "Low Risk | $110k USD",
             "Commercial subcontractor with verified general contractor pay applications. Rapid liquidity fit for weekly payroll.",
-            json.dumps({"risk_tier": "Low Risk", "amount": 110000}),
-            "Synced to n8n / LOS",
+            json.dumps({"risk_tier": "Low Risk", "requested_amount": 110000, "dti": 0.25, "collateral": "GC Pay Applications"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "General contractor pay applications confirmed; no outstanding federal liens."
         ),
         (
             t_minus_days(1),
@@ -519,10 +535,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Sonora Freightlines (Nogales, AZ)",
             "Score: 92/100 | $3.1M ARR",
             "High-volume produce hauler facing 60-day broker lag. High-conversion telephone pitch delivered to dispatch director.",
-            json.dumps({"lead_score": 92, "facility": 350000}),
-            "Synced to n8n / Sales CRM",
+            json.dumps({"lead_score": 92, "arr": 3100000, "fleet_size": 22}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "High urgency produce liquidity fit; 350k factoring line approved."
         ),
         (
             t_minus_days(1),
@@ -532,10 +549,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Mariana Ochoa (Culiacán, Sin.)",
             "Score: 91/100 | C2 Lead Specialist",
             "Over 6 years financial analysis and underwriting leadership; exceptional cross-border commercial lending communication.",
-            json.dumps({"fit_score": 91, "action": "Direct Offer Recommended"}),
-            "Synced to HR Pipeline",
+            json.dumps({"fit_score": 91, "cefr": "C2", "action": "Direct Offer Recommended"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "Exceptional cross-border credit experience; recommend direct partner offer."
         ),
         (
             t_minus_days(2),
@@ -545,10 +563,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Highland Precision Machining (Fort Worth, TX)",
             "Moderate Risk | $95k USD",
             "Aerospace tooling machine shop with verified purchase orders from Lockheed tier-2 supplier. Debt coverage DSCR at 1.34.",
-            json.dumps({"risk_tier": "Moderate Risk", "amount": 95000, "dscr": 1.34}),
-            "Synced to n8n / LOS",
+            json.dumps({"risk_tier": "Moderate Risk", "requested_amount": 95000, "dscr": 1.34, "collateral": "Tooling Equipment"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "Lockheed tier-2 purchase orders verified; 1.34 DSCR meets criteria."
         ),
         (
             t_minus_days(3),
@@ -558,10 +577,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Cactus State Express (Tucson, AZ)",
             "Score: 78/100 | $1.2M ARR",
             "Dry bulk carrier with steady regional routes. Standard 3% factoring rate approved by commercial sales director.",
-            json.dumps({"lead_score": 78, "facility": 150000}),
-            "Synced to n8n / Sales CRM",
+            json.dumps({"lead_score": 78, "arr": 1200000, "fleet_size": 7}),
+            "Synced",
             1,
-            "Google Meet / Fireflies.ai"
+            "Google Meet / Fireflies.ai",
+            "Standard 3% factoring rate approved; contracts staged."
         ),
         (
             t_minus_days(4),
@@ -571,10 +591,11 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
             "Diego Carvajal (Mazatlán, Sin.)",
             "Score: 86/100 | B2 Credit Analyst",
             "3 years banking documentation review in Mazatlán. Good understanding of balance sheet ratios and asset collateral.",
-            json.dumps({"fit_score": 86, "action": "Advance to Case Study"}),
-            "Synced to HR Pipeline",
+            json.dumps({"fit_score": 86, "cefr": "B2", "action": "Advance to Case Study"}),
+            "Synced",
             1,
-            "Google Meet / Read AI"
+            "Google Meet / Read AI",
+            "Strong documentation instincts; case study assigned for Thursday."
         )
     ]
 
@@ -583,7 +604,7 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
         INSERT INTO operations_history (
             timestamp, operator_name, operator_role, module_type,
             entity_name, headline_metric, assessment_summary,
-            full_output_json, dispatch_status, is_processed, source_channel
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            full_output_json, dispatch_status, is_processed, source_channel, analyst_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, organic_records)
     conn.commit()

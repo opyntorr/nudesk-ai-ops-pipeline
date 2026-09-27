@@ -104,6 +104,11 @@ class TestDeskMateV2Suite(unittest.TestCase):
         self.assertTrue(len(recent) >= 1)
         self.assertEqual(recent[0]["entity_name"], "Benchmark Enterprise LLC")
         self.assertEqual(recent[0]["analyst_notes"], "Special equipment lien verified")
+        # Clean up test record so it never leaks into production UI
+        conn = database.get_connection()
+        conn.cursor().execute("DELETE FROM operations_history WHERE id = ?", (rec_id,))
+        conn.commit()
+        conn.close()
 
     def test_sla_and_queue_advancement(self):
         sla_recent = database.calculate_sla_status("2026-09-26 21:00:00", is_processed=0)
