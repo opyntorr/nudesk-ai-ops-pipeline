@@ -788,7 +788,8 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
 <div><span class="nudesk-badge {badge_class}">{t_prio}</span></div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Call Transcript & Supporting Records", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Archived Call Transcript & Supporting Records")
                 st.caption(f"Historical record from {canvas_source}. Verified compliance dossier & supporting intake files.")
                 dossier_c = get_synthetic_dossier(
                     active_credit_rec["entity_name"],
@@ -848,7 +849,8 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
 </div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Discovery Transcript & Collateral Dock", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Discovery Transcript & Collateral Dock")
                 if not is_manual:
                     st.caption(f"Locked: Streaming directly from {canvas_source}. Text verification verified.")
 
@@ -1442,7 +1444,8 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
 <div class="script-box">{phone_script}</div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Sales Interaction & Notes", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Archived Sales Interaction & Notes")
                 st.caption(f"Historical record from {s_canvas_source}. Verified commercial prospect dossier & accounts receivable aging.")
                 dossier_s = get_synthetic_dossier(
                     active_sales_rec["entity_name"],
@@ -1499,7 +1502,8 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
 </div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Prospect Profile & AR Aging Dock", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Prospect Profile & AR Aging Dock")
                 if not is_manual_s:
                     st.caption(f"Locked: Streaming directly from {s_canvas_source}. Text verification verified.")
 
@@ -2114,7 +2118,8 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 <strong>Q{idx}:</strong> {q}
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Candidate Interview Transcript & CV Notes", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Archived Candidate Interview Transcript & CV Notes")
                 st.caption(f"Historical record from {h_canvas_source}. Verified candidate background, test scorecards & interview transcript.")
                 dossier_h = get_synthetic_dossier(
                     active_hr_rec["entity_name"],
@@ -2171,7 +2176,8 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 </div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Screening Transcript & Resume Dock", expanded=True):
+            with st.container(border=True):
+                st.markdown("#### Screening Transcript & Resume Dock")
                 if not is_manual_h:
                     st.caption(f"Locked: Streaming directly from {h_canvas_source}. Text verification verified.")
 

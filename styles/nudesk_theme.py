@@ -231,12 +231,17 @@ def get_nudesk_css(theme: str = "light") -> str:
         color: var(--nd-green) !important;
     }}
 
-    /* Streamlit Expanders */
+    /* Streamlit Containers & Expanders */
+    div[data-testid="stVerticalBlockBorderWrapper"],
     div[data-testid="stExpander"] {{
         background-color: var(--nd-surface) !important;
         border: 1px solid var(--nd-border) !important;
         border-radius: 8px !important;
-        margin-bottom: 0.65rem !important;
+        margin-bottom: 0.85rem !important;
+    }}
+
+    div[data-testid="stVerticalBlockBorderWrapper"] > div {{
+        padding: 0.85rem 1.15rem !important;
     }}
 
     div[data-testid="stExpander"] details summary {{

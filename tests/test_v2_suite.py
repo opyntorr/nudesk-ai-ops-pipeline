@@ -536,10 +536,13 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         with open(app_path, "r", encoding="utf-8") as f:
             app_code = f.read()
 
-        # 1. Check all 3 processed expanders have expanded=True
-        self.assertIn('with st.expander("Archived Call Transcript & Supporting Records", expanded=True):', app_code)
-        self.assertIn('with st.expander("Archived Sales Interaction & Notes", expanded=True):', app_code)
-        self.assertIn('with st.expander("Archived Candidate Interview Transcript & CV Notes", expanded=True):', app_code)
+        # 1. Check all 3 processed sections are permanently open bordered containers (no expanders)
+        self.assertIn('st.markdown("#### Archived Call Transcript & Supporting Records")', app_code)
+        self.assertIn('st.markdown("#### Archived Sales Interaction & Notes")', app_code)
+        self.assertIn('st.markdown("#### Archived Candidate Interview Transcript & CV Notes")', app_code)
+        self.assertNotIn('with st.expander("Archived Call Transcript & Supporting Records"', app_code)
+        self.assertNotIn('with st.expander("Archived Sales Interaction & Notes"', app_code)
+        self.assertNotIn('with st.expander("Archived Candidate Interview Transcript & CV Notes"', app_code)
 
         # 2. Check download buttons in app.py
         self.assertIn("btn_c_down_", app_code)
@@ -635,6 +638,32 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertEqual(ai_engine.get_candidate_models(), test_seq)
         # Restore default
         ai_engine.set_candidate_models(["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"])
+
+    def test_permanently_open_transcript_and_collateral_docks(self):
+        """QA Test: Ensure all transcript and collateral docks are non-collapsible containers."""
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        required_docks = [
+            "Archived Call Transcript & Supporting Records",
+            "Discovery Transcript & Collateral Dock",
+            "Archived Sales Interaction & Notes",
+            "Prospect Profile & AR Aging Dock",
+            "Archived Candidate Interview Transcript & CV Notes",
+            "Screening Transcript & Resume Dock"
+        ]
+
+        for dock in required_docks:
+            self.assertIn(f'st.markdown("#### {dock}")', app_code)
+            self.assertNotIn(f'with st.expander("{dock}"', app_code)
+
+        # Verify container with border=True is used
+        self.assertIn("with st.container(border=True):", app_code)
+
+        # Verify theme container CSS
+        dark_css = get_nudesk_css("dark")
+        self.assertIn('div[data-testid="stVerticalBlockBorderWrapper"]', dark_css)
 
 
 # Backwards compatibility alias
