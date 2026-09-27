@@ -1,0 +1,64 @@
+{
+  "event": "meeting.completed",
+  "meeting_id": "read_m_8849201",
+  "title": "Underwriting Discovery - Sonora Cattle & Agro Logistics",
+  "platform": "google_meet",
+  "start_time": "2026-09-26T21:15:00Z",
+  "end_time": "2026-09-26T21:45:00Z",
+  "duration_minutes": 30,
+  "organizer": {
+    "name": "Robert Martinez",
+    "email": "robert.martinez@nudesk.ai",
+    "role": "Senior Underwriter"
+  },
+  "participants": [
+    {
+      "name": "Robert Martinez",
+      "email": "robert.martinez@nudesk.ai",
+      "role": "host"
+    },
+    {
+      "name": "Guillermo Valenzuela",
+      "email": "guillermo@sonora-agrologistics.com",
+      "role": "Managing Director"
+    }
+  ],
+  "summary": "Guillermo Valenzuela is requesting a $195,000 USD equipment term loan to acquire two Kenworth T680 livestock haulers for export routes into Arizona and Texas. Current monthly debt service is $14,200 against $92,000 in monthly net collections.",
+  "action_items": [
+    "Verify Title and VIN for 2x Kenworth T680 trailers",
+    "Request 3 months bank statements from Banregio",
+    "Stage UCC-1 lien filing check"
+  ],
+  "transcript": [
+    {
+      "speaker": "Robert Martinez",
+      "timestamp": "00:00:02",
+      "text": "Buenos días Guillermo. Gracias por conectarte a la sesión de descubrimiento financiero con nuDesk Capital."
+    },
+    {
+      "speaker": "Guillermo Valenzuela",
+      "timestamp": "00:00:12",
+      "text": "Buenos días Robert. Te comento, operamos 11 tractocamiones transportando ganado desde Hermosillo hacia Nogales y Douglas, Arizona. Requerimos $195,000 USD para cerrar la compra de dos unidades seminuevas."
+    },
+    {
+      "speaker": "Robert Martinez",
+      "timestamp": "00:00:35",
+      "text": "¿Cómo se encuentra su facturación mensual promedio y tienen actualmente otros créditos o gravámenes vigentes?"
+    },
+    {
+      "speaker": "Guillermo Valenzuela",
+      "timestamp": "00:00:50",
+      "text": "Facturamos entre $85,000 y $95,000 USD mensuales. Tenemos un crédito prendario con saldo de $18,000 USD próximo a liquidarse en 60 días. No tenemos deudas de tipo MCA ni demandas fiscales."
+    },
+    {
+      "speaker": "Robert Martinez",
+      "timestamp": "00:01:15",
+      "text": "Excelente. Evaluaremos el colateral de las unidades Kenworth y calcularemos la cobertura de flujo de caja para emitir la pre-aprobación."
+    }
+  ],
+  "full_transcript_text": "[00:00:02] Robert Martinez: Buenos días Guillermo. Gracias por conectarte a la sesión de descubrimiento financiero con nuDesk Capital.\n[00:00:12] Guillermo Valenzuela: Buenos días Robert. Te comento, operamos 11 tractocamiones transportando ganado desde Hermosillo hacia Nogales y Douglas, Arizona. Requerimos $195,000 USD para cerrar la compra de dos unidades seminuevas.\n[00:00:35] Robert Martinez: ¿Cómo se encuentra su facturación mensual promedio y tienen actualmente otros créditos o gravámenes vigentes?\n[00:00:50] Guillermo Valenzuela: Facturamos entre $85,000 y $95,000 USD mensuales. Tenemos un crédito prendario con saldo de $18,000 USD próximo a liquidarse en 60 días. No tenemos deudas de tipo MCA ni demandas fiscales.\n[00:01:15] Robert Martinez: Excelente. Evaluaremos el colateral de las unidades Kenworth y calcularemos la cobertura de flujo de caja para emitir la pre-aprobación.",
+  "recording_url": "https://app.read.ai/analytics/meetings/read_m_8849201",
+  "bot_source": "Google Meet via Read AI",
+  "headline_metric": "$195,000 USD | Livestock Hauler Expansion",
+  "client_name": "Sonora Cattle & Agro Logistics (Hermosillo, Son.)"
+}

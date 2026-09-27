@@ -23,7 +23,7 @@ def extract_text_from_url(url: str, max_chars: int = 4000) -> str:
     try:
         req = urllib.request.Request(
             clean_url,
-            headers={"User-Agent": "Mozilla/5.0 (nuDesk DeskMate Ops Studio Ingestion Bot)"}
+            headers={"User-Agent": "Mozilla/5.0 (nuDesk Ops Studio Ingestion Bot)"}
         )
         with urllib.request.urlopen(req, timeout=8) as response:
             html = response.read().decode("utf-8", errors="ignore")

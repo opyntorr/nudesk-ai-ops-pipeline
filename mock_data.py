@@ -88,7 +88,7 @@ Do you have 7 minutes this Thursday at 10:00 AM MST for a quick feasibility chec
 
 Best regards,
 
-DeskMate Sales Acceleration Team | nuDesk Operations
+nuDesk Sales Acceleration Team | Commercial Lending Operations
 Mazatlan Talent Hub -- US Lending Operations""",
     phone_script_30s_en="""Hi Marcus, this is [BDR Name] with nuDesk Capital. I'll be brief -- I see Sunbelt is running 14 reefers out of Phoenix. 
 
@@ -106,6 +106,11 @@ BENCHMARK_SALES_LEAD = MOCK_SALES_LEAD_RAW
 MOCK_FALLBACK_HR = HRTalentOutput(
     candidate_name="Sofia Valdez",
     applied_role="Senior Bilingual Credit Analyst",
+    application_area="Credit Underwriting & Risk",
+    candidate_fit_tier="High Fit",
+    candidate_fit_score=94,
+    psychometrics_score=92,
+    knowledge_test_score=96,
     overall_fit_score=94,
     bilingual_fluency_rating="C1 Advanced Professional",
     executive_summary="Exceptional FinServ candidate based in Mazatlán with 4 years of cross-border SME debt underwriting. Demonstrated sharp credit acumen by catching undisclosed MCA stacking, and possesses fluent English communication suitable for direct US client calls.",

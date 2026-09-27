@@ -12,7 +12,7 @@ load_dotenv()
 
 # Page configuration (No emojis per global styling rules)
 st.set_page_config(
-    page_title="DeskMate Operations Studio | nuDesk MX",
+    page_title="nuDesk Operations Studio | nuDesk MX",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -89,7 +89,7 @@ with st.sidebar:
     st.markdown("#### About nuDesk FinServ Engine")
     st.caption(
         "Bilingual nearshore operations combining human expertise in Mazatlan with autonomous "
-        "DeskMate AI agents to double underwriting and sales productivity for US commercial lenders."
+        "nuDesk AI agents to double underwriting and sales productivity for US commercial lenders."
     )
     st.markdown("---")
     st.markdown("[Get Free Google AI Studio Key](https://aistudio.google.com/)")
@@ -116,7 +116,7 @@ if "sales_input_text" not in st.session_state:
     st.session_state.sales_input_text = ""
 
 # ----------------- MAIN INTERFACE -----------------
-st.markdown('<div class="main-header">DeskMate Operations Studio</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">nuDesk Operations Studio</div>', unsafe_allow_html=True)
 st.markdown(
     '<div class="sub-header">'
     'Autonomous Post-Call Discovery Triage, Asana Task Generation, and Hyper-Personalized Sales Outreach Engine'
@@ -155,7 +155,7 @@ with tab_credit:
     )
     st.session_state.transcript_text = transcript_area
 
-    if st.button("Execute Credit Analysis with DeskMate", type="primary"):
+    if st.button("Execute Credit Analysis with nuDesk AI", type="primary"):
         if not transcript_area.strip():
             st.warning("Please provide a call transcript or click 'Load Demo Transcript' to proceed.")
         else:

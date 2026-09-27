@@ -1,5 +1,5 @@
 {
-  "name": "nuDesk Operations Studio - Triage & CRM Sync",
+  "name": "nuDesk Operations Studio - Multi-Flow Triage & Google Workspace Sync",
   "nodes": [
     {
       "parameters": {
@@ -9,104 +9,164 @@
         "options": {}
       },
       "id": "node-webhook-1",
-      "name": "Incoming DeskMate Webhook",
+      "name": "Incoming nuDesk Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        220,
-        300
+        180,
+        340
       ],
       "webhookId": "nudesk-triage-webhook"
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const meta = body.metadata || {};\n  const data = body.data || {};\n  \n  // Determine if Credit or Sales payload using flow_type property\n  const isCredit = body.flow_type === 'credit' || meta.flow_type === 'credit' || Boolean(data.risk_tier);\n  \n  output.push({\n    json: {\n      flow_type: isCredit ? 'credit' : 'sales',\n      pipeline_type: isCredit ? 'Credit Operations' : 'Sales Operations',\n      timestamp: meta.dispatch_timestamp || new Date().toISOString(),\n      entity_name: data.business_name || data.company_name || 'N/A',\n      contact_name: data.applicant_name || data.contact_person || 'N/A',\n      industry: data.industry || 'General Commercial',\n      financial_metric_usd: data.loan_amount_requested_usd || data.annual_revenue_usd || 0,\n      assessment: data.risk_tier || `Score: ${data.lead_score}/100`,\n      summary_notes: data.executive_summary || data.score_rationale || '',\n      raw_payload: JSON.stringify(data)\n    }\n  });\n}\n\nreturn output;"
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const meta = body.metadata || {};\n  const data = body.data || {};\n  const flow = (body.flow_type || meta.flow_type || 'credit').toLowerCase();\n  \n  const timestamp = meta.dispatch_timestamp || new Date().toISOString();\n  const operator = meta.operator_name || 'Operational Specialist';\n  \n  if (flow === 'sales') {\n    output.push({\n      json: {\n        flow_type: 'sales',\n        pipeline_type: 'Sales Operations',\n        timestamp: timestamp,\n        company_name: data.company_name || data.business_name || 'N/A',\n        contact_person: data.contact_person || data.applicant_name || 'N/A',\n        industry: data.industry || 'General Commercial',\n        annual_revenue_usd: data.annual_revenue_usd || 0,\n        lead_score: data.lead_score || 0,\n        lead_tier: data.lead_tier || (data.lead_score >= 85 ? 'Hot Lead' : (data.lead_score >= 70 ? 'Qualified' : 'Review')),\n        draft_email_subject: data.draft_outreach_subject || `nuDesk Commercial Partnership - ${data.company_name || 'Inquiry'}`,\n        draft_email_body: data.draft_outreach_body || data.score_rationale || 'We reviewed your freight operations and identified tailored credit facility options.',\n        analyst_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets CRM & Gmail Drafts'\n      }\n    });\n  } else if (flow === 'hr') {\n    output.push({\n      json: {\n        flow_type: 'hr',\n        pipeline_type: 'HR Talent Screening',\n        timestamp: timestamp,\n        candidate_name: data.candidate_name || data.applicant_name || 'N/A',\n        target_role: data.target_role || data.applied_role || 'Commercial Credit Analyst',\n        cefr_level: data.english_fluency_cefr || data.cefr || 'B2',\n        competency_score: data.technical_competency_score || data.fit_score || 0,\n        salary_expectation_usd: data.salary_expectation_monthly_usd || 0,\n        hiring_recommendation: data.hiring_recommendation || data.action || 'Advance to Case Study',\n        interviewer_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets Talent Roster & Gmail'\n      }\n    });\n  } else {\n    // Default to Credit flow\n    output.push({\n      json: {\n        flow_type: 'credit',\n        pipeline_type: 'Credit Operations',\n        timestamp: timestamp,\n        company_name: data.business_name || data.company_name || 'N/A',\n        applicant_name: data.applicant_name || data.contact_person || 'N/A',\n        loan_amount_usd: data.loan_amount_requested_usd || 0,\n        dti_ratio: data.dti_ratio || 'N/A',\n        risk_tier: data.risk_tier || 'Moderate',\n        collateral: data.collateral_type || 'General Assets',\n        executive_summary: data.executive_summary || '',\n        red_flags: Array.isArray(data.red_flags) ? data.red_flags.join('; ') : (data.red_flags || 'None reported'),\n        analyst_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets Credit LOS & Asana'\n      }\n    });\n  }\n}\n\nreturn output;"
       },
       "id": "node-transformer-2",
-      "name": "Format for Google Sheets / CRM",
+      "name": "Format for Google Sheets, CRM & Mail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        460,
-        300
+        420,
+        340
       ]
     },
     {
       "parameters": {
-        "conditions": {
-          "string": [
+        "dataType": "string",
+        "value1": "={{ $json.flow_type }}",
+        "rules": {
+          "rules": [
             {
-              "value1": "={{ $json.pipeline_type }}",
-              "value2": "Credit Operations"
+              "value2": "credit",
+              "outputKey": "credit"
+            },
+            {
+              "value2": "sales",
+              "outputKey": "sales"
+            },
+            {
+              "value2": "hr",
+              "outputKey": "hr"
             }
           ]
         }
       },
-      "id": "node-filter-3",
+      "id": "node-switch-3",
       "name": "Route by Operation Type",
-      "type": "n8n-nodes-base.if",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        680,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendRow",
+        "sheetId": "Credit_LOS_Pipeline",
+        "options": {}
+      },
+      "id": "node-credit-sheet-4",
+      "name": "Google Sheets - Credit LOS",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "name": "Underwriting Follow-Up: {{ $json.company_name }}",
+        "notes": "Facility: ${{ $json.loan_amount_usd }} USD\nRisk Tier: {{ $json.risk_tier }}\nDTI: {{ $json.dti_ratio }}\nCollateral: {{ $json.collateral }}\n\nExecutive Summary:\n{{ $json.executive_summary }}\n\nAnalyst Notes:\n{{ $json.analyst_notes }}\n\nOperator: {{ $json.operator }}"
+      },
+      "id": "node-credit-asana-5",
+      "name": "Asana - Create Underwriting Task",
+      "type": "n8n-nodes-base.asana",
       "typeVersion": 1,
       "position": [
-        700,
-        300
+        1220,
+        180
       ]
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "status",
-              "value": "Credit Memo Appended to Underwriting Pipeline"
-            }
-          ]
-        },
+        "operation": "appendRow",
+        "sheetId": "Commercial_Sales_CRM",
         "options": {}
       },
-      "id": "node-credit-dest-4",
-      "name": "Persist to Credit Google Sheet / Asana",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.2,
+      "id": "node-sales-sheet-6",
+      "name": "Google Sheets - Sales CRM",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
       "position": [
-        940,
-        220
+        960,
+        340
       ]
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "status",
-              "value": "Sales Lead Synced with CRM & BDR Outbox"
-            }
-          ]
-        },
+        "operation": "createDraft",
+        "subject": "={{ $json.draft_email_subject }}",
+        "message": "={{ $json.draft_email_body }}",
         "options": {}
       },
-      "id": "node-sales-dest-5",
-      "name": "Persist to Sales CRM Sheet & Gmail Drafts",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.2,
+      "id": "node-sales-gmail-7",
+      "name": "Gmail - Create BDR Outreach Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
       "position": [
-        940,
-        380
+        1220,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendRow",
+        "sheetId": "Talent_Screening_Roster",
+        "options": {}
+      },
+      "id": "node-hr-sheet-8",
+      "name": "Google Sheets - Talent Roster",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "createDraft",
+        "subject": "=nuDesk Talent Hub - Seguimiento de Entrevista: {{ $json.candidate_name }}",
+        "message": "=Estimado/a {{ $json.candidate_name }},\n\nGracias por su tiempo en la entrevista de preselección para la posición de {{ $json.target_role }}.\n\nHemos registrado su perfil con nivel de inglés CEFR {{ $json.cefr_level }} y score técnico de {{ $json.competency_score }}/100.\n\nNos pondremos en contacto para coordinar la siguiente etapa del proceso.\n\nAtentamente,\n{{ $json.operator }}\nnuDesk Talent Hub — Mazatlán Operations",
+        "options": {}
+      },
+      "id": "node-hr-gmail-9",
+      "name": "Gmail - Create Candidate Follow-up Draft",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1220,
+        500
       ]
     }
   ],
   "connections": {
-    "Incoming DeskMate Webhook": {
+    "Incoming nuDesk Webhook": {
       "main": [
         [
           {
-            "node": "Format for Google Sheets / CRM",
+            "node": "Format for Google Sheets, CRM & Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Format for Google Sheets / CRM": {
+    "Format for Google Sheets, CRM & Mail": {
       "main": [
         [
           {
@@ -121,14 +181,54 @@
       "main": [
         [
           {
-            "node": "Persist to Credit Google Sheet / Asana",
+            "node": "Google Sheets - Credit LOS",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Persist to Sales CRM Sheet & Gmail Drafts",
+            "node": "Google Sheets - Sales CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets - Talent Roster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Credit LOS": {
+      "main": [
+        [
+          {
+            "node": "Asana - Create Underwriting Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Sales CRM": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Create BDR Outreach Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Talent Roster": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Create Candidate Follow-up Draft",
             "type": "main",
             "index": 0
           }

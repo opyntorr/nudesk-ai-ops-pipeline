@@ -16,7 +16,7 @@ def dispatch_to_n8n(
     enriched_payload = {
         "flow_type": flow_type,
         "metadata": {
-            "source": "DeskMate Operations Studio",
+            "source": "nuDesk Operations Studio",
             "flow_type": flow_type,
             "dispatch_timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
             "environment": "Mazatlan Operations Hub"

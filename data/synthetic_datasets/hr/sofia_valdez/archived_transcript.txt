@@ -1,0 +1,7 @@
+[00:00:02] Recruiter (Elena Ramos): Welcome to your nuDesk talent screening, Sofia. How are you today?
+[00:00:09] Candidate: Great, thank you Elena. Very excited to discuss the Senior Bilingual Credit Analyst opportunity.
+[00:00:18] Recruiter: Let's start with your technical background. In US commercial debt, we often encounter applicants with seasonal revenue drops who took out merchant cash advances. Walk me through how you evaluate that.
+[00:00:32] Candidate: Absolutely. When I analyze bank statements, the first thing I do is calculate the Net Operating Cash Flow minus daily debits. If I see ACH entries with daily or weekly debits from known MCA funders, I immediately calculate the effective APR and factor rate. If their DSCR drops below 1.15x after servicing that daily debt, I flag it as a high-risk stacking event and require an official payoff statement.
+[00:00:58] Recruiter: Excellent answer. That matches our exact underwriting playbook. How do you feel about working directly with our US leadership in Dallas and Phoenix?
+[00:01:10] Candidate: Completely comfortable. I have conducted discovery interviews and daily standups in English for over 3 years, and my Cambridge score is verified at C1.
+[00:01:24] Recruiter: Your scores on both the technical test (96/100) and psychometrics (92/100) placed you in our top tier. I am advancing you directly to the hiring manager interview.

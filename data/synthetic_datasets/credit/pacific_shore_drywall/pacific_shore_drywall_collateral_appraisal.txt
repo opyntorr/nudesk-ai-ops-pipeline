@@ -1,0 +1,24 @@
+================================================================================
+NUDESK COMMERCIAL UNDERWRITING - COLLATERAL APPRAISAL & VENDOR QUOTE
+================================================================================
+Entity Name:           Pacific Shore Drywall (San Diego, CA)
+Facility Requested:    $110,000.00 USD
+Appraisal Date:        2026-09-20
+Assigned Underwriter:  Robert Martinez (Senior Credit Officer)
+Collateral Asset:      GC Pay Applications
+Lien Priority:         First Position Commercial UCC-1 Purchase Money Security Interest
+Appraised Market Val:  $129,800.00 USD
+Orderly Liquidation:   $96,800.00 USD (88% advance coverage)
+Vendor Invoice Ref:    VND-2026-TX-PACIF-8839
+
+PHYSICAL ASSET SPECIFICATIONS:
+- Primary Manufacturer: Rotary Lift / Mazak Commercial Industrial Systems
+- Condition: Factory New (Certified Tier-1 Commercial Warranty 36 Months)
+- Serial Numbers: Verified SN-PAC-9948201 / SN-PAC-9948202
+- Delivery & Installation Location: Verified business premises
+- UCC-1 Search Status: Zero competing PMSI filings on record (County & Secretary of State)
+
+UNDERWRITER COLLATERAL ASSESSMENT:
+Asset provides strong primary repayment defense. Orderly liquidation exceeds requested principal
+by comfortable 12% safety margin. Direct vendor disbursement required upon closing.
+================================================================================

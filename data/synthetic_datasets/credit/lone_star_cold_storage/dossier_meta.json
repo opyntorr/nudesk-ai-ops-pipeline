@@ -1,0 +1,27 @@
+{
+  "entity_name": "Lone Star Cold Storage (Houston, TX)",
+  "module_type": "credit",
+  "links": [
+    {
+      "label": "Google Drive Financial Vault",
+      "url": "https://drive.google.com/drive/folders/nudesk-credit-lone_star_cold_storage",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "nuDesk LOS Deal Room",
+      "url": "https://app.nudesk.ai/los/loans/lone_star_cold_storage",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Read AI Discovery Recording",
+      "url": "https://app.read.ai/analytics/meetings/rec-lone_star_cold_storage",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "Texas SOS UCC-1 Registry",
+      "url": "https://direct.sos.state.tx.us/ucc/search?entity=lone_star_cold_storage",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 4
+}

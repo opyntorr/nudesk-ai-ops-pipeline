@@ -1,0 +1,48 @@
+{
+  "eventType": "Transcription completed",
+  "data": {
+    "id": "fireflies_call_993411",
+    "title": "BDR Outreach - Monterrey Steel Logistics SA",
+    "date": 1727402400000,
+    "duration": 1380,
+    "organizer_email": "sarah.jenkins@nudesk.ai",
+    "transcript_url": "https://app.fireflies.ai/view/fireflies_call_993411",
+    "bot_source": "Google Meet via Fireflies.ai",
+    "headline_metric": "$4.2M ARR | Flatbed Steel Fleet",
+    "client_name": "Monterrey Steel Logistics (Apodaca, NL)",
+    "department": "sales",
+    "sentences": [
+      {
+        "speaker_name": "Sarah Jenkins",
+        "text": "Hello Ricardo, thank you for taking the time to discuss logistics financing for your flatbed fleet."
+      },
+      {
+        "speaker_name": "Ricardo Elizondo",
+        "text": "Hello Sarah. We operate 24 flatbed units transporting industrial steel coils from Monterrey to San Antonio and Houston. Our payment terms with automotive tier-1 suppliers are 60 to 90 days, which creates cash flow strain during fuel and toll cycles."
+      },
+      {
+        "speaker_name": "Sarah Jenkins",
+        "text": "Understood. Our commercial factoring program provides same-day advances on verified bills of lading with non-recourse credit protection."
+      },
+      {
+        "speaker_name": "Ricardo Elizondo",
+        "text": "That is exactly what we need. If your advance rate is at 88% or higher, we can commit 40 monthly loads immediately."
+      }
+    ],
+    "full_transcript_text": "[00:00:02] Sarah Jenkins: Hello Ricardo, thank you for taking the time to discuss logistics financing for your flatbed fleet.\n[00:00:15] Ricardo Elizondo: Hello Sarah. We operate 24 flatbed units transporting industrial steel coils from Monterrey to San Antonio and Houston. Our payment terms with automotive tier-1 suppliers are 60 to 90 days, which creates cash flow strain during fuel and toll cycles.\n[00:00:45] Sarah Jenkins: Understood. Our commercial factoring program provides same-day advances on verified bills of lading with non-recourse credit protection.\n[00:01:05] Ricardo Elizondo: That is exactly what we need. If your advance rate is at 88% or higher, we can commit 40 monthly loads immediately.",
+    "summary": {
+      "keywords": [
+        "flatbed steel",
+        "factoring",
+        "Monterrey-Texas corridor",
+        "cash flow strain",
+        "88% advance"
+      ],
+      "action_items": [
+        "Send BDR personalized proposal with 88% advance schedule",
+        "Request AR Aging report for Ternium and Metalsa accounts"
+      ],
+      "overview": "Ricardo Elizondo of Monterrey Steel Logistics ($4.2M ARR) seeking non-recourse factoring on 40 monthly international steel shipments."
+    }
+  }
+}

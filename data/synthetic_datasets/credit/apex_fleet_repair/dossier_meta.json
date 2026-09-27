@@ -1,0 +1,27 @@
+{
+  "entity_name": "Apex Fleet Repair (Dallas, TX)",
+  "module_type": "credit",
+  "links": [
+    {
+      "label": "Google Drive Financial Vault",
+      "url": "https://drive.google.com/drive/folders/nudesk-credit-apex_fleet_repair",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "nuDesk LOS Deal Room",
+      "url": "https://app.nudesk.ai/los/loans/apex_fleet_repair",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Read AI Discovery Recording",
+      "url": "https://app.read.ai/analytics/meetings/rec-apex_fleet_repair",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "Texas SOS UCC-1 Registry",
+      "url": "https://direct.sos.state.tx.us/ucc/search?entity=apex_fleet_repair",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 4
+}

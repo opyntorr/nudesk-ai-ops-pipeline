@@ -1,0 +1,5 @@
+Evaluation_Module,Max_Score,Candidate_Score,Benchmark_Cutoff,Percentile_Rank,Result,Examiner_Comments
+SME Balance Sheet & P&L Reconstruction,25,24,20,96th Percentile,Passed,Flawless normalization of owner add-backs and tax depreciation.
+Debt Service Coverage (DSCR) & Cash Flow Modeling,25,24,21,98th Percentile,Passed,Accurate modeling of seasonal construction revenue dip.
+Bank Statement Fraud & MCA Stacking Detection,25,23,20,94th Percentile,Passed,Caught undisclosed second-position daily ACH debit instantly.
+Bilingual Professional Underwriting Communication,25,24,20,99th Percentile,Passed,Native-level professional English fluency (C1). Concise memo structuring.

@@ -1,0 +1,27 @@
+{
+  "entity_name": "Sonora Freightlines (Nogales, AZ)",
+  "module_type": "sales",
+  "links": [
+    {
+      "label": "HubSpot Enterprise Opportunity",
+      "url": "https://crm.nudesk.ai/deals/sonora_freightlines",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "Google Sheets Live AR Aging",
+      "url": "https://docs.google.com/spreadsheets/d/ar-aging-sonora_freightlines",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Fireflies.ai Call Recording",
+      "url": "https://app.fireflies.ai/view/sales-sonora_freightlines",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "FMCSA Carrier Safety Profile",
+      "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&string=sonora_freightlines",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 3
+}
