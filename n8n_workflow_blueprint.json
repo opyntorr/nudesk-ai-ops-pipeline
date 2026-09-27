@@ -33,24 +33,78 @@
     },
     {
       "parameters": {
-        "dataType": "string",
-        "value1": "={{ $json.flow_type }}",
+        "mode": "rules",
         "rules": {
-          "rules": [
+          "values": [
             {
-              "value2": "credit",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow_type }}",
+                    "rightValue": "credit",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
               "outputKey": "credit"
             },
             {
-              "value2": "sales",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow_type }}",
+                    "rightValue": "sales",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
               "outputKey": "sales"
             },
             {
-              "value2": "hr",
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.flow_type }}",
+                    "rightValue": "hr",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
               "outputKey": "hr"
             }
           ]
-        }
+        },
+        "options": {}
       },
       "id": "node-switch-3",
       "name": "Route by Operation Type",
@@ -63,7 +117,8 @@
     },
     {
       "parameters": {
-        "operation": "appendRow",
+        "authentication": "serviceAccount",
+        "operation": "append",
         "sheetId": "Credit_LOS_Pipeline",
         "options": {}
       },
@@ -93,7 +148,8 @@
     },
     {
       "parameters": {
-        "operation": "appendRow",
+        "authentication": "serviceAccount",
+        "operation": "append",
         "sheetId": "Commercial_Sales_CRM",
         "options": {}
       },
@@ -124,7 +180,8 @@
     },
     {
       "parameters": {
-        "operation": "appendRow",
+        "authentication": "serviceAccount",
+        "operation": "append",
         "sheetId": "Talent_Screening_Roster",
         "options": {}
       },
