@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 # Internal modular imports
 from styles.nudesk_theme import get_nudesk_css
+import auth_rbac
 from auth_rbac import PRESET_WORKSPACE_PERSONAS, get_persona_by_id
 from meeting_queue import INCOMING_MEETINGS_QUEUE, BENCHMARK_HR_TRANSCRIPT
 from mock_data import BENCHMARK_TRANSCRIPT, BENCHMARK_SALES_LEAD

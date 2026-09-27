@@ -1,5 +1,10 @@
 .PHONY: help install test run tunnel docker-up docker-down clean
 
+VENV := .venv
+PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else echo python3; fi)
+PIP := $(shell if [ -f $(VENV)/bin/pip ]; then echo $(VENV)/bin/pip; else echo pip; fi)
+STREAMLIT := $(shell if [ -f $(VENV)/bin/streamlit ]; then echo $(VENV)/bin/streamlit; else echo streamlit; fi)
+
 help:
 	@echo "nuDesk DeskMate Operations Studio - Developer Commands"
 	@echo "------------------------------------------------------"
@@ -12,13 +17,13 @@ help:
 	@echo "make clean       : Remove temporary bytecode and cache directories"
 
 install:
-	pip install -r requirements.txt
+	$(PIP) install -r requirements.txt
 
 test:
-	python -m unittest discover -s tests -p "test_*.py" -v
+	$(PYTHON) -m unittest discover -s tests -p "test_*.py" -v
 
 run:
-	streamlit run app.py --server.port 8501
+	$(STREAMLIT) run app.py --server.port 8501
 
 tunnel:
 	./scripts/start_tunnel.sh
