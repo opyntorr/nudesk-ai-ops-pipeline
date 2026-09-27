@@ -5,6 +5,7 @@ AI-Workforce Platform for Financial Services
 """
 import os
 import json
+from typing import Optional, Any, Dict, List, Tuple
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -125,8 +126,16 @@ current_api_key = os.getenv("GEMINI_API_KEY", "")
 current_webhook_url = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/nudesk-triage")
 
 # ----------------- HELPER: TRANSCRIPT LOOKUP -----------------
-def get_transcript_for_entity(entity_name: str, module_type: str) -> tuple[str, str, str]:
-    """Retrieve full transcript and collateral docs matching entity name."""
+def get_transcript_for_entity(entity_name: str, module_type: str, raw_json_str: Optional[Any] = None) -> tuple[str, str, str]:
+    """Retrieve full transcript and collateral docs matching entity name or record payload."""
+    if raw_json_str:
+        try:
+            parsed = json.loads(raw_json_str) if isinstance(raw_json_str, str) else raw_json_str
+            if isinstance(parsed, dict) and parsed.get("transcript"):
+                return parsed["transcript"], parsed.get("default_doc_url", ""), parsed.get("doc_note", "")
+        except Exception:
+            pass
+
     clean_name = entity_name.lower()
     for m in INCOMING_MEETINGS_QUEUE:
         if m["type"] == module_type:
@@ -439,7 +448,9 @@ with tabs[0]:
             canvas_metric = active_credit_rec["headline_metric"]
             canvas_source = active_credit_rec["source_channel"]
             canvas_sla = database.calculate_sla_status(active_credit_rec["timestamp"])
-            raw_text, doc_url_val, doc_note_val = get_transcript_for_entity(active_credit_rec["entity_name"], "credit")
+            raw_text, doc_url_val, doc_note_val = get_transcript_for_entity(
+                active_credit_rec["entity_name"], "credit", active_credit_rec.get("full_output_json")
+            )
 
         st.markdown(f"""<div class="cockpit-header">
 <div>
@@ -787,7 +798,9 @@ with tabs[1]:
             s_canvas_metric = active_sales_rec["headline_metric"]
             s_canvas_source = active_sales_rec["source_channel"]
             s_canvas_sla = database.calculate_sla_status(active_sales_rec["timestamp"])
-            s_raw_text, s_doc_url, s_doc_note = get_transcript_for_entity(active_sales_rec["entity_name"], "sales")
+            s_raw_text, s_doc_url, s_doc_note = get_transcript_for_entity(
+                active_sales_rec["entity_name"], "sales", active_sales_rec.get("full_output_json")
+            )
 
         st.markdown(f"""<div class="cockpit-header">
 <div>
@@ -1108,7 +1121,9 @@ with tabs[2]:
             h_canvas_metric = active_hr_rec["headline_metric"]
             h_canvas_source = active_hr_rec["source_channel"]
             h_canvas_sla = database.calculate_sla_status(active_hr_rec["timestamp"])
-            h_raw_text, h_doc_url, h_doc_note = get_transcript_for_entity(active_hr_rec["entity_name"], "hr")
+            h_raw_text, h_doc_url, h_doc_note = get_transcript_for_entity(
+                active_hr_rec["entity_name"], "hr", active_hr_rec.get("full_output_json")
+            )
 
         st.markdown(f"""<div class="cockpit-header">
 <div>

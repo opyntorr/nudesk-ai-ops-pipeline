@@ -1,0 +1,107 @@
+{
+  "name": "nuDesk Ingestion Pipeline - Meeting Bots, Google Drive & Forms to Triage Queue",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "incoming-meeting",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-ingest-webhook-1",
+      "name": "Incoming Meeting Bot Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        240
+      ],
+      "webhookId": "nudesk-incoming-meeting"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "fileCreated",
+        "folderId": "nuDesk_Intake_Folder"
+      },
+      "id": "node-gdrive-trigger-2",
+      "name": "Google Drive Intake Watcher",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const raw = item.json.body || item.json;\n  \n  // Detect source channel and normalize fields\n  const isDrive = Boolean(raw.mimeType || raw.name);\n  const source = isDrive ? 'Google Drive Intake' : (raw.bot_source || raw.source || 'Google Meet via Read AI');\n  \n  let moduleType = 'credit';\n  let entityName = 'New Applicant Entity';\n  let headlineMetric = 'Awaiting Financial Extraction';\n  let transcript = '';\n  let docUrl = '';\n  let docNote = '';\n  \n  if (isDrive) {\n    entityName = (raw.name || 'Uploaded File').replace(/\\.[^/.]+$/, '');\n    headlineMetric = 'New Document Ingestion';\n    docUrl = raw.webViewLink || '';\n    docNote = `File: ${raw.name} (${raw.size || 'N/A'} bytes)`;\n    transcript = raw.text_content || `[System]: Intake file ${raw.name} placed in Google Drive folder. Ready for review.`;\n    \n    // Detect module from file name keywords\n    const nameLower = entityName.lower();\n    if (nameLower.includes('sales') || nameLower.includes('lead') || nameLower.includes('bdr')) {\n      moduleType = 'sales';\n    } else if (nameLower.includes('cv') || nameLower.includes('resume') || nameLower.includes('hr') || nameLower.includes('candidate')) {\n      moduleType = 'hr';\n    }\n  } else {\n    // Meeting Bot Payload (Read AI / Fireflies / Zoom)\n    entityName = raw.meeting_title || raw.title || raw.client_name || 'Commercial Prospect';\n    headlineMetric = raw.headline_metric || raw.requested_facility || 'Discovery Call Review';\n    transcript = raw.transcript || raw.summary || raw.full_text || '';\n    docUrl = raw.recording_url || raw.meeting_url || '';\n    docNote = raw.duration ? `Call Duration: ${raw.duration}` : 'Meeting Recording';\n    moduleType = (raw.department || raw.module || 'credit').toLowerCase();\n  }\n  \n  output.push({\n    json: {\n      module_type: moduleType,\n      entity_name: entityName,\n      headline_metric: headlineMetric,\n      transcript: transcript,\n      source_channel: source,\n      doc_url: docUrl,\n      doc_note: docNote,\n      summary: `Automated ingestion from ${source}`,\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "node-ingest-normalizer-3",
+      "name": "Normalize Intake Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "command": "python3 /home/opyntorr/nuDesk/scripts/ingest_incoming_file.py --stdin"
+      },
+      "id": "node-local-bridge-4",
+      "name": "Dispatch to nuDesk Queue Bridge",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        740,
+        320
+      ]
+    }
+  ],
+  "connections": {
+    "Incoming Meeting Bot Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Intake Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Intake Watcher": {
+      "main": [
+        [
+          {
+            "node": "Normalize Intake Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Intake Payload": {
+      "main": [
+        [
+          {
+            "node": "Dispatch to nuDesk Queue Bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

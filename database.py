@@ -608,3 +608,44 @@ def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, organic_records)
     conn.commit()
+
+
+def ingest_pending_record(
+    module_type: str,
+    entity_name: str,
+    headline_metric: str,
+    transcript_text: str,
+    assessment_summary: str = "Awaiting discovery analysis",
+    source_channel: str = "Google Meet via Read AI",
+    doc_url: str = "",
+    doc_note: str = "",
+    metadata_extra: Optional[Dict[str, Any]] = None
+) -> int:
+    """
+    Ingest a new pending record from an external source (n8n, Google Drive, Meeting Webhook).
+    Places the item in the pending queue (is_processed=0) with current timestamp to start SLA tracking.
+    """
+    payload = {
+        "transcript": transcript_text,
+        "default_doc_url": doc_url,
+        "doc_note": doc_note,
+        "status": "pending_triage",
+        "ingestion_source": source_channel
+    }
+    if metadata_extra and isinstance(metadata_extra, dict):
+        payload.update(metadata_extra)
+
+    return save_operation(
+        operator_name="Unassigned (Intake Queue)",
+        operator_role="Incoming Stream",
+        module_type=module_type.lower(),
+        entity_name=entity_name,
+        headline_metric=headline_metric,
+        assessment_summary=assessment_summary,
+        full_output_json=payload,
+        dispatch_status="Pending Triage",
+        is_processed=0,
+        source_channel=source_channel,
+        analyst_notes=""
+    )
+

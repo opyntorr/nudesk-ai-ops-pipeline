@@ -143,6 +143,32 @@ class TestDeskMateV2Suite(unittest.TestCase):
         at.run()
         self.assertFalse(at.exception, f"app.py raised unhandled runtime exception: {at.exception}")
 
+    def test_n8n_integration_and_ingestion(self):
+        # 1. Test ingestion into queue with active SLA
+        rec_id = database.ingest_pending_record(
+            module_type="credit",
+            entity_name="CI Test Transports LLC",
+            headline_metric="$95,000 USD | Working Capital",
+            transcript_text="[00:00:01] Underwriter: CI automated intake test transcript.",
+            source_channel="Google Drive Intake"
+        )
+        self.assertIsInstance(rec_id, int)
+        
+        # Verify retrieved transcript from dynamic record
+        import app
+        transcript, url, note = app.get_transcript_for_entity(
+            "CI Test Transports LLC", "credit", json.dumps({"transcript": "Custom Ingested Transcript Content"})
+        )
+        self.assertEqual(transcript, "Custom Ingested Transcript Content")
+
+        # 2. Test crm_dispatcher simulation fallback
+        import crm_dispatcher
+        ok, msg, payload = crm_dispatcher.dispatch_to_n8n("", {"test": True}, flow_type="sales")
+        self.assertTrue(ok)
+        self.assertIn("Simulation Mode Active", msg)
+        self.assertEqual(payload["flow_type"], "sales")
+
 
 if __name__ == "__main__":
     unittest.main()
+
