@@ -34,7 +34,7 @@ jobs:
 
       - name: Verify Code Compilation
         run: |
-          python -m py_compile app.py auth_rbac.py ai_engine.py crm_dispatcher.py database.py document_reader.py meeting_queue.py mock_data.py models.py styles/nudesk_theme.py
+          python -m py_compile app.py auth_rbac.py ai_engine.py crm_dispatcher.py database.py document_reader.py meeting_queue.py mock_data.py models.py styles/nudesk_theme.py synthetic_datasets.py
 
       - name: Run Test Suite
         run: |
