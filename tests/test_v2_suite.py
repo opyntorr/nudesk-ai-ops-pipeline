@@ -9,6 +9,7 @@ import auth_rbac
 import meeting_queue
 import document_reader
 from styles.nudesk_theme import get_nudesk_css
+from streamlit.testing.v1 import AppTest
 
 
 class TestDeskMateV2Suite(unittest.TestCase):
@@ -113,6 +114,13 @@ class TestDeskMateV2Suite(unittest.TestCase):
         
         res_invalid = document_reader.extract_text_from_url("https://invalid-non-existent-domain-12345.org")
         self.assertTrue("Unable to scrape" in res_invalid or res_invalid == "")
+
+    def test_streamlit_app_execution(self):
+        # End-to-end headless run of app.py to guarantee no runtime NameError or crash
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        at = AppTest.from_file(app_path, default_timeout=10)
+        at.run()
+        self.assertFalse(at.exception, f"app.py raised unhandled runtime exception: {at.exception}")
 
 
 if __name__ == "__main__":
