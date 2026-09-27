@@ -79,12 +79,12 @@ class TestDeskMateV2Suite(unittest.TestCase):
 
     def test_theme_css_generation(self):
         light_css = get_nudesk_css("light")
-        self.assertIn("--nd-green: #059669", light_css)
-        self.assertIn("--nd-bg: #F8FAFC", light_css)
+        self.assertIn("--nd-green: #3EA258", light_css)
+        self.assertIn("--nd-bg: #F4F7F9", light_css)
 
         dark_css = get_nudesk_css("dark")
-        self.assertIn("--nd-green: #10B981", dark_css)
-        self.assertIn("--nd-bg: #0B0F17", dark_css)
+        self.assertIn("--nd-green: #48B46B", dark_css)
+        self.assertIn("--nd-bg: #0A0F16", dark_css)
 
     def test_database_persistence(self):
         database.init_db()
@@ -92,15 +92,16 @@ class TestDeskMateV2Suite(unittest.TestCase):
             operator_name="Unit Test Operator",
             operator_role="Tester",
             module_type="credit",
-            entity_name="Test Enterprise LLC",
+            entity_name="Benchmark Enterprise LLC",
             headline_metric="Low Risk | $50k",
             assessment_summary="Viable test profile",
-            full_output_json={"test": True}
+            full_output_json={"test": True},
+            is_processed=1
         )
         self.assertIsInstance(rec_id, int)
-        recent = database.get_operations(limit=5)
+        recent = database.get_filtered_operations(module_filter="credit", search_query="Benchmark Enterprise", time_window="all")
         self.assertTrue(len(recent) >= 1)
-        self.assertEqual(recent[0]["entity_name"], "Test Enterprise LLC")
+        self.assertEqual(recent[0]["entity_name"], "Benchmark Enterprise LLC")
 
     def test_meeting_queue(self):
         self.assertTrue(len(meeting_queue.INCOMING_MEETINGS_QUEUE) >= 3)

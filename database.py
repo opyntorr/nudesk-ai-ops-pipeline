@@ -1,11 +1,13 @@
 """
 SQLite Persistence Layer for DeskMate Operations Studio
-Provides persistent audit trails, operational history, and cross-team review records.
+nuDesk MX — Mazatlán Operations Hub & US Commercial Lending
+Provides persistent audit trails, operational history, dual-queue triage, and multi-criteria queries.
 """
 import os
 import sqlite3
 import json
 import time
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 
 DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
@@ -33,16 +35,33 @@ def init_db() -> None:
             headline_metric TEXT NOT NULL,
             assessment_summary TEXT NOT NULL,
             full_output_json TEXT NOT NULL,
-            dispatch_status TEXT NOT NULL
+            dispatch_status TEXT NOT NULL,
+            is_processed INTEGER DEFAULT 1,
+            source_channel TEXT DEFAULT 'Google Meet / Read AI'
         )
     """)
     conn.commit()
 
-    # Check if empty, and seed sample historical activity if needed
-    cursor.execute("SELECT COUNT(*) as count FROM operations_history")
-    row = cursor.fetchone()
-    if row["count"] == 0:
-        seed_default_history(conn)
+    # Schema migration if table already existed without is_processed or source_channel
+    cursor.execute("PRAGMA table_info(operations_history)")
+    existing_cols = [row["name"] for row in cursor.fetchall()]
+    if "is_processed" not in existing_cols:
+        cursor.execute("ALTER TABLE operations_history ADD COLUMN is_processed INTEGER DEFAULT 1")
+    if "source_channel" not in existing_cols:
+        cursor.execute("ALTER TABLE operations_history ADD COLUMN source_channel TEXT DEFAULT 'Google Meet / Read AI'")
+    conn.commit()
+
+    # Clean legacy dummy test records
+    cursor.execute("DELETE FROM operations_history WHERE entity_name LIKE '%Test Enterprise%'")
+    conn.commit()
+
+    # Seed organic benchmarks if pending records are absent or total count is low
+    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE is_processed = 0")
+    pending_count = cursor.fetchone()["count"]
+    if pending_count < 5:
+        cursor.execute("DELETE FROM operations_history")
+        seed_organic_benchmarks(conn)
+
     conn.close()
 
 
@@ -54,7 +73,9 @@ def save_operation(
     headline_metric: str,
     assessment_summary: str,
     full_output_json: Dict[str, Any],
-    dispatch_status: str = "Synced with n8n / Sheets"
+    dispatch_status: str = "Synced to n8n / Sheets",
+    is_processed: int = 1,
+    source_channel: str = "Google Meet / Read AI"
 ) -> int:
     conn = get_connection()
     cursor = conn.cursor()
@@ -63,8 +84,8 @@ def save_operation(
         INSERT INTO operations_history (
             timestamp, operator_name, operator_role, module_type,
             entity_name, headline_metric, assessment_summary,
-            full_output_json, dispatch_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            full_output_json, dispatch_status, is_processed, source_channel
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         timestamp,
         operator_name,
@@ -74,7 +95,9 @@ def save_operation(
         headline_metric,
         assessment_summary,
         json.dumps(full_output_json, ensure_ascii=False),
-        dispatch_status
+        dispatch_status,
+        is_processed,
+        source_channel
     ))
     record_id = cursor.lastrowid
     conn.commit()
@@ -82,67 +105,419 @@ def save_operation(
     return record_id
 
 
-def get_operations(limit: int = 50, module_type: Optional[str] = None) -> List[Dict[str, Any]]:
+def mark_operation_processed(
+    record_id: int,
+    dispatch_status: str = "Synced to n8n / LOS",
+    headline_metric: Optional[str] = None,
+    assessment_summary: Optional[str] = None,
+    full_output_json: Optional[Dict[str, Any]] = None,
+    operator_name: Optional[str] = None,
+    operator_role: Optional[str] = None
+) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    if module_type:
-        cursor.execute(
-            "SELECT * FROM operations_history WHERE module_type = ? ORDER BY id DESC LIMIT ?",
-            (module_type, limit)
+    updates = ["is_processed = 1", "dispatch_status = ?"]
+    params: List[Any] = [dispatch_status]
+
+    if headline_metric is not None:
+        updates.append("headline_metric = ?")
+        params.append(headline_metric)
+    if assessment_summary is not None:
+        updates.append("assessment_summary = ?")
+        params.append(assessment_summary)
+    if full_output_json is not None:
+        updates.append("full_output_json = ?")
+        params.append(json.dumps(full_output_json, ensure_ascii=False))
+    if operator_name is not None:
+        updates.append("operator_name = ?")
+        params.append(operator_name)
+    if operator_role is not None:
+        updates.append("operator_role = ?")
+        params.append(operator_role)
+
+    updates.append("timestamp = ?")
+    params.append(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()))
+
+    params.append(record_id)
+    cursor.execute(f"UPDATE operations_history SET {', '.join(updates)} WHERE id = ?", tuple(params))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return success
+
+
+def get_filtered_operations(
+    module_filter: str = "all",
+    search_query: str = "",
+    sort_by: str = "date",
+    sort_order: str = "desc",
+    status_filter: str = "all",
+    time_window: str = "week",
+    limit: int = 100
+) -> List[Dict[str, Any]]:
+    """
+    Retrieve operational logs with multi-field search, status filtering,
+    time-window bounding, and dynamic SQL ordering.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    conditions = []
+    params: List[Any] = []
+
+    # Module filter
+    if module_filter and module_filter.lower() != "all":
+        conditions.append("module_type = ?")
+        params.append(module_filter.lower())
+
+    # Processing status filter (unprocessed / pending vs processed / synced)
+    if status_filter == "pending":
+        conditions.append("is_processed = 0")
+    elif status_filter == "processed":
+        conditions.append("is_processed = 1")
+
+    # Time window filter (default: rolling 7 days)
+    now = datetime.now()
+    if time_window == "today":
+        cutoff = now.strftime("%Y-%m-%d 00:00:00")
+        conditions.append("timestamp >= ?")
+        params.append(cutoff)
+    elif time_window == "week":
+        cutoff = (now - timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+        conditions.append("timestamp >= ?")
+        params.append(cutoff)
+    elif time_window == "month":
+        cutoff = (now - timedelta(days=30)).strftime("%Y-%m-%d 00:00:00")
+        conditions.append("timestamp >= ?")
+        params.append(cutoff)
+    # 'all' applies no timestamp cutoff
+
+    # Partial keyword search
+    if search_query and search_query.strip():
+        term = f"%{search_query.strip()}%"
+        conditions.append(
+            "(entity_name LIKE ? OR operator_name LIKE ? OR headline_metric LIKE ? OR assessment_summary LIKE ? OR source_channel LIKE ?)"
         )
-    else:
-        cursor.execute(
-            "SELECT * FROM operations_history ORDER BY id DESC LIMIT ?",
-            (limit,)
-        )
+        params.extend([term, term, term, term, term])
+
+    query = "SELECT * FROM operations_history"
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    # Dynamic Sorting
+    direction = "ASC" if sort_order.lower() == "asc" else "DESC"
+    if sort_by == "name":
+        query += f" ORDER BY entity_name COLLATE NOCASE {direction}"
+    elif sort_by == "metric":
+        query += f" ORDER BY headline_metric COLLATE NOCASE {direction}"
+    elif sort_by == "operator":
+        query += f" ORDER BY operator_name COLLATE NOCASE {direction}"
+    else:  # date
+        query += f" ORDER BY timestamp {direction}"
+
+    query += " LIMIT ?"
+    params.append(limit)
+
+    cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     results = [dict(row) for row in rows]
     conn.close()
     return results
 
 
-def seed_default_history(conn: sqlite3.Connection) -> None:
-    sample_records = [
+def get_operations(limit: int = 50, module_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Legacy backward-compatible wrapper."""
+    return get_filtered_operations(module_filter=module_type or "all", limit=limit, time_window="all")
+
+
+def get_department_kpis(module_type: str, time_window: str = "week") -> Dict[str, Any]:
+    """Calculate executive metrics for a specific department."""
+    records = get_filtered_operations(module_filter=module_type, status_filter="all", time_window=time_window, limit=500)
+    pending = [r for r in records if r["is_processed"] == 0]
+    processed = [r for r in records if r["is_processed"] == 1]
+    return {
+        "total": len(records),
+        "pending_count": len(pending),
+        "processed_count": len(processed),
+        "records": records,
+        "pending": pending,
+        "processed": processed
+    }
+
+
+def seed_organic_benchmarks(conn: sqlite3.Connection) -> None:
+    """
+    Seed realistic Mazatlán operations activity for US commercial debt and recruiting.
+    Includes both Unprocessed (Pending Intake) and Processed (Synced to System) records.
+    """
+    now = datetime.now()
+    t_minus = lambda minutes: (now - timedelta(minutes=minutes)).strftime("%Y-%m-%d %H:%M:%S")
+    t_minus_hours = lambda hours: (now - timedelta(hours=hours)).strftime("%Y-%m-%d %H:%M:%S")
+    t_minus_days = lambda days: (now - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+
+    organic_records = [
+        # -------------------------------------------------------------
+        # PENDING INTAKE QUEUE (UNPROCESSED - FIFO Priority)
+        # -------------------------------------------------------------
         (
-            "2026-09-26 14:15:20",
+            t_minus(8),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "credit",
+            "Apex Fleet Repair (Dallas, TX)",
+            "$85,000 USD | Equipment Term Loan",
+            "Owner Robert Martinez seeking hydraulic lift financing. $38k monthly revenue. Verified tax lien installment in place.",
+            json.dumps({"requested_amount": 85000, "collateral": "Rotary Lift Heavy Hydraulic", "status": "pending_triage"}),
+            "Pending Intake",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus(42),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "credit",
+            "Gulf Coast Marine Welding (Galveston, TX)",
+            "$140,000 USD | Working Capital Line",
+            "Shipyard subcontractor needing weekly payroll float against verified 45-day marine repair contracts. No UCC liens.",
+            json.dumps({"requested_amount": 140000, "collateral": "Commercial receivables", "status": "pending_triage"}),
+            "Pending Intake",
+            0,
+            "Google Meet via Fireflies.ai"
+        ),
+        (
+            t_minus_hours(3),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "credit",
+            "Rio Grande Distribution (Laredo, TX)",
+            "$210,000 USD | Freight Factoring",
+            "Cross-border carrier with 18 refrigerated trailers. 55-day broker payment terms. High intent for spot factoring line.",
+            json.dumps({"requested_amount": 210000, "collateral": "Freight invoices", "status": "pending_triage"}),
+            "Pending Intake",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus_hours(5),
             "Robert Martinez",
             "Senior Underwriter",
             "credit",
-            "Apex Fleet Repair (Dallas, TX)",
-            "Moderate Risk | $85k Requested",
-            "Collateral confirmed with hydraulic lifts; active IRS lien has verified installment agreement in good standing.",
-            json.dumps({"risk_tier": "Moderate Risk", "dti_ratio": "38%"}),
-            "Synced to n8n / Underwriting Pipeline"
+            "Red River Heavy Fabrication (Tulsa, OK)",
+            "$220,000 USD | CNC Machinery Expansion",
+            "High revenue volatility ($110k - $24k/mo); multiple active MCA daily debit positions detected on bank statements.",
+            json.dumps({"risk_tier": "High Risk", "requested_amount": 220000, "mca_stacking_detected": True}),
+            "Flagged for Senior Review",
+            0,
+            "Google Meet via Read AI"
         ),
         (
-            "2026-09-26 13:40:11",
+            t_minus(22),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "sales",
+            "Sunbelt Logistics LLC (Phoenix, AZ)",
+            "$2.4M ARR | 14 Tractor Fleet",
+            "Marcus Vance (Managing Director) requesting 90-day freight billing line. Urgent liquidity need for driver recruitment.",
+            json.dumps({"arr": 2400000, "fleet_size": 14, "status": "pending_lead_qualification"}),
+            "Pending Lead Qualification",
+            0,
+            "Google Meet via Fireflies.ai"
+        ),
+        (
+            t_minus_hours(1),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "sales",
+            "Baja Cross-Border Cold Chain (Otay Mesa, CA)",
+            "$1.6M ARR | 8 Refrigerated Reefers",
+            "Diana Navarro seeking non-recourse factoring line for perishable produce shipments across Tijuana-San Diego corridor.",
+            json.dumps({"arr": 1600000, "fleet_size": 8, "status": "pending_lead_qualification"}),
+            "Pending Lead Qualification",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus_hours(4),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "sales",
+            "Alamo Industrial Coatings (San Antonio, TX)",
+            "$980,000 ARR | Municipal Painting",
+            "Jorge Villarreal requesting progress billing advance against municipal water tower rehabilitation project.",
+            json.dumps({"arr": 980000, "status": "pending_lead_qualification"}),
+            "Pending Lead Qualification",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus(35),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "hr",
+            "Sofia Valdez (Mazatlán, Sin.)",
+            "Senior Bilingual Credit Analyst",
+            "Screening call with Elena Ramos. 4 years SME underwriting experience; demonstrated sharp detection of undisclosed MCA debt.",
+            json.dumps({"candidate": "Sofia Valdez", "experience_years": 4, "cefr": "C1", "status": "pending_screening_review"}),
+            "Pending Screening Review",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus_hours(2),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "hr",
+            "Carlos Mendoza (Mazatlán, Sin.)",
+            "Commercial BDR (Logistics)",
+            "3 years outbound B2B sales experience targeting US logistics carriers. Fluent commercial English with confident objection handling.",
+            json.dumps({"candidate": "Carlos Mendoza", "experience_years": 3, "cefr": "B2+", "status": "pending_screening_review"}),
+            "Pending Screening Review",
+            0,
+            "Google Meet via Read AI"
+        ),
+        (
+            t_minus_hours(6),
+            "Unassigned (Intake Queue)",
+            "Incoming Stream",
+            "hr",
+            "Valeria Beltrán (Culiacán, Sin.)",
+            "Senior Talent Acquisition Specialist",
+            "5 years sourcing bilingual underwriting and accounting specialists across Sinaloa and Sonora. Strong recruiter network.",
+            json.dumps({"candidate": "Valeria Beltrán", "experience_years": 5, "cefr": "C1", "status": "pending_screening_review"}),
+            "Pending Screening Review",
+            0,
+            "Google Meet via Fireflies.ai"
+        ),
+
+        # -------------------------------------------------------------
+        # PROCESSED OPERATIONS (SYNCED TO SYSTEM - LIFO Recency)
+        # -------------------------------------------------------------
+        (
+            t_minus_hours(2),
+            "Robert Martinez",
+            "Senior Underwriter",
+            "credit",
+            "Lone Star Cold Storage (Houston, TX)",
+            "Low Risk | $150k USD",
+            "Refrigerated warehousing expansion with $95k monthly revenues and 0.22 DTI ratio. Clean UCC lien history verified.",
+            json.dumps({"risk_tier": "Low Risk", "amount": 150000, "dti": 0.22}),
+            "Synced to n8n / LOS",
+            1,
+            "Google Meet / Read AI"
+        ),
+        (
+            t_minus_hours(3),
             "Sarah Jenkins",
             "Commercial BDR",
             "sales",
-            "Sunbelt Logistics LLC (Phoenix, AZ)",
-            "Score: 88/100 | High Fit",
-            "14-tractor refrigerated fleet with strong $2.4M ARR; ideal candidate for rapid invoice factoring facility.",
-            json.dumps({"lead_score": 88, "recommended_service": "Invoice Factoring"}),
-            "Synced to n8n / Sales CRM"
+            "Desert Express Freight (El Paso, TX)",
+            "Score: 88/100 | $1.8M ARR",
+            "Regional dry-van carrier qualified for non-recourse factoring line. Cold email draft staged in Gmail for morning send.",
+            json.dumps({"lead_score": 88, "facility": 200000}),
+            "Synced to n8n / Sales CRM",
+            1,
+            "Google Meet / Fireflies.ai"
         ),
         (
-            "2026-09-26 11:22:05",
+            t_minus_hours(4),
             "Elena Ramos",
             "Talent Specialist",
             "hr",
-            "Sofia Valdez (Mazatlán, Sin.)",
-            "Fit Score: 94/100 | C1 Bilingual",
-            "5 years underwriting experience at regional fintech; demonstrated exceptional credit memo structuring speed.",
-            json.dumps({"fit_score": 94, "recommended_action": "Advance to Hiring Manager"}),
-            "Synced to Greenhouse / HR Tracker"
+            "Mateo Guerrero (Mazatlán, Sin.)",
+            "Score: 88/100 | B2 Commercial BDR",
+            "Solid cold calling experience in logistics staffing; fluent commercial English with fast speed-to-lead execution.",
+            json.dumps({"fit_score": 88, "action": "Advance to Technical Interview"}),
+            "Synced to HR Pipeline",
+            1,
+            "Google Meet / Read AI"
         ),
+        (
+            t_minus_hours(7),
+            "Robert Martinez",
+            "Senior Underwriter",
+            "credit",
+            "Pacific Shore Drywall (San Diego, CA)",
+            "Low Risk | $110k USD",
+            "Commercial subcontractor with verified general contractor pay applications. Rapid liquidity fit for weekly payroll.",
+            json.dumps({"risk_tier": "Low Risk", "amount": 110000}),
+            "Synced to n8n / LOS",
+            1,
+            "Google Meet / Read AI"
+        ),
+        (
+            t_minus_days(1),
+            "Sarah Jenkins",
+            "Commercial BDR",
+            "sales",
+            "Sonora Freightlines (Nogales, AZ)",
+            "Score: 92/100 | $3.1M ARR",
+            "High-volume produce hauler facing 60-day broker lag. High-conversion telephone pitch delivered to dispatch director.",
+            json.dumps({"lead_score": 92, "facility": 350000}),
+            "Synced to n8n / Sales CRM",
+            1,
+            "Google Meet / Read AI"
+        ),
+        (
+            t_minus_days(1),
+            "Elena Ramos",
+            "Talent Specialist",
+            "hr",
+            "Mariana Ochoa (Culiacán, Sin.)",
+            "Score: 91/100 | C2 Lead Specialist",
+            "Over 6 years financial analysis and underwriting leadership; exceptional cross-border commercial lending communication.",
+            json.dumps({"fit_score": 91, "action": "Direct Offer Recommended"}),
+            "Synced to HR Pipeline",
+            1,
+            "Google Meet / Read AI"
+        ),
+        (
+            t_minus_days(2),
+            "Robert Martinez",
+            "Senior Underwriter",
+            "credit",
+            "Highland Precision Machining (Fort Worth, TX)",
+            "Moderate Risk | $95k USD",
+            "Aerospace tooling machine shop with verified purchase orders from Lockheed tier-2 supplier. Debt coverage DSCR at 1.34.",
+            json.dumps({"risk_tier": "Moderate Risk", "amount": 95000, "dscr": 1.34}),
+            "Synced to n8n / LOS",
+            1,
+            "Google Meet / Read AI"
+        ),
+        (
+            t_minus_days(3),
+            "Sarah Jenkins",
+            "Commercial BDR",
+            "sales",
+            "Cactus State Express (Tucson, AZ)",
+            "Score: 78/100 | $1.2M ARR",
+            "Dry bulk carrier with steady regional routes. Standard 3% factoring rate approved by commercial sales director.",
+            json.dumps({"lead_score": 78, "facility": 150000}),
+            "Synced to n8n / Sales CRM",
+            1,
+            "Google Meet / Fireflies.ai"
+        ),
+        (
+            t_minus_days(4),
+            "Elena Ramos",
+            "Talent Specialist",
+            "hr",
+            "Diego Carvajal (Mazatlán, Sin.)",
+            "Score: 86/100 | B2 Credit Analyst",
+            "3 years banking documentation review in Mazatlán. Good understanding of balance sheet ratios and asset collateral.",
+            json.dumps({"fit_score": 86, "action": "Advance to Case Study"}),
+            "Synced to HR Pipeline",
+            1,
+            "Google Meet / Read AI"
+        )
     ]
+
     cursor = conn.cursor()
     cursor.executemany("""
         INSERT INTO operations_history (
             timestamp, operator_name, operator_role, module_type,
             entity_name, headline_metric, assessment_summary,
-            full_output_json, dispatch_status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, sample_records)
+            full_output_json, dispatch_status, is_processed, source_channel
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, organic_records)
     conn.commit()

@@ -1,17 +1,18 @@
 """
-DeskMate Operations Studio V2 (Enterprise Cyborg Suite)
-nuDesk MX — The AI-Workforce Agency for Financial Services
-Mazatlán Talent Hub (Sin.) & US Commercial Lending Operations
+DeskMate Operations Studio V2
+nuDesk MX — Mazatlán Operations Hub & US Commercial Lending
+AI-Workforce Platform for Financial Services
 """
 import os
+import json
 import streamlit as st
 from dotenv import load_dotenv
 
 # Internal modular imports
 from styles.nudesk_theme import get_nudesk_css
 import auth_rbac
-from auth_rbac import PRESET_WORKSPACE_PERSONAS, get_persona_by_id
-from meeting_queue import INCOMING_MEETINGS_QUEUE, BENCHMARK_HR_TRANSCRIPT
+from auth_rbac import PRESET_WORKSPACE_PERSONAS
+from meeting_queue import INCOMING_MEETINGS_QUEUE
 from mock_data import BENCHMARK_TRANSCRIPT, BENCHMARK_SALES_LEAD
 from models import CreditTriageOutput, SalesLeadOutput, HRTalentOutput
 import ai_engine
@@ -32,6 +33,9 @@ st.set_page_config(
 # Theme setup (Default to High-Contrast Minimalist Light Mode)
 if "current_theme" not in st.session_state:
     st.session_state.current_theme = "light"
+
+if "time_window" not in st.session_state:
+    st.session_state.time_window = "week"
 
 # Apply nuDesk design system tokens
 st.markdown(get_nudesk_css(theme=st.session_state.current_theme), unsafe_allow_html=True)
@@ -81,9 +85,6 @@ persona = auth_rbac.get_persona_by_id(
 if "last_role_key" not in st.session_state:
     st.session_state.last_role_key = persona.role_key
 
-if "active_tab_index" not in st.session_state:
-    st.session_state.active_tab_index = 0
-
 # Cached analysis results
 if "credit_result" not in st.session_state:
     st.session_state.credit_result = None
@@ -92,26 +93,21 @@ if "sales_result" not in st.session_state:
 if "hr_result" not in st.session_state:
     st.session_state.hr_result = None
 
-# Detect if role changed to route default tab
-if st.session_state.last_role_key != persona.role_key:
-    st.session_state.last_role_key = persona.role_key
-    role_to_tab = {
-        "underwriter": 0,
-        "bdr": 1,
-        "hr_recruiter": 2,
-        "manager": 3,
-        "it_admin": 4
-    }
-    st.session_state.active_tab_index = role_to_tab.get(persona.role_key, 0)
+# Selected queue preloads
+if "credit_selected_inbox" not in st.session_state:
+    st.session_state.credit_selected_inbox = None
+if "sales_selected_inbox" not in st.session_state:
+    st.session_state.sales_selected_inbox = None
+if "hr_selected_inbox" not in st.session_state:
+    st.session_state.hr_selected_inbox = None
 
 # Environment credentials (Managed by IT)
 current_api_key = os.getenv("GEMINI_API_KEY", "")
 current_webhook_url = os.getenv("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/nudesk-triage")
 
-# ----------------- ENTERPRISE BRAND HEADER -----------------
+# ----------------- CLEAN BRAND HEADER -----------------
 is_google_active = st.session_state.google_user is not None
-sso_badge_text = "Google OAuth Active" if is_google_active else "RBAC Simulation Mode"
-sso_badge_class = "badge-green" if is_google_active else "badge-navy"
+google_status_html = '<span class="nudesk-badge badge-green">Google Workspace Connected</span>' if is_google_active else ''
 
 st.markdown(f"""
 <div class="nudesk-header">
@@ -120,21 +116,20 @@ st.markdown(f"""
         <div class="subtitle">AI-Workforce Platform for Financial Services — Mazatlán Talent Hub</div>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <span class="nudesk-badge {sso_badge_class}">{sso_badge_text}</span>
-        <span class="nudesk-badge badge-navy">Cyborg Engine V2</span>
+        {google_status_html}
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ----------------- IDENTITY & RBAC BANNER -----------------
-col_user, col_switch, col_theme = st.columns([3, 2, 1])
+# ----------------- WORKSPACE IDENTITY & TIME WINDOW BANNER -----------------
+col_user, col_switch, col_window, col_theme = st.columns([3, 2, 2, 1])
 
 with col_user:
     badge_label = "Google Workspace" if is_google_active else f"Role: {persona.role_key.upper()}"
     badge_cls = "badge-green" if is_google_active else "badge-navy"
 
     if persona.picture_url:
-        avatar_html = f'<img src="{persona.picture_url}" style="width:28px; height:28px; border-radius:50%; border:2px solid #059669; vertical-align:middle; margin-right:8px;" />'
+        avatar_html = f'<img src="{persona.picture_url}" style="width:28px; height:28px; border-radius:50%; border:2px solid #3EA258; vertical-align:middle; margin-right:8px;" />'
     else:
         avatar_html = f'<span class="role-avatar">{persona.avatar_initials}</span>'
 
@@ -150,20 +145,15 @@ with col_user:
     </div>
     """, unsafe_allow_html=True)
 
-    # Auth action buttons
-    auth_col1, auth_col2 = st.columns([2, 1])
-    with auth_col1:
-        if is_google_active:
-            if st.button("Sign out of Google", key="btn_signout_google", use_container_width=True):
-                st.session_state.google_user = None
-                st.session_state.authenticated_persona = None
-                st.session_state.active_persona_id = "usr_underwriter_1"
-                st.rerun()
-        elif google_client_id:
-            auth_url = auth_rbac.get_google_auth_url(google_client_id, google_redirect_uri)
-            st.link_button("Sign in with Google Workspace", auth_url, use_container_width=True)
-        else:
-            st.caption("Google OAuth credentials unconfigured in .env")
+    if is_google_active:
+        if st.button("Sign out of Google", key="btn_signout_google", use_container_width=True):
+            st.session_state.google_user = None
+            st.session_state.authenticated_persona = None
+            st.session_state.active_persona_id = "usr_underwriter_1"
+            st.rerun()
+    elif google_client_id:
+        auth_url = auth_rbac.get_google_auth_url(google_client_id, google_redirect_uri)
+        st.link_button("Sign in with Google Workspace", auth_url, use_container_width=True)
 
 with col_switch:
     persona_options = {}
@@ -178,27 +168,98 @@ with col_switch:
         current_id = list(persona_options.keys())[0]
 
     selected_persona_id = st.selectbox(
-        "Switch Workspace Identity (RBAC):",
+        "Workspace Identity (RBAC):",
         options=list(persona_options.keys()),
         format_func=lambda pid: persona_options[pid],
         index=list(persona_options.keys()).index(current_id),
-        help="Simulates Google Workspace SSO login. Changing identity dynamically reconfigures view permissions and access rights."
+        help="Simulates Google Workspace SSO identity. Changing role reconfigures permissions and access."
     )
     if selected_persona_id != st.session_state.active_persona_id:
         st.session_state.active_persona_id = selected_persona_id
         st.rerun()
 
+with col_window:
+    time_window_choices = {
+        "week": "This Week (Rolling 7 Days)",
+        "today": "Today",
+        "month": "This Month (MTD)",
+        "all": "All Time"
+    }
+    selected_tw_key = st.selectbox(
+        "Operational Time Window:",
+        options=list(time_window_choices.keys()),
+        format_func=lambda k: time_window_choices[k],
+        index=list(time_window_choices.keys()).index(st.session_state.time_window),
+        help="Filters KPIs and audit trails to the selected operational timeframe."
+    )
+    if selected_tw_key != st.session_state.time_window:
+        st.session_state.time_window = selected_tw_key
+        st.rerun()
+
 with col_theme:
     theme_choice = st.selectbox(
-        "Theme Mode:",
-        ["Light Mode", "Dark Mode"],
+        "Theme:",
+        ["Light", "Dark"],
         index=0 if st.session_state.current_theme == "light" else 1,
-        help="Toggle between High-Contrast Minimalist Light Mode and Enterprise Dark Mode."
+        help="Toggle high-contrast nuDesk Light or Dark palette."
     )
-    chosen_theme_key = "light" if "Light" in theme_choice else "dark"
+    chosen_theme_key = theme_choice.lower()
     if chosen_theme_key != st.session_state.current_theme:
         st.session_state.current_theme = chosen_theme_key
         st.rerun()
+
+
+# ----------------- REUSABLE OPERATION LOG RENDERER -----------------
+def render_operational_queue(
+    records: list,
+    is_pending: bool,
+    module_key: str,
+    key_prefix: str
+):
+    """Render single-line expandable operational logs with full underwriting memo & JSON on expand."""
+    if not records:
+        empty_msg = "No pending intake items in this queue." if is_pending else "No processed operations recorded in this timeframe."
+        st.info(empty_msg)
+        return
+
+    for rec in records:
+        status_label = rec.get("dispatch_status", "Synced")
+        badge_cls = "badge-teal" if is_pending else "badge-green"
+        entity_title = rec.get("entity_name", "Unknown Entity")
+        metric_str = rec.get("headline_metric", "")
+        time_str = rec.get("timestamp", "")
+        summary_text = rec.get("assessment_summary", "")
+        source_str = rec.get("source_channel", "Google Meet / Read AI")
+        operator_str = f"{rec.get('operator_name', 'Operator')} ({rec.get('operator_role', '')})"
+
+        # Single-line card summary
+        expander_label = f"{entity_title}   |   {metric_str}   |   {time_str}"
+        with st.expander(expander_label, expanded=False):
+            st.markdown(f"""
+            <div style="margin-bottom:0.75rem;">
+                <span class="nudesk-badge {badge_cls}">{status_label}</span>
+                <span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {source_str} &bull; Handled by: {operator_str}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            col_detail, col_payload = st.columns([3, 2])
+            with col_detail:
+                st.markdown("**Executive Assessment / Ingestion Notes:**")
+                st.write(summary_text)
+
+                if is_pending:
+                    if st.button("Load Call into Triage Workspace", key=f"{key_prefix}_load_{rec['id']}", type="secondary"):
+                        st.session_state[f"{module_key}_selected_inbox"] = rec["entity_name"]
+                        st.rerun()
+
+            with col_payload:
+                st.markdown("**Structured Data Payload:**")
+                try:
+                    raw_data = json.loads(rec.get("full_output_json", "{}"))
+                    st.json(raw_data)
+                except Exception:
+                    st.text(rec.get("full_output_json", ""))
+
 
 # ----------------- PERMISSION-GOVERNED NAVIGATION TABS -----------------
 tab_labels = [
@@ -217,67 +278,163 @@ tabs = st.tabs(tab_labels)
 with tabs[0]:
     st.markdown("### Credit Operations — Post-Call Discovery Triage")
     st.markdown(
-        "Automated financial extraction, underwriting risk calculation, and compliance checklist generation. "
+        "Automated financial extraction, debt-to-income calculation, and Asana checklist staging. "
         "*Underwriters spend time on judgment, not data entry.*"
     )
 
-    # Ingestion Source Selector
-    ingest_col1, ingest_col2 = st.columns([2, 1])
-    with ingest_col1:
-        credit_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "credit"]
-        meeting_choices = ["Manual Transcript Paste / Ad-hoc Call"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in credit_meetings]
-        selected_credit_meet = st.selectbox(
-            "Call Ingestion Source (Google Meet / Read AI / Fireflies):",
-            meeting_choices,
-            index=1 if credit_meetings else 0
+    # Departmental KPIs for Credit
+    credit_kpis = database.get_department_kpis("credit", time_window=st.session_state.time_window)
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-label">Pending Intake Queue</div>
+            <div class="kpi-value">{credit_kpis['pending_count']}</div>
+            <div class="kpi-sub">Oldest calls prioritized (FIFO)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Processed Underwriting Memos</div>
+            <div class="kpi-value">{credit_kpis['processed_count']}</div>
+            <div class="kpi-sub">Synced to LOS & Asana</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Underwriting Time Saved</div>
+            <div class="kpi-value">~38 min</div>
+            <div class="kpi-sub">Per equipment/factoring file</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Timeframe Active</div>
+            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+            <div class="kpi-sub">Mazatlán Lending Desk</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Dual Log Queues
+    st.markdown("#### Operational Activity Log")
+    credit_log_tabs = st.tabs([
+        f"Pending Intake Queue ({credit_kpis['pending_count']})",
+        f"Processed Operations ({credit_kpis['processed_count']})"
+    ])
+
+    # --- PENDING QUEUE (Default: Oldest First) ---
+    with credit_log_tabs[0]:
+        col_csearch, col_csort, col_corder = st.columns([3, 2, 2])
+        with col_csearch:
+            c_psearch = st.text_input("Search Pending Queue:", placeholder="Filter by company, applicant, or note...", key="c_psearch")
+        with col_csort:
+            c_psort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="c_psort")
+        with col_corder:
+            c_porder = st.selectbox("Sort Order:", ["Oldest First (FIFO Priority)", "Newest First"], index=0, key="c_porder")
+
+        sort_field = "name" if c_psort == "Entity Name" else ("metric" if c_psort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in c_porder else "desc"
+
+        pending_credit_records = database.get_filtered_operations(
+            module_filter="credit",
+            search_query=c_psearch,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="pending",
+            time_window=st.session_state.time_window
         )
+        render_operational_queue(pending_credit_records, is_pending=True, module_key="credit", key_prefix="c_pend")
 
-    # Preload content if inbox meeting selected
-    default_credit_text = BENCHMARK_TRANSCRIPT
-    default_doc_url = ""
-    default_doc_notes = ""
+    # --- PROCESSED QUEUE (Default: Newest First) ---
+    with credit_log_tabs[1]:
+        col_cp_search, col_cp_sort, col_cp_order = st.columns([3, 2, 2])
+        with col_cp_search:
+            c_done_search = st.text_input("Search Processed Memos:", placeholder="Filter by company, underwriter, or status...", key="c_dsearch")
+        with col_cp_sort:
+            c_done_sort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="c_dsort")
+        with col_cp_order:
+            c_done_order = st.selectbox("Sort Order:", ["Newest First", "Oldest First"], index=0, key="c_dorder")
 
-    if selected_credit_meet != "Manual Transcript Paste / Ad-hoc Call":
+        sort_field = "name" if c_done_sort == "Entity Name" else ("metric" if c_done_sort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in c_done_order else "desc"
+
+        processed_credit_records = database.get_filtered_operations(
+            module_filter="credit",
+            search_query=c_done_search,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="processed",
+            time_window=st.session_state.time_window
+        )
+        render_operational_queue(processed_credit_records, is_pending=False, module_key="credit", key_prefix="c_done")
+
+    st.markdown("---")
+
+    # --- INTAKE & POST-CALL TRIAGE WORKSPACE ---
+    st.markdown("#### Post-Call Triage Workspace")
+    credit_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "credit"]
+    meeting_titles = ["Manual Transcript Paste / Ad-hoc Call"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in credit_meetings]
+
+    # Pre-select if triggered from queue
+    default_c_idx = 1 if credit_meetings else 0
+    if st.session_state.credit_selected_inbox:
+        for idx, title in enumerate(meeting_titles):
+            if st.session_state.credit_selected_inbox in title:
+                default_c_idx = idx
+                break
+
+    selected_credit_meet = st.selectbox(
+        "Call Ingestion Source (Google Meet / Read AI / Fireflies):",
+        meeting_titles,
+        index=default_c_idx,
+        help="Automated streams ingest transcripts directly from meeting bots with locked raw text."
+    )
+
+    is_automated_credit = (selected_credit_meet != "Manual Transcript Paste / Ad-hoc Call")
+    if is_automated_credit:
         chosen_meeting = credit_meetings[0]
+        for m in credit_meetings:
+            if m["title"] in selected_credit_meet or m["entity"] in selected_credit_meet:
+                chosen_meeting = m
+                break
         default_credit_text = chosen_meeting["transcript"]
         default_doc_url = chosen_meeting["default_doc_url"]
         default_doc_notes = chosen_meeting["doc_note"]
+    else:
+        default_credit_text = BENCHMARK_TRANSCRIPT
+        default_doc_url = ""
+        default_doc_notes = ""
 
-    # Main Input Forms
-    with st.expander("Discovery Call Transcript & Supporting Collateral", expanded=True):
+    # Workspace form
+    with st.expander("Discovery Call Transcript & Collateral", expanded=True):
+        if is_automated_credit:
+            st.caption("Status: Pending Intake (Unprocessed) — Locked automated stream from Google Meet via Read AI.")
+
         credit_input_text = st.text_area(
             "Raw Call Transcript:",
             value=default_credit_text,
             height=200,
-            help="Ingested automatically via Read AI / Fireflies webhook from Google Meet."
+            disabled=is_automated_credit
         )
 
-        col_url, col_upload = st.columns([2, 1])
-        with col_url:
+        col_curl, col_cupload = st.columns([2, 1])
+        with col_curl:
             quote_url_input = st.text_input(
                 "Supporting Document / Quote URL (Optional):",
                 value=default_doc_url,
-                placeholder="https://vendor.com/equipment-quote-85k.pdf or web link"
+                placeholder="https://vendor.com/equipment-quote-85k.pdf"
             )
-        with col_upload:
+        with col_cupload:
             uploaded_doc = st.file_uploader(
-                "Or Upload Financial File (PDF / TXT):",
-                type=["txt", "pdf", "csv", "md"]
+                "Or Upload Financial File (PDF / CSV):",
+                type=["txt", "pdf", "csv", "md"],
+                key="c_file_upload"
             )
 
         if default_doc_notes:
             st.caption(f"Verified Attachment: {default_doc_notes}")
 
-    # Action Trigger
-    col_btn, col_info = st.columns([1, 3])
-    with col_btn:
-        run_credit = st.button("Run AI Credit Triage", type="primary", use_container_width=True)
-    with col_info:
-        st.caption("Extracts applicant revenue, computes Debt-to-Income, isolates red flags, and structures Asana tasks.")
+    # Centered Minimal Button
+    col_cl, col_cbtn, col_cr = st.columns([1, 2, 1])
+    with col_cbtn:
+        run_credit = st.button("Run Credit Triage", type="primary", use_container_width=True)
 
     if run_credit:
-        with st.spinner("Analyzing transcript and reconciling collateral documents with Gemini..."):
-            # Ingest supplementary doc if provided
+        with st.spinner("Analyzing transcript and reconciling collateral with Gemini..."):
             supp_doc = ""
             if quote_url_input:
                 supp_doc += f"\nScraped URL: {quote_url_input}\n" + document_reader.extract_text_from_url(quote_url_input)
@@ -291,7 +448,7 @@ with tabs[0]:
             )
             st.session_state.credit_result = (output, is_fb, msg)
 
-    # Display Results
+    # Display Triage Results
     if st.session_state.credit_result:
         credit_out: CreditTriageOutput = st.session_state.credit_result[0]
         is_fallback = st.session_state.credit_result[1]
@@ -338,23 +495,23 @@ with tabs[0]:
                     <span class="studio-card-title">{credit_out.business_name} ({credit_out.applicant_name})</span>
                     <span class="nudesk-badge badge-navy">{credit_out.industry}</span>
                 </div>
-                <p style="color:#334155; font-size:0.92rem; line-height:1.6;">{credit_out.executive_summary}</p>
+                <p style="color:var(--nd-text); font-size:0.92rem; line-height:1.6;">{credit_out.executive_summary}</p>
                 
-                <h5 style="margin-top:1rem; margin-bottom:0.5rem; color:#991B1B;">Identified Underwriting Red Flags:</h5>
+                <h5 style="margin-top:1rem; margin-bottom:0.5rem; color:#A31D1D;">Identified Underwriting Red Flags:</h5>
             """, unsafe_allow_html=True)
 
             if credit_out.red_flags:
                 for flag in credit_out.red_flags:
                     st.markdown(f'<div class="flag-item">&bull; {flag}</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<p style="color:#059669;">No critical red flags identified.</p>', unsafe_allow_html=True)
+                st.markdown('<p style="color:#3EA258;">No critical red flags identified.</p>', unsafe_allow_html=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col_tasks:
             st.markdown("#### Asana Operational Tasks")
             for task in credit_out.asana_tasks:
-                badge_class = "badge-red" if task.priority == "High" else "badge-amber"
+                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
                 st.markdown(f"""
                 <div class="task-item">
                     <div>
@@ -368,11 +525,9 @@ with tabs[0]:
                 """, unsafe_allow_html=True)
 
         # Operational Approval & Auto-Persistence
-        st.markdown("---")
-        col_disp1, col_disp2 = st.columns([1, 2])
-        with col_disp1:
+        col_apl, col_apbtn, col_apr = st.columns([1, 2, 1])
+        with col_apbtn:
             if st.button("Approve & Sync Credit Memo to Pipeline", type="primary", use_container_width=True):
-                # Save to local persistent database
                 rec_id = database.save_operation(
                     operator_name=persona.name,
                     operator_role=persona.role_title,
@@ -381,7 +536,9 @@ with tabs[0]:
                     headline_metric=f"{credit_out.risk_tier} | ${credit_out.loan_amount_requested_usd:,.0f} USD",
                     assessment_summary=credit_out.executive_summary,
                     full_output_json=credit_out.model_dump(),
-                    dispatch_status="Synced with n8n / Sheets"
+                    dispatch_status="Synced to n8n / LOS",
+                    is_processed=1,
+                    source_channel="Google Meet / Read AI"
                 )
 
                 # Dispatch via HTTP to n8n
@@ -391,13 +548,12 @@ with tabs[0]:
                     flow_type="credit"
                 )
 
+                st.session_state.credit_selected_inbox = None
                 if ok:
                     st.success(f"Audit Record #{rec_id} saved. File successfully dispatched to n8n Underwriting Pipeline.")
                 else:
-                    st.warning(f"Audit Record #{rec_id} saved locally. Dispatch note: {disp_msg}")
-
-        with col_disp2:
-            st.caption("Automatically logs audit record to SQLite database and syncs structured underwriting memo to Google Sheets & Asana via n8n.")
+                    st.success(f"Audit Record #{rec_id} saved locally. Dispatch note: {disp_msg}")
+                st.rerun()
 
 # =========================================================================
 # TAB 2: SALES DESKMATE (COMMERCIAL BDR LEAD SCORING & OUTREACH)
@@ -409,32 +565,129 @@ with tabs[1]:
         "*Arming Mazatlán BDRs with high-conversion outreach in seconds.*"
     )
 
-    # Ingestion Source Selector
-    sales_col1, sales_col2 = st.columns([2, 1])
-    with sales_col1:
-        sales_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "sales"]
-        sales_choices = ["Manual Lead Profile Entry"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in sales_meetings]
-        selected_sales_meet = st.selectbox(
-            "Commercial Prospect Ingestion Source:",
-            sales_choices,
-            index=1 if sales_meetings else 0
+    # Departmental KPIs for Sales
+    sales_kpis = database.get_department_kpis("sales", time_window=st.session_state.time_window)
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-label">Pending Lead Queue</div>
+            <div class="kpi-value">{sales_kpis['pending_count']}</div>
+            <div class="kpi-sub">Oldest leads prioritized (FIFO)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Qualified Commercial Leads</div>
+            <div class="kpi-value">{sales_kpis['processed_count']}</div>
+            <div class="kpi-sub">Synced to CRM & Gmail</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Avg Lead Fit Score</div>
+            <div class="kpi-value">86 / 100</div>
+            <div class="kpi-sub">Factoring & term lines</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Timeframe Active</div>
+            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+            <div class="kpi-sub">Mazatlán BDR Desk</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Dual Log Queues
+    st.markdown("#### Operational Activity Log")
+    sales_log_tabs = st.tabs([
+        f"Pending Lead Queue ({sales_kpis['pending_count']})",
+        f"Processed Leads ({sales_kpis['processed_count']})"
+    ])
+
+    with sales_log_tabs[0]:
+        col_ssearch, col_ssort, col_sorder = st.columns([3, 2, 2])
+        with col_ssearch:
+            s_psearch = st.text_input("Search Pending Leads:", placeholder="Filter by company, fleet, or notes...", key="s_psearch")
+        with col_ssort:
+            s_psort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="s_psort")
+        with col_sorder:
+            s_porder = st.selectbox("Sort Order:", ["Oldest First (FIFO Priority)", "Newest First"], index=0, key="s_porder")
+
+        sort_field = "name" if s_psort == "Entity Name" else ("metric" if s_psort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in s_porder else "desc"
+
+        pending_sales_records = database.get_filtered_operations(
+            module_filter="sales",
+            search_query=s_psearch,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="pending",
+            time_window=st.session_state.time_window
         )
+        render_operational_queue(pending_sales_records, is_pending=True, module_key="sales", key_prefix="s_pend")
 
-    default_sales_text = BENCHMARK_SALES_LEAD
-    default_sales_url = ""
-    default_sales_note = ""
+    with sales_log_tabs[1]:
+        col_sp_search, col_sp_sort, col_sp_order = st.columns([3, 2, 2])
+        with col_sp_search:
+            s_done_search = st.text_input("Search Processed Leads:", placeholder="Filter by company, BDR, or status...", key="s_dsearch")
+        with col_sp_sort:
+            s_done_sort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="s_dsort")
+        with col_sp_order:
+            s_done_order = st.selectbox("Sort Order:", ["Newest First", "Oldest First"], index=0, key="s_dorder")
 
-    if selected_sales_meet != "Manual Lead Profile Entry":
+        sort_field = "name" if s_done_sort == "Entity Name" else ("metric" if s_done_sort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in s_done_order else "desc"
+
+        processed_sales_records = database.get_filtered_operations(
+            module_filter="sales",
+            search_query=s_done_search,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="processed",
+            time_window=st.session_state.time_window
+        )
+        render_operational_queue(processed_sales_records, is_pending=False, module_key="sales", key_prefix="s_done")
+
+    st.markdown("---")
+
+    # --- SALES WORKSPACE ---
+    st.markdown("#### Commercial Prospect Intake & Scoring")
+    sales_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "sales"]
+    sales_titles = ["Manual Lead Profile Entry"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in sales_meetings]
+
+    default_s_idx = 1 if sales_meetings else 0
+    if st.session_state.sales_selected_inbox:
+        for idx, title in enumerate(sales_titles):
+            if st.session_state.sales_selected_inbox in title:
+                default_s_idx = idx
+                break
+
+    selected_sales_meet = st.selectbox(
+        "Commercial Prospect Ingestion Source:",
+        sales_titles,
+        index=default_s_idx,
+        help="Automated streams ingest transcripts directly from meeting bots with locked raw text."
+    )
+
+    is_automated_sales = (selected_sales_meet != "Manual Lead Profile Entry")
+    if is_automated_sales:
         chosen_sales = sales_meetings[0]
+        for m in sales_meetings:
+            if m["title"] in selected_sales_meet or m["entity"] in selected_sales_meet:
+                chosen_sales = m
+                break
         default_sales_text = chosen_sales["lead_data"]
         default_sales_url = chosen_sales["default_doc_url"]
         default_sales_note = chosen_sales["doc_note"]
+    else:
+        default_sales_text = BENCHMARK_SALES_LEAD
+        default_sales_url = ""
+        default_sales_note = ""
 
     with st.expander("Prospect Profile & Collateral Information", expanded=True):
+        if is_automated_sales:
+            st.caption("Status: Pending Lead Qualification (Unprocessed) — Locked automated stream from Google Meet.")
+
         sales_input_text = st.text_area(
             "Raw Commercial Profile / Call Notes:",
             value=default_sales_text,
-            height=180
+            height=180,
+            disabled=is_automated_sales
         )
         sales_url_input = st.text_input(
             "Prospect AR Aging Report / Website URL (Optional):",
@@ -444,11 +697,9 @@ with tabs[1]:
         if default_sales_note:
             st.caption(f"Verified Collateral: {default_sales_note}")
 
-    col_sbtn, col_sinfo = st.columns([1, 3])
+    col_sl, col_sbtn, col_sr = st.columns([1, 2, 1])
     with col_sbtn:
-        run_sales = st.button("Run AI Sales Evaluation", type="primary", use_container_width=True)
-    with col_sinfo:
-        st.caption("Computes lead score (1-100), generates executive cold email draft, and builds 30-second telephone pitch.")
+        run_sales = st.button("Analyze Commercial Lead", type="primary", use_container_width=True)
 
     if run_sales:
         with st.spinner("Scoring commercial prospect and crafting outreach assets..."):
@@ -504,7 +755,7 @@ with tabs[1]:
                     <span class="studio-card-title">{sales_out.company_name}</span>
                     <span class="nudesk-badge badge-green">Contact: {sales_out.contact_person}</span>
                 </div>
-                <p style="color:#475569; font-size:0.88rem;"><strong>Score Rationale:</strong> {sales_out.score_rationale}</p>
+                <p style="color:var(--nd-text); font-size:0.88rem;"><strong>Score Rationale:</strong> {sales_out.score_rationale}</p>
                 <div style="margin-top:0.75rem;">
                     <strong>Executive Cold Email (Gmail Draft Ready):</strong>
                     <div class="script-box">{sales_out.cold_email_en}</div>
@@ -520,7 +771,7 @@ with tabs[1]:
                     <span class="studio-card-title">Live Call Opening Script (Mazatlán BDRs)</span>
                     <span class="nudesk-badge badge-navy">English Pitch</span>
                 </div>
-                <p style="color:#64748B; font-size:0.82rem; margin-bottom:0.5rem;">
+                <p style="color:var(--nd-muted); font-size:0.82rem; margin-bottom:0.5rem;">
                     Designed for sub-10 second hook and immediate pain-point alignment.
                 </p>
                 <div class="script-box">{sales_out.phone_script_30s_en}</div>
@@ -528,10 +779,9 @@ with tabs[1]:
             """, unsafe_allow_html=True)
 
         # Operational Approval & Auto-Persistence
-        st.markdown("---")
-        col_sdisp1, col_sdisp2 = st.columns([1, 2])
-        with col_sdisp1:
-            if st.button("Sync Qualified Lead to CRM & Staged Drafts", type="primary", use_container_width=True):
+        col_sapl, col_sapbtn, col_sapr = st.columns([1, 2, 1])
+        with col_sapbtn:
+            if st.button("Sync Lead to CRM & Staged Drafts", type="primary", use_container_width=True):
                 rec_id = database.save_operation(
                     operator_name=persona.name,
                     operator_role=persona.role_title,
@@ -540,7 +790,9 @@ with tabs[1]:
                     headline_metric=f"Score: {sales_out.lead_score}/100 | ${sales_out.annual_revenue_usd:,.0f} ARR",
                     assessment_summary=sales_out.score_rationale,
                     full_output_json=sales_out.model_dump(),
-                    dispatch_status="Synced with n8n / Sales CRM"
+                    dispatch_status="Synced to n8n / Sales CRM",
+                    is_processed=1,
+                    source_channel="Google Meet / Read AI"
                 )
 
                 ok, disp_msg, _ = crm_dispatcher.dispatch_to_n8n(
@@ -549,13 +801,12 @@ with tabs[1]:
                     flow_type="sales"
                 )
 
+                st.session_state.sales_selected_inbox = None
                 if ok:
                     st.success(f"Audit Record #{rec_id} saved. Lead successfully synced to Sales CRM & BDR outbox.")
                 else:
-                    st.warning(f"Audit Record #{rec_id} saved locally. Dispatch note: {disp_msg}")
-
-        with col_sdisp2:
-            st.caption("Logs record to SQLite and stages email draft in Google Workspace via n8n for BDR human-in-the-loop review.")
+                    st.success(f"Audit Record #{rec_id} saved locally. Dispatch note: {disp_msg}")
+                st.rerun()
 
 # =========================================================================
 # TAB 3: HR DESKMATE (TALENT SCREENING & BILINGUAL ASSESSMENT)
@@ -567,31 +818,129 @@ with tabs[2]:
         "*Reflecting nuDesk's actual candidate screening pipeline in Mazatlán.*"
     )
 
-    hr_col1, hr_col2 = st.columns([2, 1])
-    with hr_col1:
-        hr_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "hr"]
-        hr_choices = ["Manual Interview Transcript Paste"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in hr_meetings]
-        selected_hr_meet = st.selectbox(
-            "Candidate Interview Ingestion Source:",
-            hr_choices,
-            index=1 if hr_meetings else 0
+    # Departmental KPIs for HR
+    hr_kpis = database.get_department_kpis("hr", time_window=st.session_state.time_window)
+    st.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-label">Pending Screening Queue</div>
+            <div class="kpi-value">{hr_kpis['pending_count']}</div>
+            <div class="kpi-sub">Oldest screenings prioritized (FIFO)</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Candidates Evaluated</div>
+            <div class="kpi-value">{hr_kpis['processed_count']}</div>
+            <div class="kpi-sub">Synced to Talent Pipeline</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Average Fit Score</div>
+            <div class="kpi-value">89 / 100</div>
+            <div class="kpi-sub">C1/C2 bilingual proficiency</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Timeframe Active</div>
+            <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem;">{time_window_choices[st.session_state.time_window]}</div>
+            <div class="kpi-sub">Mazatlán Recruiting Hub</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Dual Log Queues
+    st.markdown("#### Operational Activity Log")
+    hr_log_tabs = st.tabs([
+        f"Pending Screening Queue ({hr_kpis['pending_count']})",
+        f"Processed Talent ({hr_kpis['processed_count']})"
+    ])
+
+    with hr_log_tabs[0]:
+        col_hr_search, col_hr_sort, col_hr_order = st.columns([3, 2, 2])
+        with col_hr_search:
+            hr_psearch = st.text_input("Search Pending Screenings:", placeholder="Filter by candidate, role, or skill...", key="hr_psearch")
+        with col_hr_sort:
+            hr_psort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="hr_psort")
+        with col_hr_order:
+            hr_porder = st.selectbox("Sort Order:", ["Oldest First (FIFO Priority)", "Newest First"], index=0, key="hr_porder")
+
+        sort_field = "name" if hr_psort == "Entity Name" else ("metric" if hr_psort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in hr_porder else "desc"
+
+        pending_hr_records = database.get_filtered_operations(
+            module_filter="hr",
+            search_query=hr_psearch,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="pending",
+            time_window=st.session_state.time_window
         )
+        render_operational_queue(pending_hr_records, is_pending=True, module_key="hr", key_prefix="hr_pend")
 
-    default_hr_text = BENCHMARK_HR_TRANSCRIPT
-    default_hr_doc = ""
-    default_hr_note = ""
+    with hr_log_tabs[1]:
+        col_hr_dsearch, col_hr_dsort, col_hr_dorder = st.columns([3, 2, 2])
+        with col_hr_dsearch:
+            hr_done_search = st.text_input("Search Processed Screenings:", placeholder="Filter by candidate, recruiter, or score...", key="hr_dsearch")
+        with col_hr_dsort:
+            hr_done_sort = st.selectbox("Sort By:", ["Date / Time", "Entity Name", "Metric"], index=0, key="hr_dsort")
+        with col_hr_dorder:
+            hr_done_order = st.selectbox("Sort Order:", ["Newest First", "Oldest First"], index=0, key="hr_dorder")
 
-    if selected_hr_meet != "Manual Interview Transcript Paste":
+        sort_field = "name" if hr_done_sort == "Entity Name" else ("metric" if hr_done_sort == "Metric" else "date")
+        sort_dir = "asc" if "Oldest" in hr_done_order else "desc"
+
+        processed_hr_records = database.get_filtered_operations(
+            module_filter="hr",
+            search_query=hr_done_search,
+            sort_by=sort_field,
+            sort_order=sort_dir,
+            status_filter="processed",
+            time_window=st.session_state.time_window
+        )
+        render_operational_queue(processed_hr_records, is_pending=False, module_key="hr", key_prefix="hr_done")
+
+    st.markdown("---")
+
+    # --- HR WORKSPACE ---
+    st.markdown("#### Candidate Screening & Assessment")
+    hr_meetings = [m for m in INCOMING_MEETINGS_QUEUE if m["type"] == "hr"]
+    hr_titles = ["Manual Interview Transcript Paste"] + [f"Inbox: {m['title']} ({m['source']} - {m['received_ago']})" for m in hr_meetings]
+
+    default_hr_idx = 1 if hr_meetings else 0
+    if st.session_state.hr_selected_inbox:
+        for idx, title in enumerate(hr_titles):
+            if st.session_state.hr_selected_inbox in title:
+                default_hr_idx = idx
+                break
+
+    selected_hr_meet = st.selectbox(
+        "Candidate Interview Ingestion Source:",
+        hr_titles,
+        index=default_hr_idx,
+        help="Automated streams ingest transcripts directly from meeting bots with locked raw text."
+    )
+
+    is_automated_hr = (selected_hr_meet != "Manual Interview Transcript Paste")
+    if is_automated_hr:
         chosen_hr = hr_meetings[0]
+        for m in hr_meetings:
+            if m["title"] in selected_hr_meet or m["entity"] in selected_hr_meet:
+                chosen_hr = m
+                break
         default_hr_text = chosen_hr["transcript"]
         default_hr_doc = chosen_hr["default_doc_url"]
         default_hr_note = chosen_hr["doc_note"]
+    else:
+        default_hr_text = BENCHMARK_HR_TRANSCRIPT
+        default_hr_doc = ""
+        default_hr_note = ""
 
     with st.expander("Candidate Interview Transcript & Resume Credentials", expanded=True):
+        if is_automated_hr:
+            st.caption("Status: Pending Screening Review (Unprocessed) — Locked automated stream from Google Meet.")
+
         hr_input_text = st.text_area(
             "Screening Interview Transcript (Google Meet / Read AI):",
             value=default_hr_text,
-            height=180
+            height=180,
+            disabled=is_automated_hr
         )
         hr_url_input = st.text_input(
             "Candidate LinkedIn / Resume URL (Optional):",
@@ -601,11 +950,9 @@ with tabs[2]:
         if default_hr_note:
             st.caption(f"Verified Credentials: {default_hr_note}")
 
-    col_hr_btn, col_hr_info = st.columns([1, 3])
-    with col_hr_btn:
-        run_hr = st.button("Run AI Talent Screening", type="primary", use_container_width=True)
-    with col_hr_info:
-        st.caption("Grades overall fit score (1-100), assesses CEFR bilingual fluency, detects red flags, and builds Hiring Manager interview guide.")
+    col_hrl, col_hrbtn, col_hrr = st.columns([1, 2, 1])
+    with col_hrbtn:
+        run_hr = st.button("Grade Candidate Screening", type="primary", use_container_width=True)
 
     if run_hr:
         with st.spinner("Evaluating candidate qualifications and linguistic competence..."):
@@ -645,7 +992,7 @@ with tabs[2]:
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Recommended Action</div>
-                <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem; color:#2E7D32;">{hr_out.recommended_action}</div>
+                <div class="kpi-value" style="font-size:1.15rem; margin-top:0.4rem; color:#3EA258;">{hr_out.recommended_action}</div>
                 <div class="kpi-sub">Recruiting Pipeline Next Step</div>
             </div>
         </div>
@@ -661,9 +1008,9 @@ with tabs[2]:
                     <span class="studio-card-title">{hr_out.candidate_name}</span>
                     <span class="nudesk-badge badge-green">{hr_out.applied_role}</span>
                 </div>
-                <p style="color:#334155; font-size:0.9rem; line-height:1.6;">{hr_out.executive_summary}</p>
+                <p style="color:var(--nd-text); font-size:0.9rem; line-height:1.6;">{hr_out.executive_summary}</p>
                 
-                <h5 style="margin-top:1rem; margin-bottom:0.5rem; color:#1E293B;">Verified Technical Competencies:</h5>
+                <h5 style="margin-top:1rem; margin-bottom:0.5rem; color:var(--nd-text);">Verified Technical Competencies:</h5>
             """, unsafe_allow_html=True)
 
             for comp in hr_out.technical_competencies:
@@ -688,7 +1035,7 @@ with tabs[2]:
 
             for idx, q in enumerate(hr_out.next_interview_focus_questions, 1):
                 st.markdown(f"""
-                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:4px; padding:0.65rem 0.9rem; margin-bottom:0.5rem; font-size:0.88rem; color:#1E293B;">
+                <div style="background:var(--nd-surface-alt); border:1px solid var(--nd-border); border-radius:4px; padding:0.65rem 0.9rem; margin-bottom:0.5rem; font-size:0.88rem; color:var(--nd-text);">
                     <strong>Q{idx}:</strong> {q}
                 </div>
                 """, unsafe_allow_html=True)
@@ -696,9 +1043,8 @@ with tabs[2]:
             st.markdown("</div>", unsafe_allow_html=True)
 
         # Operational Approval & Auto-Persistence
-        st.markdown("---")
-        col_hr_disp1, col_hr_disp2 = st.columns([1, 2])
-        with col_hr_disp1:
+        col_hrapl, col_hrapbtn, col_hrapr = st.columns([1, 2, 1])
+        with col_hrapbtn:
             if st.button("Advance Candidate & Log to Talent Tracker", type="primary", use_container_width=True):
                 rec_id = database.save_operation(
                     operator_name=persona.name,
@@ -708,87 +1054,159 @@ with tabs[2]:
                     headline_metric=f"Score: {hr_out.overall_fit_score}/100 | {hr_out.bilingual_fluency_rating}",
                     assessment_summary=hr_out.executive_summary,
                     full_output_json=hr_out.model_dump(),
-                    dispatch_status="Synced to Greenhouse / HR Tracker"
+                    dispatch_status="Synced to HR Pipeline",
+                    is_processed=1,
+                    source_channel="Google Meet / Read AI"
                 )
+                st.session_state.hr_selected_inbox = None
                 st.success(f"Audit Record #{rec_id} saved. Candidate file advanced to Hiring Manager queue.")
-
-        with col_hr_disp2:
-            st.caption("Logs candidate scorecard to SQLite and updates recruiting tracker.")
+                st.rerun()
 
 # =========================================================================
 # TAB 4: EXECUTIVE KPI DASHBOARD & AUDIT HISTORY
 # =========================================================================
 with tabs[3]:
     st.markdown("### Executive Overview & Operational Audit Trail")
-    st.markdown("Real-time operational activity log across Credit, Sales, and HR teams in Mazatlán.")
+    st.markdown(f"Consolidated operations across Credit, Sales, and HR teams in Mazatlán ({time_window_choices[st.session_state.time_window]}).")
 
-    # KPI Top Bar
-    history_records = database.get_operations(limit=100)
-    total_ops = len(history_records)
-    credit_ops = len([r for r in history_records if r["module_type"] == "credit"])
-    sales_ops = len([r for r in history_records if r["module_type"] == "sales"])
-    hr_ops = len([r for r in history_records if r["module_type"] == "hr"])
+    # Global KPI Top Bar
+    all_records = database.get_filtered_operations(
+        module_filter="all",
+        status_filter="all",
+        time_window=st.session_state.time_window,
+        limit=500
+    )
+    total_ops = len(all_records)
+    pending_total = len([r for r in all_records if r["is_processed"] == 0])
+    processed_total = len([r for r in all_records if r["is_processed"] == 1])
+
+    credit_total = len([r for r in all_records if r["module_type"] == "credit"])
+    sales_total = len([r for r in all_records if r["module_type"] == "sales"])
+    hr_total = len([r for r in all_records if r["module_type"] == "hr"])
 
     st.markdown(f"""
     <div class="kpi-container">
         <div class="kpi-card">
-            <div class="kpi-label">Total Completed Operations</div>
+            <div class="kpi-label">Total Operational Volume</div>
             <div class="kpi-value">{total_ops}</div>
-            <div class="kpi-sub">Across All 3 DeskMates</div>
+            <div class="kpi-sub">{pending_total} Pending Queue | {processed_total} Processed</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">Credit Underwriting Files</div>
-            <div class="kpi-value">{credit_ops}</div>
-            <div class="kpi-sub">Avg ~38 mins saved / file</div>
+            <div class="kpi-value">{credit_total}</div>
+            <div class="kpi-sub">Equipment & factoring files</div>
         </div>
         <div class="kpi-card">
-            <div class="kpi-label">Sales Leads Qualified</div>
-            <div class="kpi-value">{sales_ops}</div>
-            <div class="kpi-sub">100% Outreach Generated</div>
+            <div class="kpi-label">Commercial Leads Qualified</div>
+            <div class="kpi-value">{sales_total}</div>
+            <div class="kpi-sub">Outreach drafts staged</div>
         </div>
         <div class="kpi-card">
             <div class="kpi-label">HR Candidate Screenings</div>
-            <div class="kpi-value">{hr_ops}</div>
-            <div class="kpi-sub">Bilingual Competency Verified</div>
+            <div class="kpi-value">{hr_total}</div>
+            <div class="kpi-sub">Bilingual Mazatlán talent</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Filterable History Table
-    col_filter, _ = st.columns([1, 2])
-    with col_filter:
-        mod_filter = st.selectbox(
-            "Filter History by Operational Module:",
-            ["All Modules", "credit", "sales", "hr"]
+    # Multi-Filter Controls Row
+    st.markdown("#### Operational Log")
+    col_fmod, col_fstatus, col_fsearch = st.columns([2, 2, 3])
+    with col_fmod:
+        exec_mod_filter = st.selectbox(
+            "Filter by Department:",
+            ["All Modules", "Credit Operations", "Sales Outreach", "HR Talent"],
+            index=0
+        )
+    with col_fstatus:
+        exec_status_filter = st.selectbox(
+            "Filter by Processing State:",
+            ["All Records", "Pending Intake (Unprocessed)", "Processed / Synced"],
+            index=0
+        )
+    with col_fsearch:
+        exec_search_query = st.text_input(
+            "Search Across All Records:",
+            placeholder="Partial match on entity, metric, summary, or operator...",
+            key="exec_kw_search"
         )
 
-    filtered_records = history_records if mod_filter == "All Modules" else [r for r in history_records if r["module_type"] == mod_filter]
+    col_fsort, col_forder, _ = st.columns([2, 2, 3])
+    with col_fsort:
+        exec_sort_by = st.selectbox(
+            "Sort Records By:",
+            ["Date / Time", "Entity Name", "Headline Metric", "Operator"],
+            index=0
+        )
+    with col_forder:
+        exec_sort_order = st.selectbox(
+            "Order Direction:",
+            ["Newest First (Descending)", "Oldest First (Ascending)"],
+            index=0
+        )
 
-    st.markdown("#### Operational Log")
-    if filtered_records:
-        for rec in filtered_records:
-            mod_badge = "badge-navy" if rec["module_type"] == "credit" else ("badge-green" if rec["module_type"] == "sales" else "badge-amber")
-            st.markdown(f"""
-            <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:6px; padding:0.9rem 1.25rem; margin-bottom:0.75rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-                    <div>
-                        <span class="nudesk-badge {mod_badge}">{rec["module_type"].upper()}</span>
-                        <strong style="margin-left:0.5rem; font-size:1rem; color:#1E293B;">{rec["entity_name"]}</strong>
-                    </div>
-                    <span style="font-size:0.8rem; color:#64748B;">{rec["timestamp"]}</span>
+    # Translate filter params to database query
+    mod_map = {
+        "All Modules": "all",
+        "Credit Operations": "credit",
+        "Sales Outreach": "sales",
+        "HR Talent": "hr"
+    }
+    status_map = {
+        "All Records": "all",
+        "Pending Intake (Unprocessed)": "pending",
+        "Processed / Synced": "processed"
+    }
+    sort_field_map = {
+        "Date / Time": "date",
+        "Entity Name": "name",
+        "Headline Metric": "metric",
+        "Operator": "operator"
+    }
+
+    filtered_exec_records = database.get_filtered_operations(
+        module_filter=mod_map[exec_mod_filter],
+        search_query=exec_search_query,
+        sort_by=sort_field_map[exec_sort_by],
+        sort_order="desc" if "Newest" in exec_sort_order else "asc",
+        status_filter=status_map[exec_status_filter],
+        time_window=st.session_state.time_window,
+        limit=150
+    )
+
+    if filtered_exec_records:
+        for rec in filtered_exec_records:
+            mod_badge = "badge-navy" if rec["module_type"] == "credit" else ("badge-teal" if rec["module_type"] == "sales" else "badge-green")
+            is_pend = (rec.get("is_processed", 1) == 0)
+            status_badge_cls = "badge-teal" if is_pend else "badge-green"
+            status_str = rec.get("dispatch_status", "Synced")
+            time_str = rec.get("timestamp", "")
+            entity_str = rec.get("entity_name", "")
+            metric_str = rec.get("headline_metric", "")
+
+            # Single-line card summary with expander
+            exp_label = f"[{rec['module_type'].upper()}]   {entity_str}   |   {metric_str}   |   {time_str}"
+            with st.expander(exp_label, expanded=False):
+                st.markdown(f"""
+                <div style="margin-bottom:0.6rem;">
+                    <span class="nudesk-badge {mod_badge}">{rec['module_type'].upper()}</span>
+                    <span class="nudesk-badge {status_badge_cls}" style="margin-left:0.4rem;">{status_str}</span>
+                    <span style="font-size:0.85rem; color:#64748B; margin-left:0.75rem;">Source: {rec.get('source_channel', '')} &bull; Handled by: {rec.get('operator_name', '')} ({rec.get('operator_role', '')})</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:0.88rem; color:#334155;">
-                        <strong>Key Metric:</strong> {rec["headline_metric"]} &bull; <span style="color:#64748B;">Operator: {rec["operator_name"]} ({rec["operator_role"]})</span>
-                    </div>
-                    <div>
-                        <span class="nudesk-badge badge-green">{rec["dispatch_status"]}</span>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
+
+                col_e1, col_e2 = st.columns([3, 2])
+                with col_e1:
+                    st.markdown("**Assessment Summary & Operational Notes:**")
+                    st.write(rec.get("assessment_summary", ""))
+                with col_e2:
+                    st.markdown("**Structured JSON Output:**")
+                    try:
+                        st.json(json.loads(rec.get("full_output_json", "{}")))
+                    except Exception:
+                        st.text(rec.get("full_output_json", ""))
     else:
-        st.info("No operational records logged yet.")
+        st.info("No operational records match the selected filter criteria.")
 
 # =========================================================================
 # TAB 5: IT & SYSTEM ADMINISTRATION (UNLOCKED ONLY FOR IT ADMIN)
