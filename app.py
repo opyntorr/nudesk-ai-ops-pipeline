@@ -191,7 +191,7 @@ with col_head_right:
 
     with col_user_btn:
         avatar_btn_label = f"User: {persona.avatar_initials}"
-        with st.popover(avatar_btn_label, use_container_width=True):
+        with st.popover(avatar_btn_label, width="stretch"):
             st.markdown(f"#### {persona.name}")
             st.markdown(f"**Role:** {persona.role_title}")
             st.markdown(f"**Department:** {persona.department}")
@@ -200,7 +200,7 @@ with col_head_right:
             if is_google_active:
                 st.markdown('<span class="nudesk-badge badge-green">Google Workspace Connected</span>', unsafe_allow_html=True)
                 st.markdown("")
-                if st.button("Sign out of Google", key="btn_signout_google_popover", use_container_width=True):
+                if st.button("Sign out of Google", key="btn_signout_google_popover", width="stretch"):
                     st.session_state.google_user = None
                     st.session_state.authenticated_persona = None
                     st.session_state.active_persona_id = "usr_underwriter_1"
@@ -209,12 +209,12 @@ with col_head_right:
                 st.markdown('<span class="nudesk-badge badge-navy">Local Session</span>', unsafe_allow_html=True)
                 st.markdown("")
                 auth_url = auth_rbac.get_google_auth_url(google_client_id, google_redirect_uri)
-                st.link_button("Sign in with Google Workspace", auth_url, use_container_width=True)
+                st.link_button("Sign in with Google Workspace", auth_url, width="stretch")
             else:
                 st.markdown('<span class="nudesk-badge badge-navy">Demo Workspace Session</span>', unsafe_allow_html=True)
 
     with col_settings_btn:
-        with st.popover("Settings", use_container_width=True):
+        with st.popover("Settings", width="stretch"):
             st.markdown("#### System Settings")
             st.markdown("**Appearance Mode**")
             theme_choice = st.selectbox(
@@ -331,7 +331,7 @@ with tabs[0]:
                 ),
                 tooltip=["Risk Tier", "Files"]
             ).properties(height=110)
-            st.altair_chart(c_chart, use_container_width=True)
+            st.altair_chart(c_chart, width="stretch")
         else:
             st.info("No credit files in this period.")
 
@@ -365,14 +365,14 @@ with tabs[0]:
             # Manual Ad-hoc and Synthetic Stream Simulation
             col_cad1, col_cad2 = st.columns([1, 1])
             with col_cad1:
-                if st.button("+ Manual Entry", key="btn_c_manual_entry", use_container_width=True):
+                if st.button("+ Manual Entry", key="btn_c_manual_entry", width="stretch"):
                     st.session_state.active_credit_id = "manual"
                     st.session_state.credit_result = None
                     st.rerun()
             with col_cad2:
-                with st.popover("+ Simulate Stream", use_container_width=True):
+                with st.popover("+ Simulate Stream", width="stretch"):
                     st.caption("Inject synthetic external webhook payload:")
-                    if st.button("Read AI: Livestock Hauler ($195k)", key="sim_c_readai", use_container_width=True):
+                    if st.button("Read AI: Livestock Hauler ($195k)", key="sim_c_readai", width="stretch"):
                         from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                         p = generate_synthetic_payload("readai", "credit")
                         f = extract_ingestion_fields(p, "readai", "credit")
@@ -384,7 +384,7 @@ with tabs[0]:
                         st.session_state.active_credit_id = new_id
                         st.session_state.credit_result = None
                         st.rerun()
-                    if st.button("Google Drive: Freight Aging PDF", key="sim_c_gdrive", use_container_width=True):
+                    if st.button("Google Drive: Freight Aging PDF", key="sim_c_gdrive", width="stretch"):
                         from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                         p = generate_synthetic_payload("gdrive", "credit")
                         f = extract_ingestion_fields(p, "gdrive", "credit")
@@ -415,7 +415,7 @@ with tabs[0]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    if st.button("Select", key=f"btn_c_select_{rec['id']}", use_container_width=True):
+                    if st.button("Select", key=f"btn_c_select_{rec['id']}", width="stretch"):
                         st.session_state.active_credit_id = rec["id"]
                         st.session_state.credit_result = None
                         st.rerun()
@@ -520,7 +520,7 @@ with tabs[0]:
         # Centered Primary Action Button
         col_cbl, col_cbbtn, col_cbr = st.columns([1, 2, 1])
         with col_cbbtn:
-            run_credit = st.button("Run Credit Triage", type="primary", use_container_width=True, key="btn_run_credit_triage")
+            run_credit = st.button("Run Credit Triage", type="primary", width="stretch", key="btn_run_credit_triage")
 
         if run_credit:
             with st.spinner("Analyzing transcript & collateral with Gemini cascade..."):
@@ -606,7 +606,7 @@ with tabs[0]:
 
             col_cap_l, col_cap_btn, col_cap_r = st.columns([1, 2, 1])
             with col_cap_btn:
-                if st.button("Approve & Sign-Off (Auto-Advance)", type="primary", use_container_width=True, key="btn_c_dispatch"):
+                if st.button("Approve & Sign-Off (Auto-Advance)", type="primary", width="stretch", key="btn_c_dispatch"):
                     if is_manual or not active_credit_rec:
                         rec_id = database.save_operation(
                             operator_name=persona.name,
@@ -715,7 +715,7 @@ with tabs[1]:
                 ),
                 tooltip=["Lead Tier", "Prospects"]
             ).properties(height=110)
-            st.altair_chart(s_chart, use_container_width=True)
+            st.altair_chart(s_chart, width="stretch")
         else:
             st.info("No commercial leads in this period.")
 
@@ -747,14 +747,14 @@ with tabs[1]:
 
             col_sad1, col_sad2 = st.columns([1, 1])
             with col_sad1:
-                if st.button("+ Manual Entry", key="btn_s_manual_entry", use_container_width=True):
+                if st.button("+ Manual Entry", key="btn_s_manual_entry", width="stretch"):
                     st.session_state.active_sales_id = "manual"
                     st.session_state.sales_result = None
                     st.rerun()
             with col_sad2:
-                with st.popover("+ Simulate Stream", use_container_width=True):
+                with st.popover("+ Simulate Stream", width="stretch"):
                     st.caption("Inject synthetic external webhook payload:")
-                    if st.button("Fireflies: Flatbed Steel ($4.2M)", key="sim_s_fireflies", use_container_width=True):
+                    if st.button("Fireflies: Flatbed Steel ($4.2M)", key="sim_s_fireflies", width="stretch"):
                         from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                         p = generate_synthetic_payload("fireflies", "sales")
                         f = extract_ingestion_fields(p, "fireflies", "sales")
@@ -785,7 +785,7 @@ with tabs[1]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    if st.button("Select", key=f"btn_s_select_{rec['id']}", use_container_width=True):
+                    if st.button("Select", key=f"btn_s_select_{rec['id']}", width="stretch"):
                         st.session_state.active_sales_id = rec["id"]
                         st.session_state.sales_result = None
                         st.rerun()
@@ -878,7 +878,7 @@ with tabs[1]:
 
         col_sbl, col_sbbtn, col_sbr = st.columns([1, 2, 1])
         with col_sbbtn:
-            run_sales = st.button("Analyze Commercial Lead", type="primary", use_container_width=True, key="btn_run_sales_triage")
+            run_sales = st.button("Analyze Commercial Lead", type="primary", width="stretch", key="btn_run_sales_triage")
 
         if run_sales:
             with st.spinner("Scoring commercial prospect & crafting outreach..."):
@@ -948,7 +948,7 @@ with tabs[1]:
 
             col_sap_l, col_sap_btn, col_sap_r = st.columns([1, 2, 1])
             with col_sap_btn:
-                if st.button("Qualify Lead & Stage Outreach (Auto-Advance)", type="primary", use_container_width=True, key="btn_s_dispatch"):
+                if st.button("Qualify Lead & Stage Outreach (Auto-Advance)", type="primary", width="stretch", key="btn_s_dispatch"):
                     if is_manual_s or not active_sales_rec:
                         rec_id = database.save_operation(
                             operator_name=persona.name,
@@ -1055,7 +1055,7 @@ with tabs[2]:
                 ),
                 tooltip=["Fluency Level", "Candidates"]
             ).properties(height=110)
-            st.altair_chart(h_chart, use_container_width=True)
+            st.altair_chart(h_chart, width="stretch")
         else:
             st.info("No candidates screened in this period.")
 
@@ -1087,14 +1087,14 @@ with tabs[2]:
 
             col_had1, col_had2 = st.columns([1, 1])
             with col_had1:
-                if st.button("+ Manual Entry", key="btn_h_manual_entry", use_container_width=True):
+                if st.button("+ Manual Entry", key="btn_h_manual_entry", width="stretch"):
                     st.session_state.active_hr_id = "manual"
                     st.session_state.hr_result = None
                     st.rerun()
             with col_had2:
-                with st.popover("+ Simulate Stream", use_container_width=True):
+                with st.popover("+ Simulate Stream", width="stretch"):
                     st.caption("Inject synthetic external webhook payload:")
-                    if st.button("Read AI: Bilingual Underwriter (C1)", key="sim_h_readai", use_container_width=True):
+                    if st.button("Read AI: Bilingual Underwriter (C1)", key="sim_h_readai", width="stretch"):
                         from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                         p = generate_synthetic_payload("readai", "hr")
                         f = extract_ingestion_fields(p, "readai", "hr")
@@ -1125,7 +1125,7 @@ with tabs[2]:
 </div>
 </div>""", unsafe_allow_html=True)
 
-                    if st.button("Select", key=f"btn_h_select_{rec['id']}", use_container_width=True):
+                    if st.button("Select", key=f"btn_h_select_{rec['id']}", width="stretch"):
                         st.session_state.active_hr_id = rec["id"]
                         st.session_state.hr_result = None
                         st.rerun()
@@ -1218,7 +1218,7 @@ with tabs[2]:
 
         col_hbl, col_hbbtn, col_hbr = st.columns([1, 2, 1])
         with col_hbbtn:
-            run_hr = st.button("Grade Candidate Screening", type="primary", use_container_width=True, key="btn_run_hr_triage")
+            run_hr = st.button("Grade Candidate Screening", type="primary", width="stretch", key="btn_run_hr_triage")
 
         if run_hr:
             with st.spinner("Grading bilingual fluency & technical competencies..."):
@@ -1290,7 +1290,7 @@ with tabs[2]:
 
             col_hap_l, col_hap_btn, col_hap_r = st.columns([1, 2, 1])
             with col_hap_btn:
-                if st.button("Advance Candidate & Sign-Off (Auto-Advance)", type="primary", use_container_width=True, key="btn_h_dispatch"):
+                if st.button("Advance Candidate & Sign-Off (Auto-Advance)", type="primary", width="stretch", key="btn_h_dispatch"):
                     if is_manual_h or not active_hr_rec:
                         rec_id = database.save_operation(
                             operator_name=persona.name,
@@ -1456,7 +1456,7 @@ with tabs[3]:
                     ),
                     tooltip=["Department", "Operations"]
                 ).properties(height=260)
-                st.altair_chart(dept_chart, use_container_width=True)
+                st.altair_chart(dept_chart, width="stretch")
             else:
                 st.info("No active department records for this period.")
         else:
@@ -1490,7 +1490,7 @@ with tabs[3]:
                     ),
                     tooltip=["Risk Tier", "Files"]
                 ).properties(height=260)
-                st.altair_chart(risk_chart, use_container_width=True)
+                st.altair_chart(risk_chart, width="stretch")
             else:
                 st.info("No credit risk files for this period.")
         else:
@@ -1800,7 +1800,7 @@ with tabs[4]:
         st.caption("Demonstration suite: Ingest realistic production payloads from Read AI, Fireflies.ai, and Google Drive without paid accounts.")
         col_sim1, col_sim2, col_sim3 = st.columns(3)
         with col_sim1:
-            if st.button("Fire Read AI Credit Call", use_container_width=True, key="btn_it_sim_readai"):
+            if st.button("Fire Read AI Credit Call", width="stretch", key="btn_it_sim_readai"):
                 from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                 p = generate_synthetic_payload("readai", "credit")
                 f = extract_ingestion_fields(p, "readai", "credit")
@@ -1811,7 +1811,7 @@ with tabs[4]:
                 )
                 st.success(f"Ingested Record #{nid}: {f['entity_name']} (Credit Queue)")
         with col_sim2:
-            if st.button("Fire Fireflies Sales Call", use_container_width=True, key="btn_it_sim_fireflies"):
+            if st.button("Fire Fireflies Sales Call", width="stretch", key="btn_it_sim_fireflies"):
                 from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                 p = generate_synthetic_payload("fireflies", "sales")
                 f = extract_ingestion_fields(p, "fireflies", "sales")
@@ -1822,7 +1822,7 @@ with tabs[4]:
                 )
                 st.success(f"Ingested Record #{nid}: {f['entity_name']} (Sales Queue)")
         with col_sim3:
-            if st.button("Fire Google Drive Intake", use_container_width=True, key="btn_it_sim_gdrive"):
+            if st.button("Fire Google Drive Intake", width="stretch", key="btn_it_sim_gdrive"):
                 from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
                 p = generate_synthetic_payload("gdrive", "credit")
                 f = extract_ingestion_fields(p, "gdrive", "credit")

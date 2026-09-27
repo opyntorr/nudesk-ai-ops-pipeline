@@ -168,7 +168,34 @@ class TestDeskMateV2Suite(unittest.TestCase):
         self.assertIn("Simulation Mode Active", msg)
         self.assertEqual(payload["flow_type"], "sales")
 
+    def test_no_deprecated_streamlit_attributes(self):
+        # QA Test: Guarantee zero occurrences of deprecated use_container_width in app.py
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertNotIn("use_container_width", content, "app.py contains deprecated use_container_width attribute")
+
+    def test_streamlit_server_config(self):
+        # QA Test: Guarantee enableCORS=true in .streamlit/config.toml to prevent cross-origin warnings
+        cfg_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".streamlit", "config.toml"))
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("enableCORS = true", content, "config.toml must have enableCORS = true")
+        self.assertIn("enableXsrfProtection = true", content, "config.toml must have enableXsrfProtection = true")
+
+    def test_synthetic_fixtures_validity(self):
+        # QA Test: Validate all synthetic fixtures and generator extraction
+        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+        for provider, module in [("readai", "credit"), ("fireflies", "sales"), ("gdrive", "credit"), ("readai", "hr")]:
+            p = generate_synthetic_payload(provider, module)
+            self.assertTrue(bool(p), f"Fixture for {provider}/{module} could not be loaded")
+            f = extract_ingestion_fields(p, provider, module)
+            self.assertIn(f["module_type"], ["credit", "sales", "hr"])
+            self.assertTrue(len(f["entity_name"]) > 0)
+            self.assertTrue(len(f["transcript_text"]) > 0)
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
