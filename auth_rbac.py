@@ -3,6 +3,7 @@ Role-Based Access Control (RBAC) & Google Workspace Identity Management
 Supports Google Cloud Console OAuth 2.0 Single Sign-On (SSO) alongside
 preset corporate personas for Mazatlán Talent Hub operational testing.
 """
+import os
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 import urllib.parse
@@ -196,9 +197,14 @@ def create_persona_from_google_user(user_info: Dict[str, Any]) -> UserPersona:
     else:
         initials = "GW"
 
-    # Lead Engineer / Admin check
-    normalized_email = email.lower()
-    is_admin = ("omar" in normalized_email) or ("payan" in normalized_email) or ("admin" in normalized_email)
+    # Lead Engineer / Admin check (Strict whitelist lookup)
+    normalized_email = email.strip().lower()
+    admin_whitelist_env = os.getenv(
+        "WORKSPACE_ADMIN_EMAILS",
+        "omarpayant@gmail.com,omar.payan@nudesk.ai,admin@nudesk.ai"
+    )
+    admin_emails = {e.strip().lower() for e in admin_whitelist_env.split(",") if e.strip()}
+    is_admin = normalized_email in admin_emails
 
     if is_admin:
         role_key = "it_admin"
