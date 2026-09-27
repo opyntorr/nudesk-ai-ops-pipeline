@@ -665,6 +665,21 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         dark_css = get_nudesk_css("dark")
         self.assertIn('div[data-testid="stVerticalBlockBorderWrapper"]', dark_css)
 
+    def test_single_tab_selection_indicator_no_double_highlight(self):
+        """QA Test: Ensure tabs have a single clean selection indicator and no duplicate border-bottom."""
+        dark_css = get_nudesk_css("dark")
+        # Ensure duplicate border-bottom on active tabs is eliminated
+        self.assertNotIn("border-bottom: 2.5px solid var(--nd-green)", dark_css)
+        self.assertNotIn("border-bottom: 3px solid var(--nd-green) !important;", dark_css)
+        # Verify single indicator is styled
+        self.assertIn('div[data-testid="stTab"] .react-aria-SelectionIndicator', dark_css)
+        self.assertIn("background-color: var(--nd-green) !important;", dark_css)
+        self.assertIn("border-bottom: none !important;", dark_css)
+
+        light_css = get_nudesk_css("light")
+        self.assertNotIn("border-bottom: 2.5px solid var(--nd-green)", light_css)
+        self.assertIn('div[data-testid="stTab"] .react-aria-SelectionIndicator', light_css)
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite

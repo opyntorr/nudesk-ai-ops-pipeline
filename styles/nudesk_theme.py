@@ -819,6 +819,9 @@ def get_nudesk_css(theme: str = "light") -> str:
         opacity: 1 !important;
         cursor: pointer !important;
         font-family: 'Host Grotesk', sans-serif !important;
+        border: none !important;
+        border-bottom: none !important;
+        outline: none !important;
     }}
 
     div[data-testid="stTab"] *,
@@ -834,6 +837,9 @@ def get_nudesk_css(theme: str = "light") -> str:
         font-size: 0.92rem !important;
         font-weight: 600 !important;
         opacity: 1 !important;
+        border: none !important;
+        border-bottom: none !important;
+        text-decoration: none !important;
         transition: color 0.15s ease-in-out !important;
     }}
 
@@ -859,9 +865,12 @@ def get_nudesk_css(theme: str = "light") -> str:
         color: {tab_hover_color} !important;
         -webkit-text-fill-color: {tab_hover_color} !important;
         opacity: 1 !important;
+        border: none !important;
+        border-bottom: none !important;
+        text-decoration: none !important;
     }}
 
-    /* Selected / Active Tabs */
+    /* Selected / Active Tabs (Single Clean Indicator - Eliminates Duplicate Line) */
     div[data-testid="stTab"][data-selected],
     div[data-testid="stTab"][aria-selected="true"],
     [data-testid="stTab"][data-selected],
@@ -873,7 +882,13 @@ def get_nudesk_css(theme: str = "light") -> str:
     [role="tab"][data-selected],
     [role="tab"][aria-selected="true"],
     button[role="tab"][aria-selected="true"],
-    .stTabs [aria-selected="true"],
+    .stTabs [aria-selected="true"] {{
+        border: none !important;
+        border-bottom: none !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }}
+
     div[data-testid="stTab"][data-selected] *,
     div[data-testid="stTab"][aria-selected="true"] *,
     [data-testid="stTab"][data-selected] *,
@@ -888,15 +903,19 @@ def get_nudesk_css(theme: str = "light") -> str:
     .stTabs [aria-selected="true"] * {{
         color: {tab_selected_color} !important;
         -webkit-text-fill-color: {tab_selected_color} !important;
-        border-bottom: 2.5px solid var(--nd-green) !important;
         font-weight: 700 !important;
         opacity: 1 !important;
+        border: none !important;
+        border-bottom: none !important;
+        text-decoration: none !important;
+        box-shadow: none !important;
     }}
 
     div[data-testid="stTab"] .react-aria-SelectionIndicator,
     .react-aria-Tab .react-aria-SelectionIndicator {{
         background-color: var(--nd-green) !important;
         height: 3px !important;
+        border-radius: 2px !important;
     }}
 
     /* Form Label and Caption Contrast Improvements */
