@@ -1,0 +1,27 @@
+{
+  "entity_name": "Sunbelt Logistics LLC (Phoenix, AZ)",
+  "module_type": "sales",
+  "links": [
+    {
+      "label": "HubSpot Enterprise Opportunity",
+      "url": "https://crm.nudesk.ai/deals/sunbelt_logistics_llc",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "Google Sheets Live AR Aging",
+      "url": "https://docs.google.com/spreadsheets/d/ar-aging-sunbelt_logistics_llc",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Fireflies.ai Call Recording",
+      "url": "https://app.fireflies.ai/view/sales-sunbelt_logistics_llc",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "FMCSA Carrier Safety Profile",
+      "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&string=sunbelt_logistics_llc",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 3
+}

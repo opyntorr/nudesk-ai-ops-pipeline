@@ -530,6 +530,67 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
             app_code = f.read()
         self.assertIn("color:var(--nd-green);\">{hr_out.recommended_action}</div>", app_code)
 
+    def test_processed_expanded_view_and_downloadable_synthetic_documents(self):
+        # QA Test: Validate default expanded view on all processed expanders and synthetic documents
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        # 1. Check all 3 processed expanders have expanded=True
+        self.assertIn('with st.expander("Archived Call Transcript & Supporting Records", expanded=True):', app_code)
+        self.assertIn('with st.expander("Archived Sales Interaction & Notes", expanded=True):', app_code)
+        self.assertIn('with st.expander("Archived Candidate Interview Transcript & CV Notes", expanded=True):', app_code)
+
+        # 2. Check download buttons in app.py
+        self.assertIn("btn_c_down_", app_code)
+        self.assertIn("btn_s_down_", app_code)
+        self.assertIn("btn_h_down_", app_code)
+
+        # 3. Test synthetic_datasets module
+        import synthetic_datasets
+        import csv
+
+        # Test Credit Dossier
+        c_dossier = synthetic_datasets.get_synthetic_dossier("Lone Star Cold Storage (Houston, TX)", "credit", {"requested_amount": 150000})
+        self.assertTrue(len(c_dossier["links"]) >= 3)
+        self.assertTrue(len(c_dossier["files"]) >= 3)
+        self.assertTrue(bool(c_dossier["transcript"]))
+        # Check CSV validity
+        c_bank_csv = next(f["content"] for f in c_dossier["files"] if f["file_name"].endswith(".csv"))
+        rows = list(csv.reader(c_bank_csv.splitlines()))
+        self.assertTrue(len(rows) >= 5)
+        self.assertEqual(rows[0][0], "Date")
+
+        # Test Sales Dossier
+        s_dossier = synthetic_datasets.get_synthetic_dossier("Desert Express Freight (El Paso, TX)", "sales", {"arr": 1800000})
+        self.assertTrue(len(s_dossier["links"]) >= 3)
+        self.assertTrue(len(s_dossier["files"]) >= 3)
+        self.assertTrue(bool(s_dossier["transcript"]))
+        s_ar_csv = next(f["content"] for f in s_dossier["files"] if f["file_name"].endswith(".csv"))
+        s_rows = list(csv.reader(s_ar_csv.splitlines()))
+        self.assertTrue(len(s_rows) >= 5)
+        self.assertEqual(s_rows[0][0], "Invoice_No")
+
+        # Test HR Dossier
+        h_dossier = synthetic_datasets.get_synthetic_dossier("Mateo Guerrero (Mazatlán, Sin.)", "hr", {"candidate_fit_score": 88, "applied_role": "Commercial BDR"})
+        self.assertTrue(len(h_dossier["links"]) >= 3)
+        self.assertTrue(len(h_dossier["files"]) >= 3)
+        self.assertTrue(bool(h_dossier["transcript"]))
+        h_cv_md = next(f["content"] for f in h_dossier["files"] if f["file_name"].endswith(".md"))
+        self.assertIn("Mateo Guerrero", h_cv_md)
+
+        # 4. Check links renderer HTML
+        links_html = synthetic_datasets.render_dossier_links_html(c_dossier["links"])
+        self.assertIn("nudesk-badge", links_html)
+        self.assertIn("href=", links_html)
+
+        # 5. Check physical dataset persistence
+        datasets_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "synthetic_datasets"))
+        self.assertTrue(os.path.exists(datasets_root))
+        self.assertTrue(os.path.exists(os.path.join(datasets_root, "credit")))
+        self.assertTrue(os.path.exists(os.path.join(datasets_root, "sales")))
+        self.assertTrue(os.path.exists(os.path.join(datasets_root, "hr")))
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite

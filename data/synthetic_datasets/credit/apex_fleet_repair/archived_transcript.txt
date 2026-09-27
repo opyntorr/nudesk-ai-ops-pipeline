@@ -1,0 +1,7 @@
+[00:00:03] Underwriter (nuDesk Credit Ops): Good morning. Thank you for connecting on our recorded intake line regarding Apex Fleet Repair (Dallas, TX).
+[00:00:12] Principal / Applicant: Thanks for having us on. We are moving forward on our equipment expansion and want to finalize the capital facility.
+[00:00:24] Underwriter: Excellent. We reviewed your 12-month deposit records and preliminary vendor invoice for $85,000.00 USD. What is the expected delivery timeline on the equipment?
+[00:00:36] Principal: The manufacturer has the units staged in Houston. As soon as the wire clears, delivery and calibration take less than 5 business days.
+[00:00:48] Underwriter: Perfect. Your debt-service ratio is calculated at 1.41x, which comfortably qualifies under our standard lending box.
+[00:01:02] Principal: Great news. We'll sign the closing documents via DocuSign today.
+[00:01:14] Underwriter: Documents are staged in your Google Workspace vault. We look forward to funding your expansion.

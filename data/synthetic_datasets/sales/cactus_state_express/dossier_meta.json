@@ -1,0 +1,27 @@
+{
+  "entity_name": "Cactus State Express (Tucson, AZ)",
+  "module_type": "sales",
+  "links": [
+    {
+      "label": "HubSpot Enterprise Opportunity",
+      "url": "https://crm.nudesk.ai/deals/cactus_state_express",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "Google Sheets Live AR Aging",
+      "url": "https://docs.google.com/spreadsheets/d/ar-aging-cactus_state_express",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Fireflies.ai Call Recording",
+      "url": "https://app.fireflies.ai/view/sales-cactus_state_express",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "FMCSA Carrier Safety Profile",
+      "url": "https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&string=cactus_state_express",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 3
+}

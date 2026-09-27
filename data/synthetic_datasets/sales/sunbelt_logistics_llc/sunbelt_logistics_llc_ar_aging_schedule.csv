@@ -1,0 +1,8 @@
+Invoice_No,Debtor_Shipper_Broker,Invoice_Date,Due_Date,Amount_USD,Days_Outstanding,Aging_Bracket,Credit_Insurance_Status
+INV-2026-101,C.H. Robinson Worldwide,2026-08-10,2026-09-10,108000.00,48,31-60 Days,Approved (Grade A)
+INV-2026-102,Total Quality Logistics (TQL),2026-08-10,2026-09-10,91200.00,55,31-60 Days,Approved (Grade A)
+INV-2026-103,Echo Global Logistics,2026-08-10,2026-09-10,69600.00,38,31-60 Days,Approved (Grade A)
+INV-2026-104,Landstar Ranger Division,2026-08-10,2026-09-10,76800.00,62,61-90 Days,Approved (Grade A)
+INV-2026-105,Schneider Freight Systems,2026-08-10,2026-09-10,60000.00,44,31-60 Days,Approved (Grade A)
+INV-2026-106,J.B. Hunt Transport Solutions,2026-08-10,2026-09-10,74400.00,52,31-60 Days,Approved (Grade A)
+INV-2026-107,Coyote Logistics / UPS,2026-08-10,2026-09-10,52800.00,35,31-60 Days,Approved (Grade A)

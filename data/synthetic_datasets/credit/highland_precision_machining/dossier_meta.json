@@ -1,0 +1,27 @@
+{
+  "entity_name": "Highland Precision Machining (Fort Worth, TX)",
+  "module_type": "credit",
+  "links": [
+    {
+      "label": "Google Drive Financial Vault",
+      "url": "https://drive.google.com/drive/folders/nudesk-credit-highland_precision_machining",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "nuDesk LOS Deal Room",
+      "url": "https://app.nudesk.ai/los/loans/highland_precision_machining",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Read AI Discovery Recording",
+      "url": "https://app.read.ai/analytics/meetings/rec-highland_precision_machining",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "Texas SOS UCC-1 Registry",
+      "url": "https://direct.sos.state.tx.us/ucc/search?entity=highland_precision_machining",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 4
+}

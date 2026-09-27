@@ -1,0 +1,24 @@
+================================================================================
+NUDESK COMMERCIAL UNDERWRITING - COLLATERAL APPRAISAL & VENDOR QUOTE
+================================================================================
+Entity Name:           Lone Star Cold Storage (Houston, TX)
+Facility Requested:    $150,000.00 USD
+Appraisal Date:        2026-09-20
+Assigned Underwriter:  Robert Martinez (Senior Credit Officer)
+Collateral Asset:      Warehouse Refrigeration
+Lien Priority:         First Position Commercial UCC-1 Purchase Money Security Interest
+Appraised Market Val:  $177,000.00 USD
+Orderly Liquidation:   $132,000.00 USD (88% advance coverage)
+Vendor Invoice Ref:    VND-2026-TX-LONE_-8839
+
+PHYSICAL ASSET SPECIFICATIONS:
+- Primary Manufacturer: Rotary Lift / Mazak Commercial Industrial Systems
+- Condition: Factory New (Certified Tier-1 Commercial Warranty 36 Months)
+- Serial Numbers: Verified SN-LON-9948201 / SN-LON-9948202
+- Delivery & Installation Location: Verified business premises
+- UCC-1 Search Status: Zero competing PMSI filings on record (County & Secretary of State)
+
+UNDERWRITER COLLATERAL ASSESSMENT:
+Asset provides strong primary repayment defense. Orderly liquidation exceeds requested principal
+by comfortable 12% safety margin. Direct vendor disbursement required upon closing.
+================================================================================

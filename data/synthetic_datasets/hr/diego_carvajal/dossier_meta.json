@@ -1,0 +1,27 @@
+{
+  "entity_name": "Diego Carvajal (Mazatl\u00e1n, Sin.)",
+  "module_type": "hr",
+  "links": [
+    {
+      "label": "Greenhouse Candidate Profile",
+      "url": "https://app.greenhouse.io/candidates/diego_carvajal",
+      "badge": "badge-teal"
+    },
+    {
+      "label": "Google Drive Talent Dossier",
+      "url": "https://drive.google.com/drive/folders/hr-candidate-diego_carvajal",
+      "badge": "badge-green"
+    },
+    {
+      "label": "Read AI Screening Recording",
+      "url": "https://app.read.ai/interviews/diego_carvajal",
+      "badge": "badge-navy"
+    },
+    {
+      "label": "Cambridge English Verification",
+      "url": "https://verify.cambridgeenglish.org/cert/diego_carvajal",
+      "badge": "badge-navy"
+    }
+  ],
+  "file_count": 3
+}

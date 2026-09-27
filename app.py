@@ -35,6 +35,7 @@ import database
 import importlib
 importlib.reload(database)
 import document_reader
+from synthetic_datasets import get_synthetic_dossier, render_dossier_links_html
 
 load_dotenv()
 database.init_db()
@@ -742,11 +743,36 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
 <div><span class="nudesk-badge {badge_class}">{t_prio}</span></div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Call Transcript & Supporting Records", expanded=False):
-                st.caption(f"Historical record from {canvas_source}. Read-only audit log.")
-                st.text_area("Archived Transcript:", value=active_credit_rec.get("transcript_text") or raw_text, height=180, disabled=True, key=f"c_archived_{active_credit_rec['id']}")
+            with st.expander("Archived Call Transcript & Supporting Records", expanded=True):
+                st.caption(f"Historical record from {canvas_source}. Verified compliance dossier & supporting intake files.")
+                dossier_c = get_synthetic_dossier(
+                    active_credit_rec["entity_name"],
+                    "credit",
+                    active_credit_rec.get("full_output_json")
+                )
+
+                # Verified Cloud Document Links
+                st.markdown(render_dossier_links_html(dossier_c["links"]), unsafe_allow_html=True)
+
+                # Downloadable Synthetic Documents & Data
+                c_files = dossier_c.get("files", [])
+                if c_files:
+                    st.markdown("<div style='font-size:0.82rem; font-weight:700; margin-bottom:0.4rem; color:var(--nd-text);'>Verified Downloadable Documents & Datasets</div>", unsafe_allow_html=True)
+                    c_cols = st.columns(len(c_files))
+                    for f_idx, f_item in enumerate(c_files):
+                        with c_cols[f_idx]:
+                            st.download_button(
+                                label=f_item["name"],
+                                data=f_item["content"],
+                                file_name=f_item["file_name"],
+                                mime=f_item["mime"],
+                                key=f"btn_c_down_{active_credit_rec['id']}_{f_idx}",
+                                help=f_item.get("description", "")
+                            )
+
+                st.text_area("Archived Transcript:", value=active_credit_rec.get("transcript_text") or dossier_c.get("transcript") or raw_text, height=180, disabled=True, key=f"c_archived_{active_credit_rec['id']}")
                 if doc_url_val:
-                    st.markdown(f"**Supporting Document / Quote URL:** [{doc_url_val}]({doc_url_val})")
+                    st.markdown(f"**Direct Document Reference:** [{doc_url_val}]({doc_url_val})")
                 if doc_note_val:
                     st.caption(f"Verification Note: {doc_note_val}")
 
@@ -1371,11 +1397,36 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
 <div class="script-box">{phone_script}</div>
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Sales Interaction & Notes", expanded=False):
-                st.caption(f"Historical record from {s_canvas_source}. Read-only audit log.")
-                st.text_area("Archived Interaction Notes:", value=active_sales_rec.get("transcript_text") or s_raw_text, height=180, disabled=True, key=f"s_archived_{active_sales_rec['id']}")
+            with st.expander("Archived Sales Interaction & Notes", expanded=True):
+                st.caption(f"Historical record from {s_canvas_source}. Verified commercial prospect dossier & accounts receivable aging.")
+                dossier_s = get_synthetic_dossier(
+                    active_sales_rec["entity_name"],
+                    "sales",
+                    active_sales_rec.get("full_output_json")
+                )
+
+                # Verified Cloud Document Links
+                st.markdown(render_dossier_links_html(dossier_s["links"]), unsafe_allow_html=True)
+
+                # Downloadable Synthetic Documents & Data
+                s_files = dossier_s.get("files", [])
+                if s_files:
+                    st.markdown("<div style='font-size:0.82rem; font-weight:700; margin-bottom:0.4rem; color:var(--nd-text);'>Verified Downloadable Documents & Datasets</div>", unsafe_allow_html=True)
+                    s_cols = st.columns(len(s_files))
+                    for f_idx, f_item in enumerate(s_files):
+                        with s_cols[f_idx]:
+                            st.download_button(
+                                label=f_item["name"],
+                                data=f_item["content"],
+                                file_name=f_item["file_name"],
+                                mime=f_item["mime"],
+                                key=f"btn_s_down_{active_sales_rec['id']}_{f_idx}",
+                                help=f_item.get("description", "")
+                            )
+
+                st.text_area("Archived Interaction Notes:", value=active_sales_rec.get("transcript_text") or dossier_s.get("transcript") or s_raw_text, height=180, disabled=True, key=f"s_archived_{active_sales_rec['id']}")
                 if s_doc_url:
-                    st.markdown(f"**AR Aging / Supporting Document:** [{s_doc_url}]({s_doc_url})")
+                    st.markdown(f"**Direct Document Reference:** [{s_doc_url}]({s_doc_url})")
 
         else:
             if is_manual_s:
@@ -2018,11 +2069,36 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 <strong>Q{idx}:</strong> {q}
 </div>""", unsafe_allow_html=True)
 
-            with st.expander("Archived Candidate Interview Transcript & CV Notes", expanded=False):
-                st.caption(f"Historical record from {h_canvas_source}. Read-only audit log.")
-                st.text_area("Archived Screening Transcript:", value=active_hr_rec.get("transcript_text") or h_raw_text, height=180, disabled=True, key=f"h_archived_{active_hr_rec['id']}")
+            with st.expander("Archived Candidate Interview Transcript & CV Notes", expanded=True):
+                st.caption(f"Historical record from {h_canvas_source}. Verified candidate background, test scorecards & interview transcript.")
+                dossier_h = get_synthetic_dossier(
+                    active_hr_rec["entity_name"],
+                    "hr",
+                    active_hr_rec.get("full_output_json")
+                )
+
+                # Verified Cloud Document Links
+                st.markdown(render_dossier_links_html(dossier_h["links"]), unsafe_allow_html=True)
+
+                # Downloadable Synthetic Documents & Data
+                h_files = dossier_h.get("files", [])
+                if h_files:
+                    st.markdown("<div style='font-size:0.82rem; font-weight:700; margin-bottom:0.4rem; color:var(--nd-text);'>Verified Downloadable Documents & Datasets</div>", unsafe_allow_html=True)
+                    h_cols = st.columns(len(h_files))
+                    for f_idx, f_item in enumerate(h_files):
+                        with h_cols[f_idx]:
+                            st.download_button(
+                                label=f_item["name"],
+                                data=f_item["content"],
+                                file_name=f_item["file_name"],
+                                mime=f_item["mime"],
+                                key=f"btn_h_down_{active_hr_rec['id']}_{f_idx}",
+                                help=f_item.get("description", "")
+                            )
+
+                st.text_area("Archived Screening Transcript:", value=active_hr_rec.get("transcript_text") or dossier_h.get("transcript") or h_raw_text, height=180, disabled=True, key=f"h_archived_{active_hr_rec['id']}")
                 if h_doc_url:
-                    st.markdown(f"**Resume / LinkedIn Credentials:** [{h_doc_url}]({h_doc_url})")
+                    st.markdown(f"**Direct Document Reference:** [{h_doc_url}]({h_doc_url})")
 
         else:
             if is_manual_h:
