@@ -591,6 +591,48 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(datasets_root, "sales")))
         self.assertTrue(os.path.exists(os.path.join(datasets_root, "hr")))
 
+    def test_unselected_tabs_contrast_transcripts_and_ai_engine_hotreload(self):
+        """QA Test: Verify unselected tabs and transcripts contrast and ai_engine reload safety."""
+        # 1. Dark Mode CSS verification
+        dark_css = get_nudesk_css("dark")
+        self.assertIn("color: #D1DCE5 !important;", dark_css)
+        self.assertIn("-webkit-text-fill-color: #D1DCE5 !important;", dark_css)
+        self.assertIn('.stTabs button[role="tab"]', dark_css)
+        self.assertIn(".stTextArea textarea:disabled", dark_css)
+        self.assertIn("-webkit-text-fill-color: #F8FAFC !important;", dark_css)
+        self.assertIn("opacity: 1 !important;", dark_css)
+
+        # 2. Light Mode CSS verification
+        light_css = get_nudesk_css("light")
+        self.assertIn("color: #4B5563 !important;", light_css)
+        self.assertIn("-webkit-text-fill-color: #4B5563 !important;", light_css)
+        self.assertIn("-webkit-text-fill-color: #1E293B !important;", light_css)
+
+        # 3. app.py module reload and safe helper verification
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        self.assertIn("importlib.reload(ai_engine)", app_code)
+        self.assertIn("def get_active_model_cascade()", app_code)
+        self.assertIn("def get_available_models()", app_code)
+        self.assertIn("def persist_model_cascade(", app_code)
+        self.assertIn("def test_model_connectivity_safe(", app_code)
+
+        # 4. Functional test of ai_engine cascade accessors
+        import ai_engine
+        cascade = ai_engine.get_candidate_models()
+        self.assertIsInstance(cascade, list)
+        self.assertTrue(len(cascade) >= 1)
+        self.assertIn("gemini-3.5-flash-lite", cascade)
+
+        # Test safe cascade helper logic
+        test_seq = ["gemini-flash-latest", "gemini-3.5-flash"]
+        ai_engine.set_candidate_models(test_seq)
+        self.assertEqual(ai_engine.get_candidate_models(), test_seq)
+        # Restore default
+        ai_engine.set_candidate_models(["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-flash-latest"])
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite

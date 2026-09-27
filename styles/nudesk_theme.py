@@ -30,8 +30,13 @@ def get_nudesk_css(theme: str = "light") -> str:
     input_bg = "#222D37" if is_dark else "#FFFFFF"
     input_text = "#FFFFFF" if is_dark else "#1D242E"
     input_border = "#576169" if is_dark else "#CBD7E0"
-    disabled_bg = "#27333F" if is_dark else "#EAEFF2"
-    disabled_text = "#D1DCE5" if is_dark else "#475569"
+    disabled_bg = "#202A34" if is_dark else "#F1F5F9"
+    disabled_text = "#F8FAFC" if is_dark else "#1E293B"
+
+    # Tab navigation contrast tokens
+    tab_unselected_color = "#D1DCE5" if is_dark else "#4B5563"
+    tab_selected_color = "#FFFFFF" if is_dark else "#0F172A"
+    tab_hover_color = "#FFFFFF" if is_dark else "#1E293B"
 
     # NuDesk Authentic Badges (Zero Orange)
     badge_green_bg = "#1A402B" if is_dark else "#EAF7EE"
@@ -165,10 +170,11 @@ def get_nudesk_css(theme: str = "light") -> str:
         border: 1px solid {badge_red_bdr} !important;
     }}
 
-    /* Universal Form Control Overrides (Fixes Dark/Light Text Contrast) */
+    /* Universal Form Control Overrides (Fixes Dark/Light Text Contrast & Transcripts) */
     .stTextInput input, .stTextArea textarea, div[data-baseweb="input"] input, div[data-baseweb="textarea"] textarea {{
         background-color: var(--nd-input-bg) !important;
         color: var(--nd-input-text) !important;
+        -webkit-text-fill-color: var(--nd-input-text) !important;
         border: 1px solid var(--nd-input-border) !important;
         border-radius: 6px !important;
         font-family: 'Manrope', sans-serif !important;
@@ -186,12 +192,20 @@ def get_nudesk_css(theme: str = "light") -> str:
         box-shadow: 0 0 0 1px var(--nd-green) !important;
     }}
 
-    .stTextArea textarea:disabled {{
+    .stTextArea textarea:disabled,
+    div[data-baseweb="textarea"] textarea:disabled,
+    textarea:disabled,
+    .stTextInput input:disabled,
+    div[data-baseweb="input"] input:disabled,
+    input:disabled {{
         background-color: {disabled_bg} !important;
         color: {disabled_text} !important;
-        border: 1px dashed var(--nd-border) !important;
-        cursor: not-allowed !important;
-        opacity: 0.95 !important;
+        -webkit-text-fill-color: {disabled_text} !important;
+        border: 1px solid var(--nd-border) !important;
+        cursor: text !important;
+        opacity: 1 !important;
+        font-size: 0.92rem !important;
+        line-height: 1.5 !important;
     }}
 
     div[data-baseweb="select"] > div {{
@@ -772,44 +786,68 @@ def get_nudesk_css(theme: str = "light") -> str:
         border: 1px solid var(--nd-border) !important;
     }}
 
-    /* Streamlit Tabs Navigation - High Contrast */
-    .stTabs [data-baseweb="tab-list"] {{
+    /* Streamlit Tabs Navigation - High Contrast Universal */
+    .stTabs [data-baseweb="tab-list"],
+    div[data-baseweb="tab-list"] {{
         gap: 8px;
         border-bottom: 1px solid var(--nd-border);
         background: transparent !important;
     }}
 
-    .stTabs [data-baseweb="tab"] {{
+    .stTabs button[role="tab"],
+    .stTabs [data-baseweb="tab"],
+    button[data-baseweb="tab"],
+    button[role="tab"],
+    div[data-baseweb="tab-list"] button {{
         padding: 8px 16px !important;
         font-weight: 600 !important;
-        color: var(--nd-muted) !important;
+        color: {tab_unselected_color} !important;
+        -webkit-text-fill-color: {tab_unselected_color} !important;
         border-radius: 6px 6px 0 0 !important;
         font-family: 'Host Grotesk', sans-serif !important;
         background: transparent !important;
+        opacity: 1 !important;
     }}
 
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span {{
-        color: var(--nd-muted) !important;
+    .stTabs button[role="tab"] *,
+    .stTabs [data-baseweb="tab"] *,
+    button[data-baseweb="tab"] *,
+    button[role="tab"] *,
+    div[data-baseweb="tab-list"] button * {{
+        color: {tab_unselected_color} !important;
+        -webkit-text-fill-color: {tab_unselected_color} !important;
         font-size: 0.92rem !important;
         font-weight: 600 !important;
+        opacity: 1 !important;
         transition: color 0.15s ease-in-out !important;
     }}
 
-    .stTabs [data-baseweb="tab"]:hover p,
-    .stTabs [data-baseweb="tab"]:hover span {{
-        color: var(--nd-text) !important;
+    .stTabs button[role="tab"]:hover,
+    .stTabs button[role="tab"]:hover *,
+    .stTabs [data-baseweb="tab"]:hover,
+    .stTabs [data-baseweb="tab"]:hover *,
+    button[data-baseweb="tab"]:hover,
+    button[data-baseweb="tab"]:hover *,
+    button[role="tab"]:hover,
+    button[role="tab"]:hover * {{
+        color: {tab_hover_color} !important;
+        -webkit-text-fill-color: {tab_hover_color} !important;
+        opacity: 1 !important;
     }}
 
-    .stTabs [aria-selected="true"] {{
-        color: var(--nd-text) !important;
+    .stTabs button[role="tab"][aria-selected="true"],
+    .stTabs button[role="tab"][aria-selected="true"] *,
+    .stTabs [data-baseweb="tab"][aria-selected="true"],
+    .stTabs [data-baseweb="tab"][aria-selected="true"] *,
+    button[data-baseweb="tab"][aria-selected="true"],
+    button[data-baseweb="tab"][aria-selected="true"] *,
+    button[role="tab"][aria-selected="true"],
+    button[role="tab"][aria-selected="true"] * {{
+        color: {tab_selected_color} !important;
+        -webkit-text-fill-color: {tab_selected_color} !important;
         border-bottom: 2.5px solid var(--nd-green) !important;
-    }}
-
-    .stTabs [aria-selected="true"] p,
-    .stTabs [aria-selected="true"] span {{
-        color: var(--nd-text) !important;
         font-weight: 700 !important;
+        opacity: 1 !important;
     }}
 
     /* Form Label and Caption Contrast Improvements */
