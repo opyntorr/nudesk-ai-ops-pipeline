@@ -89,7 +89,7 @@ class TestDeskMateV2Suite(unittest.TestCase):
 
         dark_css = get_nudesk_css("dark")
         self.assertIn("--nd-green: #48B46B", dark_css)
-        self.assertIn("--nd-bg: #0A0F16", dark_css)
+        self.assertIn("--nd-bg: #18202C", dark_css)
 
     def test_database_persistence(self):
         database.init_db()
@@ -320,6 +320,62 @@ class TestDeskMateV2Suite(unittest.TestCase):
                 self.assertTrue(bool(r["entity_name"]))
                 self.assertTrue(bool(r["headline_metric"]))
                 self.assertTrue(bool(r["assessment_summary"]))
+
+    def test_dark_mode_palette_contrast_and_transparent_charts(self):
+        # QA Test: Validate lighter slate palette, button text contrast, and transparent charts
+        dark_css = get_nudesk_css("dark")
+        # 1. Slate palette instead of pitch-black
+        self.assertIn("--nd-bg: #18202C", dark_css)
+        self.assertIn("--nd-surface: #222C3D", dark_css)
+        self.assertIn("--nd-surface-alt: #2B384D", dark_css)
+        self.assertIn("--nd-border: #364559", dark_css)
+
+        # 2. Universal secondary buttons: surface background, high contrast, no white blocks
+        self.assertIn('button[data-testid="stBaseButton-secondary"]', dark_css)
+        self.assertIn("background-color: var(--nd-surface) !important", dark_css)
+        self.assertIn("color: var(--nd-text) !important", dark_css)
+
+        # 3. Popover hitboxes: full 100% surface area clickable
+        self.assertIn('div[data-testid="stPopover"] button', dark_css)
+        self.assertIn('div[data-testid="stPopover"] button *', dark_css)
+        self.assertIn('pointer-events: none !important', dark_css)
+        self.assertIn('min-height: 42px !important', dark_css)
+
+        # 4. Transparent charts in Vega/Altair CSS
+        self.assertIn('.vega-embed', dark_css)
+        self.assertIn('background: transparent !important', dark_css)
+
+        # 5. configure_altair_donut helper
+        import altair as alt
+        import pandas as pd
+        from styles.nudesk_theme import configure_altair_donut
+
+        df = pd.DataFrame({"Category": ["A", "B"], "Value": [10, 20]})
+        base_chart = alt.Chart(df).mark_arc().encode(theta="Value", color="Category").properties(height=110)
+        styled_chart_dark = configure_altair_donut(base_chart, theme="dark")
+        chart_dict_dark = styled_chart_dark.to_dict()
+        self.assertEqual(chart_dict_dark.get("background"), "transparent")
+        self.assertEqual(chart_dict_dark.get("config", {}).get("legend", {}).get("labelColor"), "#E2E8F0")
+
+        styled_chart_light = configure_altair_donut(base_chart, theme="light")
+        chart_dict_light = styled_chart_light.to_dict()
+        self.assertEqual(chart_dict_light.get("background"), "transparent")
+        self.assertEqual(chart_dict_light.get("config", {}).get("legend", {}).get("labelColor"), "#1D242E")
+
+        # 6. Verify app.py renders all charts with theme=None and configure_altair_donut
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            code = f.read()
+        self.assertIn("from styles.nudesk_theme import get_nudesk_css, configure_altair_donut", code)
+        self.assertEqual(code.count("theme=None"), 8)
+        self.assertIn("c_status_chart = configure_altair_donut(c_status_chart", code)
+        self.assertIn("c_chart = configure_altair_donut(c_chart", code)
+        self.assertIn("s_status_chart = configure_altair_donut(s_status_chart", code)
+        self.assertIn("s_chart = configure_altair_donut(s_chart", code)
+        self.assertIn("h_status_chart = configure_altair_donut(h_status_chart", code)
+        self.assertIn("h_fit_chart = configure_altair_donut(h_fit_chart", code)
+        self.assertIn("dept_chart = configure_altair_donut(dept_chart", code)
+        self.assertIn("risk_chart = configure_altair_donut(risk_chart", code)
 
 
 if __name__ == "__main__":

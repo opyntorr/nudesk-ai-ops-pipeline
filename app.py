@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 import importlib
 import styles.nudesk_theme
 importlib.reload(styles.nudesk_theme)
-from styles.nudesk_theme import get_nudesk_css
+from styles.nudesk_theme import get_nudesk_css, configure_altair_donut
 import auth_rbac
 from auth_rbac import PRESET_WORKSPACE_PERSONAS
 from meeting_queue import (
@@ -187,6 +187,7 @@ with col_head_left:
 </div>""", unsafe_allow_html=True)
 
 with col_head_right:
+    st.markdown('<div style="height: 0.35rem;"></div>', unsafe_allow_html=True)
     col_user_btn, col_settings_btn = st.columns([1, 1], gap="small")
 
     with col_user_btn:
@@ -328,7 +329,8 @@ with tabs[0]:
                 ),
                 tooltip=["Status", "Files"]
             ).properties(height=110)
-            st.altair_chart(c_status_chart, width="stretch")
+            c_status_chart = configure_altair_donut(c_status_chart, st.session_state.current_theme)
+            st.altair_chart(c_status_chart, width="stretch", theme=None)
         else:
             st.info("No credit files in this period.")
 
@@ -356,7 +358,8 @@ with tabs[0]:
                 ),
                 tooltip=["Risk Tier", "Files"]
             ).properties(height=110)
-            st.altair_chart(c_chart, width="stretch")
+            c_chart = configure_altair_donut(c_chart, st.session_state.current_theme)
+            st.altair_chart(c_chart, width="stretch", theme=None)
         else:
             st.info("No risk files in this period.")
 
@@ -949,7 +952,8 @@ with tabs[1]:
                 ),
                 tooltip=["Status", "Leads"]
             ).properties(height=110)
-            st.altair_chart(s_status_chart, width="stretch")
+            s_status_chart = configure_altair_donut(s_status_chart, st.session_state.current_theme)
+            st.altair_chart(s_status_chart, width="stretch", theme=None)
         else:
             st.info("No leads in this period.")
 
@@ -979,7 +983,8 @@ with tabs[1]:
                 ),
                 tooltip=["Lead Tier", "Prospects"]
             ).properties(height=110)
-            st.altair_chart(s_chart, width="stretch")
+            s_chart = configure_altair_donut(s_chart, st.session_state.current_theme)
+            st.altair_chart(s_chart, width="stretch", theme=None)
         else:
             st.info("No commercial leads in this period.")
 
@@ -1503,7 +1508,8 @@ with tabs[2]:
                 ),
                 tooltip=["Status", "Candidates"]
             ).properties(height=110)
-            st.altair_chart(h_status_chart, width="stretch")
+            h_status_chart = configure_altair_donut(h_status_chart, st.session_state.current_theme)
+            st.altair_chart(h_status_chart, width="stretch", theme=None)
         else:
             st.info("No candidates in this period.")
 
@@ -1552,7 +1558,8 @@ with tabs[2]:
                 ),
                 tooltip=["Candidate Fit", "Candidates"]
             ).properties(height=110)
-            st.altair_chart(h_fit_chart, width="stretch")
+            h_fit_chart = configure_altair_donut(h_fit_chart, st.session_state.current_theme)
+            st.altair_chart(h_fit_chart, width="stretch", theme=None)
         else:
             st.info("No candidate fit evaluations in this period.")
 
@@ -2178,7 +2185,8 @@ with tabs[3]:
                     ),
                     tooltip=["Department", "Operations"]
                 ).properties(height=260)
-                st.altair_chart(dept_chart, width="stretch")
+                dept_chart = configure_altair_donut(dept_chart, st.session_state.current_theme)
+                st.altair_chart(dept_chart, width="stretch", theme=None)
             else:
                 st.info("No active department records for this period.")
         else:
@@ -2212,7 +2220,8 @@ with tabs[3]:
                     ),
                     tooltip=["Risk Tier", "Files"]
                 ).properties(height=260)
-                st.altair_chart(risk_chart, width="stretch")
+                risk_chart = configure_altair_donut(risk_chart, st.session_state.current_theme)
+                st.altair_chart(risk_chart, width="stretch", theme=None)
             else:
                 st.info("No credit risk files for this period.")
         else:

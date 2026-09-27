@@ -15,44 +15,44 @@ def get_nudesk_css(theme: str = "light") -> str:
     is_dark = (theme == "dark")
 
     # Dynamic variables
-    bg_body = "#0A0F16" if is_dark else "#F4F7F9"
-    bg_surface = "#141D2B" if is_dark else "#FFFFFF"
-    bg_surface_alt = "#1A2536" if is_dark else "#EDF3F5"
-    text_primary = "#F8FAFC" if is_dark else "#1D242E"
-    text_muted = "#94A3B8" if is_dark else "#5A6A7E"
-    border_color = "#223145" if is_dark else "#D5E0E8"
-    border_subtle = "#1A2536" if is_dark else "#E5ECF0"
-    header_gradient = "linear-gradient(135deg, #0A0F16 0%, #162233 100%)" if is_dark else "linear-gradient(135deg, #1E293B 0%, #2C3E50 100%)"
+    bg_body = "#18202C" if is_dark else "#F4F7F9"
+    bg_surface = "#222C3D" if is_dark else "#FFFFFF"
+    bg_surface_alt = "#2B384D" if is_dark else "#EDF3F5"
+    text_primary = "#FFFFFF" if is_dark else "#1D242E"
+    text_muted = "#A0B0C4" if is_dark else "#5A6A7E"
+    border_color = "#364559" if is_dark else "#D5E0E8"
+    border_subtle = "#2B384B" if is_dark else "#E5ECF0"
+    header_gradient = "linear-gradient(135deg, #1E2837 0%, #2C394E 100%)" if is_dark else "linear-gradient(135deg, #1E293B 0%, #2C3E50 100%)"
     brand_green = "#48B46B" if is_dark else "#3EA258"
     accent_teal = "#3AB7A8" if is_dark else "#2A9D8F"
 
     # Input styling
-    input_bg = "#162030" if is_dark else "#FFFFFF"
-    input_text = "#F8FAFC" if is_dark else "#1D242E"
-    input_border = "#2A3D54" if is_dark else "#CBD7E0"
-    disabled_bg = "#0E1522" if is_dark else "#EAEFF2"
-    disabled_text = "#94A3B8" if is_dark else "#475569"
+    input_bg = "#1F2837" if is_dark else "#FFFFFF"
+    input_text = "#FFFFFF" if is_dark else "#1D242E"
+    input_border = "#3D4F66" if is_dark else "#CBD7E0"
+    disabled_bg = "#1B222E" if is_dark else "#EAEFF2"
+    disabled_text = "#A0B0C4" if is_dark else "#475569"
 
     # NuDesk Authentic Badges (Zero Orange)
-    badge_green_bg = "#0A3D24" if is_dark else "#EAF7EE"
-    badge_green_txt = "#6FE69A" if is_dark else "#1E7E34"
-    badge_green_bdr = "#17633B" if is_dark else "#C6E8CF"
+    badge_green_bg = "#123D25" if is_dark else "#EAF7EE"
+    badge_green_txt = "#7BE8A4" if is_dark else "#1E7E34"
+    badge_green_bdr = "#21683D" if is_dark else "#C6E8CF"
 
-    badge_teal_bg = "#0B3835" if is_dark else "#E6F4F3"
-    badge_teal_txt = "#5FE0D4" if is_dark else "#1D6F68"
-    badge_teal_bdr = "#145954" if is_dark else "#B8E3E0"
+    badge_teal_bg = "#133C39" if is_dark else "#E6F4F3"
+    badge_teal_txt = "#6FE4D9" if is_dark else "#1D6F68"
+    badge_teal_bdr = "#21615B" if is_dark else "#B8E3E0"
 
-    badge_navy_bg = "#182638" if is_dark else "#EFF3F6"
-    badge_navy_txt = "#CFDAE5" if is_dark else "#2C3E50"
-    badge_navy_bdr = "#283C54" if is_dark else "#D5E0E8"
+    badge_navy_bg = "#26354A" if is_dark else "#EFF3F6"
+    badge_navy_txt = "#E2E8F0" if is_dark else "#2C3E50"
+    badge_navy_bdr = "#3B506E" if is_dark else "#D5E0E8"
 
-    badge_red_bg = "#421010" if is_dark else "#FEEFEF"
+    badge_red_bg = "#4A1818" if is_dark else "#FEEFEF"
     badge_red_txt = "#FCA5A5" if is_dark else "#A31D1D"
-    badge_red_bdr = "#821F1F" if is_dark else "#FCD3D3"
+    badge_red_bdr = "#872B2B" if is_dark else "#FCD3D3"
 
-    badge_amber_bg = "#3D2A0A" if is_dark else "#FEF3C7"
-    badge_amber_txt = "#FCD34D" if is_dark else "#92400E"
-    badge_amber_bdr = "#784A12" if is_dark else "#FCD34D"
+    badge_amber_bg = "#4A3610" if is_dark else "#FEF3C7"
+    badge_amber_txt = "#FDE047" if is_dark else "#92400E"
+    badge_amber_bdr = "#855E16" if is_dark else "#FCD34D"
 
     return f"""
 <style>
@@ -749,28 +749,128 @@ def get_nudesk_css(theme: str = "light") -> str:
         border: 1px solid var(--nd-border);
     }}
 
-    /* Streamlit Tabs Navigation */
+    /* Streamlit Tabs Navigation - High Contrast */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
         border-bottom: 1px solid var(--nd-border);
+        background: transparent !important;
     }}
 
     .stTabs [data-baseweb="tab"] {{
-        padding: 8px 14px;
-        font-weight: 600;
-        color: var(--nd-muted);
-        border-radius: 6px 6px 0 0;
-        font-family: 'Host Grotesk', sans-serif;
+        padding: 8px 16px !important;
+        font-weight: 600 !important;
+        color: var(--nd-muted) !important;
+        border-radius: 6px 6px 0 0 !important;
+        font-family: 'Host Grotesk', sans-serif !important;
+        background: transparent !important;
+    }}
+
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span {{
+        color: var(--nd-muted) !important;
+        font-size: 0.92rem !important;
+        font-weight: 600 !important;
+        transition: color 0.15s ease-in-out !important;
+    }}
+
+    .stTabs [data-baseweb="tab"]:hover p,
+    .stTabs [data-baseweb="tab"]:hover span {{
+        color: var(--nd-text) !important;
     }}
 
     .stTabs [aria-selected="true"] {{
         color: var(--nd-text) !important;
-        border-bottom: 2px solid var(--nd-green) !important;
+        border-bottom: 2.5px solid var(--nd-green) !important;
+    }}
+
+    .stTabs [aria-selected="true"] p,
+    .stTabs [aria-selected="true"] span {{
+        color: var(--nd-text) !important;
+        font-weight: 700 !important;
+    }}
+
+    /* Form Label and Caption Contrast Improvements */
+    label[data-testid="stWidgetLabel"],
+    label[data-testid="stWidgetLabel"] p,
+    .stSelectbox label,
+    .stSelectbox label p,
+    .stTextInput label,
+    .stTextInput label p,
+    .stTextArea label,
+    .stTextArea label p {{
+        color: var(--nd-text) !important;
+        font-size: 0.88rem !important;
+        font-weight: 600 !important;
+    }}
+
+    div[data-testid="stCaptionContainer"],
+    div[data-testid="stCaptionContainer"] p,
+    .stCaption,
+    .stCaption p {{
+        color: var(--nd-muted) !important;
+        font-size: 0.85rem !important;
+    }}
+
+    /* Transparent Altair & Vega-Lite Charts (Zero White Rectangles in Dark Mode) */
+    div[data-testid="stVegaLiteChart"],
+    div[data-testid="stArrowVegaLiteChart"],
+    div[data-testid="stVegaLiteChart"] > div,
+    .vega-embed,
+    .vega-embed canvas,
+    .vega-embed svg {{
+        background: transparent !important;
+        background-color: transparent !important;
+    }}
+
+    /* Universal Buttons & Actions (Eliminates white blocks with white text) */
+    button[data-testid="stBaseButton-secondary"],
+    button[data-testid="baseButton-secondary"],
+    button[kind="secondary"],
+    div[data-testid="stPopover"] button,
+    .stPopover button,
+    div[data-testid="stButton"] button:not([kind="primary"]),
+    .stButton > button:not([kind="primary"]),
+    div[data-testid="stLinkButton"] > a,
+    .stDownloadButton > button {{
+        background-color: var(--nd-surface) !important;
+        background: var(--nd-surface) !important;
+        color: var(--nd-text) !important;
+        border: 1px solid var(--nd-border) !important;
+        border-radius: 6px !important;
+        font-family: 'Host Grotesk', 'Manrope', sans-serif !important;
+        font-weight: 600 !important;
+        box-shadow: none !important;
+        transition: all 0.15s ease-in-out !important;
+    }}
+
+    button[data-testid="stBaseButton-secondary"]:hover,
+    button[data-testid="baseButton-secondary"]:hover,
+    button[kind="secondary"]:hover,
+    div[data-testid="stPopover"] button:hover,
+    .stPopover button:hover,
+    div[data-testid="stButton"] button:not([kind="primary"]):hover,
+    .stButton > button:not([kind="primary"]):hover,
+    div[data-testid="stLinkButton"] > a:hover,
+    .stDownloadButton > button:hover {{
+        background-color: var(--nd-surface-alt) !important;
+        background: var(--nd-surface-alt) !important;
+        border-color: var(--nd-green) !important;
+        color: var(--nd-green) !important;
+    }}
+
+    button[data-testid="stBaseButton-secondary"] *,
+    button[kind="secondary"] *,
+    div[data-testid="stPopover"] button *,
+    .stButton > button:not([kind="primary"]) * {{
+        color: inherit !important;
     }}
 
     /* Primary button override (Centered, nuDesk Green) */
-    .stButton > button[kind="primary"] {{
+    .stButton > button[kind="primary"],
+    button[data-testid="stBaseButton-primary"],
+    button[kind="primary"] {{
         background-color: var(--nd-green) !important;
+        background: var(--nd-green) !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 6px !important;
@@ -781,27 +881,42 @@ def get_nudesk_css(theme: str = "light") -> str:
         transition: background-color 0.15s ease-in-out !important;
     }}
 
-    .stButton > button[kind="primary"]:hover {{
+    .stButton > button[kind="primary"]:hover,
+    button[data-testid="stBaseButton-primary"]:hover,
+    button[kind="primary"]:hover {{
         background-color: #348E4D !important;
+        background: #348E4D !important;
+        color: #FFFFFF !important;
     }}
 
-    /* Top Bar Popovers (Settings and User Profile) */
-    div[data-testid="stPopover"] > button {{
-        border-radius: 6px !important;
-        font-family: 'Host Grotesk', 'Manrope', sans-serif !important;
-        font-weight: 700 !important;
-        font-size: 0.88rem !important;
-        border: 1px solid var(--nd-border) !important;
-        background-color: var(--nd-surface) !important;
-        color: var(--nd-text) !important;
-        padding: 0.45rem 0.95rem !important;
-        transition: all 0.15s ease-in-out !important;
+    /* Top Bar Popovers (Settings and User Profile) - Full surface clickable hitbox */
+    div[data-testid="stPopover"],
+    div[data-testid="stPopover"] > div {{
+        width: 100% !important;
+        display: block !important;
     }}
 
-    div[data-testid="stPopover"] > button:hover {{
-        border-color: var(--nd-green) !important;
-        background-color: var(--nd-surface-alt) !important;
-        color: var(--nd-green) !important;
+    div[data-testid="stPopover"] button,
+    div[data-testid="stPopover"] > button,
+    div[data-testid="stPopover"] button[data-testid="stBaseButton-secondary"] {{
+        width: 100% !important;
+        min-height: 42px !important;
+        height: 100% !important;
+        padding: 0.5rem 1rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.5rem !important;
+        cursor: pointer !important;
+        box-sizing: border-box !important;
+        pointer-events: auto !important;
+    }}
+
+    /* Delegate click events to button so entire surface is actionable */
+    div[data-testid="stPopover"] button *,
+    div[data-testid="stPopover"] > button * {{
+        pointer-events: none !important;
+        cursor: pointer !important;
     }}
 
     div[data-testid="stPopoverBody"] {{
@@ -831,3 +946,19 @@ def get_nudesk_css(theme: str = "light") -> str:
     }}
 </style>
 """
+
+
+def configure_altair_donut(chart, theme: str = "light"):
+    """Configure transparent background and theme-aware legend/text for Altair charts."""
+    is_dark = (theme == "dark")
+    text_color = "#E2E8F0" if is_dark else "#1D242E"
+    return (
+        chart.properties(background="transparent")
+        .configure_view(stroke=None)
+        .configure_legend(
+            labelColor=text_color,
+            titleColor=text_color,
+            labelFont="Manrope, sans-serif",
+            labelFontSize=11
+        )
+    )
