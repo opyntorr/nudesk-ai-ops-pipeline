@@ -423,8 +423,8 @@ def render_inline_pending_sales(rec, is_active, p_persona, p_api_key, p_webhook_
             st.markdown(f"""<div class="kpi-container" style="margin-top:0.5rem;">
 <div class="kpi-card"><div class="kpi-label">Lead Score</div><div class="kpi-value">{sales_out.lead_score} / 100</div><div class="kpi-sub">Outbound Priority</div></div>
 <div class="kpi-card"><div class="kpi-label">Annual Revenue</div><div class="kpi-value">${sales_out.annual_revenue_usd:,.0f}</div><div class="kpi-sub">ARR Estimate</div></div>
-<div class="kpi-card"><div class="kpi-label">Commercial Fleet</div><div class="kpi-value">{sales_out.fleet_size} Units</div><div class="kpi-sub">Power Units</div></div>
-<div class="kpi-card"><div class="kpi-label">Contact Target</div><div class="kpi-value" style="font-size:0.95rem;">{sales_out.contact_person}</div><div class="kpi-sub">{sales_out.contact_role}</div></div>
+<div class="kpi-card"><div class="kpi-label">Target Sector</div><div class="kpi-value" style="font-size:1.05rem;">{sales_out.industry}</div><div class="kpi-sub">Commercial Fit</div></div>
+<div class="kpi-card"><div class="kpi-label">Contact Target</div><div class="kpi-value" style="font-size:0.95rem;">{sales_out.contact_person}</div><div class="kpi-sub">Decision Maker</div></div>
 </div>""", unsafe_allow_html=True)
 
             st.markdown("#### Commercial Value Proposition Memo")
@@ -434,12 +434,10 @@ def render_inline_pending_sales(rec, is_active, p_persona, p_api_key, p_webhook_
 <div style="margin-top:0.75rem;"><strong>Cold Email Draft:</strong><div class="script-box">{sales_out.cold_email_en}</div></div>
 </div>""", unsafe_allow_html=True)
 
-            st.markdown("#### Asana Operational Tasks")
-            for task in sales_out.asana_tasks:
-                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
-                st.markdown(f"""<div class="task-item">
-<div><div class="task-title">{task.task_title}</div><span class="task-assignee">{task.assignee_role}</span></div>
-<div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
+            if getattr(sales_out, "phone_script_30s_en", None):
+                st.markdown("#### 30-Second BDR Phone Script")
+                st.markdown(f"""<div class="studio-card">
+<div class="script-box">{sales_out.phone_script_30s_en}</div>
 </div>""", unsafe_allow_html=True)
 
             s_analyst_note = st.text_area(
@@ -564,22 +562,19 @@ def render_inline_pending_hr(rec, is_active, p_persona, p_api_key, p_webhook_url
 <div class="kpi-card"><div class="kpi-label">Candidate Fit (AI)</div><div class="kpi-value" style="color:{fit_color}; font-size:1.15rem;">{hr_out.candidate_fit_tier}</div><div class="kpi-sub">Score: {hr_out.candidate_fit_score} / 100</div></div>
 <div class="kpi-card"><div class="kpi-label">Psicométricos</div><div class="kpi-value">{hr_out.psychometrics_score} / 100</div><div class="kpi-sub">Personality & Diligence</div></div>
 <div class="kpi-card"><div class="kpi-label">Test Conocimientos</div><div class="kpi-value">{hr_out.knowledge_test_score} / 100</div><div class="kpi-sub">{hr_out.application_area}</div></div>
-<div class="kpi-card"><div class="kpi-label">English Fluency</div><div class="kpi-value" style="font-size:1.1rem;">{hr_out.english_cefr_level}</div><div class="kpi-sub">Bilingual Assessment</div></div>
+<div class="kpi-card"><div class="kpi-label">English Fluency</div><div class="kpi-value" style="font-size:1.1rem;">{hr_out.bilingual_fluency_rating}</div><div class="kpi-sub">Bilingual Assessment</div></div>
 </div>""", unsafe_allow_html=True)
 
             st.markdown("#### Candidate Evaluation Memo")
             st.markdown(f"""<div class="studio-card">
-<div class="studio-card-header"><span class="studio-card-title">{hr_out.candidate_name} &bull; {hr_out.target_role}</span><span class="nudesk-badge badge-green">{hr_out.candidate_fit_tier}</span></div>
-<p style="color:var(--nd-text); font-size:0.88rem; line-height:1.6;">{hr_out.screening_memo_es}</p>
+<div class="studio-card-header"><span class="studio-card-title">{hr_out.candidate_name} &bull; {hr_out.applied_role}</span><span class="nudesk-badge badge-green">{hr_out.candidate_fit_tier}</span></div>
+<p style="color:var(--nd-text); font-size:0.88rem; line-height:1.6;">{hr_out.executive_summary}</p>
 </div>""", unsafe_allow_html=True)
 
-            st.markdown("#### Asana Operational Tasks")
-            for task in hr_out.asana_tasks:
-                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
-                st.markdown(f"""<div class="task-item">
-<div><div class="task-title">{task.task_title}</div><span class="task-assignee">{task.assignee_role}</span></div>
-<div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
-</div>""", unsafe_allow_html=True)
+            if hr_out.technical_competencies:
+                st.markdown("#### Verified Competencies")
+                for comp in hr_out.technical_competencies:
+                    st.markdown(f'<div class="bullet-item"><span class="bullet-dot"></span><span class="bullet-text">{comp}</span></div>', unsafe_allow_html=True)
 
             h_analyst_note = st.text_area(
                 "Recruiter Sign-Off Notes (Optional):",
@@ -592,8 +587,8 @@ def render_inline_pending_hr(rec, is_active, p_persona, p_api_key, p_webhook_url
                 database.mark_operation_processed(
                     record_id=rec_id,
                     dispatch_status="Synced",
-                    headline_metric=f"{hr_out.candidate_fit_tier} ({hr_out.candidate_fit_score}/100) | {hr_out.english_cefr_level}",
-                    assessment_summary=hr_out.screening_memo_es,
+                    headline_metric=f"{hr_out.candidate_fit_tier} ({hr_out.candidate_fit_score}/100) | {hr_out.bilingual_fluency_rating}",
+                    assessment_summary=hr_out.executive_summary,
                     full_output_json=hr_out.model_dump(),
                     operator_name=p_persona.name,
                     operator_role=p_persona.role_title,
