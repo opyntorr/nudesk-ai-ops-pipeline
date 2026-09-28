@@ -1,117 +1,25 @@
 {
-  "name": "nuDesk Operations Studio - Closed-Loop Intake & Google Workspace Sync",
+  "updatedAt": "2026-09-28T04:47:01.000Z",
+  "createdAt": "2026-09-26T22:58:37.889Z",
+  "id": "SDAJiNePGG1J3TzW",
+  "name": "nuDesk Operations Studio - Multi-Flow Triage & Google Workspace Sync",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "nudesk-inbound-intake",
-        "responseMode": "onReceived",
-        "options": {}
-      },
-      "id": "node-inbound-webhook",
-      "name": "Incoming Inbound Webhook (Google Forms / Dialers)",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [
-        180,
-        -240
-      ],
-      "webhookId": "nudesk-inbound-intake-webhook"
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "read",
-        "sheetId": "Inbound_Raw_Submissions",
-        "options": {
-          "filter": "status=NEW"
-        }
-      },
-      "id": "node-inbound-gsheets",
-      "name": "Google Sheets - Watch Inbound Submissions",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        180,
-        -60
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const data = item.json.body || item.json;\n  const moduleType = (data.module_type || data.flow_type || 'credit').toLowerCase();\n  const entityName = data.entity_name || data.company_name || data.business_name || data.applicant_name || 'Inbound Commercial Prospect';\n  const headlineMetric = data.headline_metric || data.loan_amount_requested || (data.revenue ? `$${data.revenue} ARR` : '$250,000 USD | Working Capital');\n  const transcript = data.transcript_text || data.transcript || data.notes || 'Inbound application submitted via Google Sheets intake portal.';\n  const source = data.source_channel || 'Google Sheets Inbound Intake via n8n';\n  \n  output.push({\n    json: {\n      module_type: moduleType,\n      entity_name: entityName,\n      headline_metric: headlineMetric,\n      transcript_text: transcript,\n      source_channel: source,\n      doc_url: data.doc_url || '',\n      doc_note: data.doc_note || '',\n      metadata: {\n        intake_timestamp: new Date().toISOString(),\n        orchestrator: 'n8n Inbound Pipeline',\n        sheet_row_id: data.row_number || data.id || null\n      }\n    }\n  });\n}\n\nreturn output;"
-      },
-      "id": "node-inbound-transformer",
-      "name": "Sanitize & Normalize Inbound Application",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        440,
-        -150
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://172.17.0.1:8502/api/ingest",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "X-nuDesk-Auth-Token",
-              "value": "nudesk_ops_secure_token_v2"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json) }}",
-        "options": {}
-      },
-      "id": "node-inbound-http-dispatch",
-      "name": "Dispatch to nuDesk Ingestion Engine",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        720,
-        -150
-      ]
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "sheetId": "Inbound_Raw_Submissions",
-        "options": {
-          "status": "QUEUED_IN_NUDESK"
-        }
-      },
-      "id": "node-inbound-gsheets-update",
-      "name": "Google Sheets - Update Intake Status to Queued",
-      "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 4.5,
-      "position": [
-        980,
-        -150
-      ]
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
         "path": "nudesk-triage",
-        "responseMode": "onReceived",
         "options": {}
       },
-      "id": "node-webhook-1",
+      "id": "f0861a12-7941-4ef2-b27f-29f3044ad361",
       "name": "Incoming nuDesk Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        180,
-        340
+        -1152,
+        464
       ],
       "webhookId": "nudesk-triage-webhook"
     },
@@ -119,18 +27,17 @@
       "parameters": {
         "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const body = item.json.body || item.json;\n  const meta = body.metadata || {};\n  const data = body.data || {};\n  const flow = (body.flow_type || meta.flow_type || 'credit').toLowerCase();\n  \n  const timestamp = meta.dispatch_timestamp || new Date().toISOString();\n  const operator = meta.operator_name || 'Operational Specialist';\n  \n  if (flow === 'sales') {\n    output.push({\n      json: {\n        flow_type: 'sales',\n        pipeline_type: 'Sales Operations',\n        timestamp: timestamp,\n        company_name: data.company_name || data.business_name || 'N/A',\n        contact_person: data.contact_person || data.applicant_name || 'N/A',\n        industry: data.industry || 'General Commercial',\n        annual_revenue_usd: data.annual_revenue_usd || 0,\n        lead_score: data.lead_score || 0,\n        lead_tier: data.lead_tier || (data.lead_score >= 85 ? 'Hot Lead' : (data.lead_score >= 70 ? 'Qualified' : 'Review')),\n        draft_email_subject: data.draft_outreach_subject || `nuDesk Commercial Partnership - ${data.company_name || 'Inquiry'}`,\n        draft_email_body: data.draft_outreach_body || data.score_rationale || 'We reviewed your freight operations and identified tailored credit facility options.',\n        analyst_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets CRM & Gmail Drafts'\n      }\n    });\n  } else if (flow === 'hr') {\n    output.push({\n      json: {\n        flow_type: 'hr',\n        pipeline_type: 'HR Talent Screening',\n        timestamp: timestamp,\n        candidate_name: data.candidate_name || data.applicant_name || 'N/A',\n        target_role: data.target_role || data.applied_role || 'Commercial Credit Analyst',\n        cefr_level: data.english_fluency_cefr || data.cefr || 'B2',\n        competency_score: data.technical_competency_score || data.fit_score || 0,\n        salary_expectation_usd: data.salary_expectation_monthly_usd || 0,\n        hiring_recommendation: data.hiring_recommendation || data.action || 'Advance to Case Study',\n        interviewer_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets Talent Roster & Gmail'\n      }\n    });\n  } else {\n    // Default to Credit flow\n    output.push({\n      json: {\n        flow_type: 'credit',\n        pipeline_type: 'Credit Operations',\n        timestamp: timestamp,\n        company_name: data.business_name || data.company_name || 'N/A',\n        applicant_name: data.applicant_name || data.contact_person || 'N/A',\n        loan_amount_usd: data.loan_amount_requested_usd || 0,\n        dti_ratio: data.dti_ratio || 'N/A',\n        risk_tier: data.risk_tier || 'Moderate',\n        collateral: data.collateral_type || 'General Assets',\n        executive_summary: data.executive_summary || '',\n        red_flags: Array.isArray(data.red_flags) ? data.red_flags.join('; ') : (data.red_flags || 'None reported'),\n        analyst_notes: data.analyst_notes || '',\n        operator: operator,\n        status: 'Synced with Google Sheets Credit LOS & Asana'\n      }\n    });\n  }\n}\n\nreturn output;"
       },
-      "id": "node-transformer-2",
+      "id": "53a43670-2299-426b-b0a7-6923885ae44d",
       "name": "Format for Google Sheets, CRM & Mail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        420,
-        340
+        -912,
+        464
       ]
     },
     {
       "parameters": {
-        "mode": "rules",
         "rules": {
           "values": [
             {
@@ -138,7 +45,8 @@
                 "options": {
                   "caseSensitive": false,
                   "leftValue": "",
-                  "typeValidation": "loose"
+                  "typeValidation": "loose",
+                  "version": 1
                 },
                 "conditions": [
                   {
@@ -160,7 +68,8 @@
                 "options": {
                   "caseSensitive": false,
                   "leftValue": "",
-                  "typeValidation": "loose"
+                  "typeValidation": "loose",
+                  "version": 1
                 },
                 "conditions": [
                   {
@@ -182,7 +91,8 @@
                 "options": {
                   "caseSensitive": false,
                   "leftValue": "",
-                  "typeValidation": "loose"
+                  "typeValidation": "loose",
+                  "version": 1
                 },
                 "conditions": [
                   {
@@ -203,61 +113,352 @@
         },
         "options": {}
       },
-      "id": "node-switch-3",
+      "id": "645c6f2c-80e5-4bb3-800f-9643831c7a20",
       "name": "Route by Operation Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
       "position": [
-        680,
-        340
+        -672,
+        464
       ]
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "operation": "append",
-        "sheetId": "Credit_LOS_Pipeline",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1R2wqjLnoGdNxu0nX_L8s5ARUhaBYinaKCFT5nmlz7nU/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1R2wqjLnoGdNxu0nX_L8s5ARUhaBYinaKCFT5nmlz7nU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "applicant_name",
+              "displayName": "applicant_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "loan_amount_usd",
+              "displayName": "loan_amount_usd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dti_ratio",
+              "displayName": "dti_ratio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "risk_tier",
+              "displayName": "risk_tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "collateral",
+              "displayName": "collateral",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "executive_summary",
+              "displayName": "executive_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "red_flags",
+              "displayName": "red_flags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "analyst_notes",
+              "displayName": "analyst_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "operator",
+              "displayName": "operator",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
-      "id": "node-credit-sheet-4",
+      "id": "1eb74014-ca30-44ff-a2a6-ec33190ad2e1",
       "name": "Google Sheets - Credit LOS",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        960,
-        180
-      ]
+        -368,
+        304
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "3F2afP7a25U6hayp",
+          "name": "Google Service Account account"
+        }
+      }
     },
     {
       "parameters": {
-        "operation": "create",
+        "workspace": "1218908507417022",
         "name": "=Underwriting Follow-Up: {{ $json.company_name }}",
-        "notes": "=Facility: ${{ $json.loan_amount_usd }} USD\nRisk Tier: {{ $json.risk_tier }}\nDTI: {{ $json.dti_ratio }}\nCollateral: {{ $json.collateral }}\n\nExecutive Summary:\n{{ $json.executive_summary }}\n\nRed Flags:\n{{ $json.red_flags }}\n\nAnalyst Notes:\n{{ $json.analyst_notes }}\n\nOperator: {{ $json.operator }}"
+        "otherProperties": {
+          "notes": "=Facility: ${{ $json.loan_amount_usd }} USD\nRisk Tier: {{ $json.risk_tier }}\nDTI: {{ $json.dti_ratio }}\nCollateral: {{ $json.collateral }}\n\nExecutive Summary:\n{{ $json.executive_summary }}\n\nRed Flags:\n{{ $json.red_flags }}\n\nAnalyst Notes:\n{{ $json.analyst_notes }}\n\nOperator: {{ $json.operator }}",
+          "projects": [
+            "1218907545086351"
+          ]
+        }
       },
-      "id": "node-credit-asana-5",
+      "id": "435f219b-5c09-40b5-8548-7175f7c5b211",
       "name": "Asana - Create Underwriting Task",
       "type": "n8n-nodes-base.asana",
       "typeVersion": 1,
       "position": [
-        1220,
-        180
-      ]
+        -112,
+        304
+      ],
+      "credentials": {
+        "asanaApi": {
+          "id": "Tzoa9Tx6mk66p6JA",
+          "name": "Asana account"
+        }
+      }
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "operation": "append",
-        "sheetId": "Commercial_Sales_CRM",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/17KwKF5jjCq2ZFsAjp58lQoy0u5X1fVmVzT07rXq5BHs/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17KwKF5jjCq2ZFsAjp58lQoy0u5X1fVmVzT07rXq5BHs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company_name",
+              "displayName": "company_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "contact_person",
+              "displayName": "contact_person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "annual_revenue_usd",
+              "displayName": "annual_revenue_usd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_score",
+              "displayName": "lead_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_tier",
+              "displayName": "lead_tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "draft_email_subject",
+              "displayName": "draft_email_subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "draft_email_body",
+              "displayName": "draft_email_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "analyst_notes",
+              "displayName": "analyst_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "operator",
+              "displayName": "operator",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
-      "id": "node-sales-sheet-6",
+      "id": "9fa086fe-540b-468e-af98-cd76997b2271",
       "name": "Google Sheets - Sales CRM",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        960,
-        340
-      ]
+        -368,
+        464
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "3F2afP7a25U6hayp",
+          "name": "Google Service Account account"
+        }
+      }
     },
     {
       "parameters": {
@@ -268,30 +469,153 @@
         "message": "={{ $json.draft_email_body }}",
         "options": {}
       },
-      "id": "node-sales-gmail-7",
+      "id": "a413723f-9af3-4f0c-ac6b-10bf0e1cbd37",
       "name": "Gmail - Create BDR Outreach Draft",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1220,
-        340
-      ]
+        -112,
+        464
+      ],
+      "webhookId": "3264f36c-2852-42b1-ab43-696f251cd8bf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "HpmyqoAqph28Rjgm",
+          "name": "Gmail account"
+        }
+      }
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
         "operation": "append",
-        "sheetId": "Talent_Screening_Roster",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1I1HAYDu8IMtPUBOk-oY-_FUGooUbdL3Y2L3Mz_2kM_0/edit",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Hoja 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1I1HAYDu8IMtPUBOk-oY-_FUGooUbdL3Y2L3Mz_2kM_0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "candidate_name",
+              "displayName": "candidate_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "target_role",
+              "displayName": "target_role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cefr_level",
+              "displayName": "cefr_level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "competency_score",
+              "displayName": "competency_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "salary_expectation_usd",
+              "displayName": "salary_expectation_usd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hiring_recommendation",
+              "displayName": "hiring_recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "interviewer_notes",
+              "displayName": "interviewer_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "operator",
+              "displayName": "operator",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
         "options": {}
       },
-      "id": "node-hr-sheet-8",
+      "id": "1671ab1d-37bc-48b4-998b-a83ee3ea6a80",
       "name": "Google Sheets - Talent Roster",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
       "position": [
-        960,
-        500
-      ]
+        -368,
+        624
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "3F2afP7a25U6hayp",
+          "name": "Google Service Account account"
+        }
+      }
     },
     {
       "parameters": {
@@ -299,64 +623,27 @@
         "operation": "create",
         "subject": "=nuDesk Talent Hub - Seguimiento de Entrevista: {{ $json.candidate_name }}",
         "emailType": "text",
-        "message": "=Estimado/a {{ $json.candidate_name }},\n\nGracias por su tiempo en la entrevista de preselección para la posición de {{ $json.target_role }}.\n\nHemos registrado su perfil con nivel de inglés CEFR {{ $json.cefr_level }} y score técnico de {{ $json.competency_score }}/100.\n\nNos pondremos en contacto para coordinar la siguiente etapa del proceso.\n\nAtentamente,\n{{ $json.operator }}\nnuDesk Talent Hub — Mazatlán Operations",
+        "message": "=Estimado/a {{ $json.candidate_name }},\n\nGracias por su tiempo en la entrevista de preselecci\u00f3n para la posici\u00f3n de {{ $json.target_role }}.\n\nHemos registrado su perfil con nivel de ingl\u00e9s CEFR {{ $json.cefr_level }} y score t\u00e9cnico de {{ $json.competency_score }}/100.\n\nNos pondremos en contacto para coordinar la siguiente etapa del proceso.\n\nAtentamente,\n{{ $json.operator }}\nnuDesk Talent Hub \u2014 Mazatl\u00e1n Operations",
         "options": {}
       },
-      "id": "node-hr-gmail-9",
+      "id": "5e51ce65-3af0-4577-b09b-347ada23a195",
       "name": "Gmail - Create Candidate Follow-up Draft",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        1220,
-        500
-      ]
+        -112,
+        624
+      ],
+      "webhookId": "0a6e84aa-02e4-4e85-aec1-6871c11973a8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "HpmyqoAqph28Rjgm",
+          "name": "Gmail account"
+        }
+      }
     }
   ],
   "connections": {
-    "Incoming Inbound Webhook (Google Forms / Dialers)": {
-      "main": [
-        [
-          {
-            "node": "Sanitize & Normalize Inbound Application",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Sheets - Watch Inbound Submissions": {
-      "main": [
-        [
-          {
-            "node": "Sanitize & Normalize Inbound Application",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sanitize & Normalize Inbound Application": {
-      "main": [
-        [
-          {
-            "node": "Dispatch to nuDesk Ingestion Engine",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Dispatch to nuDesk Ingestion Engine": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets - Update Intake Status to Queued",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Incoming nuDesk Webhook": {
       "main": [
         [
@@ -373,31 +660,6 @@
         [
           {
             "node": "Route by Operation Type",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Route by Operation Type": {
-      "main": [
-        [
-          {
-            "node": "Google Sheets - Credit LOS",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Google Sheets - Sales CRM",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Google Sheets - Talent Roster",
             "type": "main",
             "index": 0
           }
@@ -436,9 +698,71 @@
           }
         ]
       ]
+    },
+    "Route by Operation Type": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Credit LOS",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets - Sales CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Google Sheets - Talent Roster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "pinData": {},
+  "versionId": "bb987601-1a01-4d5f-a2b4-07ca5cec2a52",
+  "activeVersionId": "bb987601-1a01-4d5f-a2b4-07ca5cec2a52",
+  "versionCounter": 51,
+  "triggerCount": 1,
+  "sourceWorkflowId": null,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-09-26T22:58:37.892Z",
+      "createdAt": "2026-09-26T22:58:37.892Z",
+      "role": "workflow:owner",
+      "workflowId": "SDAJiNePGG1J3TzW",
+      "projectId": "R2C1NNlB5FtmRbFU",
+      "project": {
+        "updatedAt": "2026-09-26T22:53:31.757Z",
+        "createdAt": "2026-09-26T22:50:56.038Z",
+        "id": "R2C1NNlB5FtmRbFU",
+        "name": "Omar Pay\u00e1n <omarpayant@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "customTelemetryTags": [],
+        "creatorId": "8138af80-6ee5-4c44-add6-4ec09e78b15a"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version bb987601",
+    "description": ""
   }
 }
