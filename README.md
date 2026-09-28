@@ -180,22 +180,22 @@ Engineered for operational supervisors and underwriters connecting from smartpho
 #### Mobile Credit Operations & Discovery Dock (Top View)
 Demonstrates the immediate visibility of the active credit file and the primary triage action button on a Google Pixel 7 viewport.
 
-![Mobile Credit Cockpit](assets/screenshots/mobile_android_credit_cockpit.png)
+<img src="assets/screenshots/mobile_android_credit_cockpit.png" width="340" alt="Mobile Credit Cockpit" />
 
 #### Mobile Credit Underwriting Dossier & Synthesized Memo
 Displays the completed credit evaluation memo, deterministic DTI ratio, and automated Asana compliance tasks rendered natively on mobile.
 
-![Mobile Credit Dossier](assets/screenshots/mobile_android_credit_dossier.png)
+<img src="assets/screenshots/mobile_android_credit_dossier.png" width="340" alt="Mobile Credit Dossier" />
 
 #### Mobile Commercial Sales (BDR Outreach & Lead Scoring)
 Shows rapid commercial prospect qualification and staged cold outreach pitches optimized for mobile review.
 
-![Mobile Sales Cockpit](assets/screenshots/mobile_android_sales_cockpit.png)
+<img src="assets/screenshots/mobile_android_sales_cockpit.png" width="340" alt="Mobile Sales Cockpit" />
 
 #### Mobile Executive KPI Dashboard & Operations Audit
 Presents consolidated team throughput, departmental distribution, and SLA adherence metrics formatted in high-contrast compact cards.
 
-![Mobile Executive Dashboard](assets/screenshots/mobile_android_exec_dashboard.png)
+<img src="assets/screenshots/mobile_android_exec_dashboard.png" width="340" alt="Mobile Executive Dashboard" />
 
 ### 5.10 Mac Desktop Operations (MacBook Pro High-Resolution Environment)
 Native high-resolution desktop view illustrating the dual-panel split-screen architecture across key operational modules:
