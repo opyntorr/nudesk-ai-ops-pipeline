@@ -1,4 +1,4 @@
-.PHONY: help install test run tunnel docker-up docker-down clean
+.PHONY: help install test eval run tunnel docker-up docker-down clean
 
 VENV := .venv
 PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else echo python3; fi)
@@ -10,6 +10,7 @@ help:
 	@echo "------------------------------------------------------"
 	@echo "make install     : Install all project dependencies into active environment"
 	@echo "make test        : Run full automated test suite"
+	@echo "make eval        : Run AI agent evaluation & safety benchmarking harness"
 	@echo "make run         : Launch Streamlit web application on port 8501"
 	@echo "make tunnel      : Start secure Cloudflare HTTPS tunnel for mobile demo"
 	@echo "make docker-up   : Spin up local n8n workflow automation container"
@@ -21,6 +22,9 @@ install:
 
 test:
 	$(PYTHON) -m unittest discover -s tests -p "test_*.py" -v
+
+eval:
+	$(PYTHON) evals/agent_eval_harness.py
 
 run:
 	$(STREAMLIT) run app.py --server.port 8501

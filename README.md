@@ -190,6 +190,7 @@ nudesk-ai-ops-pipeline/
 ├── AGENTS.md                       # Agentic architecture & AI pairing directives (Claude & Gemini)
 ├── agent_specs/
 │   └── tools_manifest.json         # Formal JSON schemas for function calling & agent tool catalog
+├── agent_guardrails.py             # Pre-flight PII masking, injection defense, & post-flight override
 ├── requirements.txt                # Pinned dependencies (Streamlit, GenAI, Pydantic, Requests)
 ├── docker-compose.yml              # Container definition for local n8n instance
 ├── n8n_workflow_blueprint.json     # Closed-loop workflow blueprint (Inbound Intake & Outbound Sync)
@@ -205,6 +206,8 @@ nudesk-ai-ops-pipeline/
 ├── mock_data.py                    # Benchmark transcripts and candidate records
 ├── styles/
 │   └── nudesk_theme.py             # Design system tokens and WCAG AAA Light/Dark theme engine
+├── evals/
+│   └── agent_eval_harness.py       # Autonomous agent evaluation & safety benchmarking suite
 ├── scripts/
 │   ├── e2e_playwright_audit.py     # Playwright headless browser E2E test & screenshot capture
 │   ├── generate_synthetic_intake.py# Synthetic intake generator (Read AI, Fireflies, GDrive, Wispr, GSheets)
@@ -213,7 +216,7 @@ nudesk-ai-ops-pipeline/
 │   ├── test_n8n_pipeline.py        # End-to-end integration test runner
 │   └── test_n8n_closed_loop.py     # Closed-loop round-trip test (Google Sheets -> n8n -> nuDesk -> Workspace)
 └── tests/
-    └── test_v2_suite.py            # Comprehensive 78-test automated suite
+    └── test_v2_suite.py            # Comprehensive 82-test automated suite
 ```
 
 ---
@@ -260,7 +263,8 @@ Open your browser at `http://localhost:8501`.
 | Command | Description |
 |---|---|
 | `make install` | Installs all Python dependencies into active virtual environment |
-| `make test` | Executes the 74-test automated test suite |
+| `make test` | Executes the 82-test automated unit test suite |
+| `make eval` | Executes the AI agent safety, PII redaction, and injection benchmarking harness |
 | `make run` | Starts the Streamlit dashboard on port 8501 |
 | `make tunnel` | Launches secure Cloudflare HTTPS tunnel for mobile/remote testing |
 | `make docker-up` | Launches local n8n container in the background |
@@ -278,9 +282,15 @@ To run the full suite locally:
 make test
 ```
 
-### Test Suite Coverage (78 Tests):
+To run the AI agent evaluation & safety benchmarking harness:
+```bash
+make eval
+```
+
+### Test Suite Coverage (82 Tests):
 - **Data Contracts:** Validates Pydantic V2 models for Credit, Sales, and HR.
 - **Agentic Tools:** Verifies deterministic calculation of DSCR and DTI ratios and historical database lookups.
+- **Agent Guardrails & Interceptors:** Verifies pre-flight PII masking (SSN, EIN, Card), prompt injection detection, and post-flight mathematical reconciliation.
 - **Voice Dictation:** Tests Wispr Flow payload parsing and ingestion.
 - **Closed-Loop Automation:** Verifies bidirectional Google Sheets intake, n8n webhook routing, and HTTP ingestion API on port 8502.
 - **Authentication & RBAC:** Verifies strict admin whitelist matching and OAuth URL construction.

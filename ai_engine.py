@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 
 from models import CreditTriageOutput, SalesLeadOutput, HRTalentOutput
 from mock_data import MOCK_FALLBACK_CREDIT, MOCK_FALLBACK_SALES, MOCK_FALLBACK_HR
+import agent_guardrails
 
 load_dotenv()
 
@@ -501,26 +502,43 @@ VERIFIED AGENT TOOL GROUND TRUTH:
 Incorporate these mathematically verified facts into your executive assessment and DTI estimation.
 """
 
+    # Pre-flight Guardrails: PII redaction and Prompt Injection Defense
+    sanitized_transcript, redacted_pii = agent_guardrails.mask_sensitive_pii(transcript)
+    is_injected, injection_summary, _ = agent_guardrails.detect_prompt_injection(sanitized_transcript)
+
     combined_supplement = (supplementary_doc + "\n" + tool_grounding).strip()
+    if is_injected:
+        combined_supplement += f"\nSECURITY ALERT: {injection_summary}. Flag as High Risk and mandate senior risk officer review."
 
     # Step 3: Run structured output analysis with grounded context
     output, is_fallback, status_msg = analyze_credit_call(
-        transcript=transcript,
+        transcript=sanitized_transcript,
         api_key=api_key,
         supplementary_doc=combined_supplement
     )
+
+    # Post-flight Guardrail: Enforce deterministic mathematical reconciliation
+    output, was_reconciled, guardrail_rationale = agent_guardrails.reconcile_deterministic_ratios(output, ratio_result)
+    if is_injected:
+        output.red_flags.insert(0, f"SECURITY ALERT: {injection_summary}")
+        output.risk_tier = "High Risk"
 
     agent_trace.append({
         "step": 3,
         "agent_thought": "Synthesizing structured underwriting memo (Pydantic schema) with grounded tool facts.",
         "tool_called": "analyze_credit_call",
-        "tool_input": {"model_tier": "candidate_cascade"},
+        "tool_input": {
+            "model_tier": "candidate_cascade",
+            "pii_redacted": redacted_pii,
+            "injection_threat": is_injected
+        },
         "tool_output": {
             "applicant_name": output.applicant_name,
             "business_name": output.business_name,
             "risk_tier": output.risk_tier,
             "dti_ratio": output.estimated_dti_ratio,
-            "asana_tasks_count": len(output.asana_tasks)
+            "asana_tasks_count": len(output.asana_tasks),
+            "guardrail_reconciled": was_reconciled
         }
     })
 
