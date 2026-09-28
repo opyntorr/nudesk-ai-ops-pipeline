@@ -47,9 +47,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Theme setup (Default to High-Contrast Minimalist Light Mode)
+# Theme setup (Default to High-Contrast Minimalist Light Mode, supports ?theme=dark)
 if "current_theme" not in st.session_state:
-    st.session_state.current_theme = "light"
+    if "theme" in st.query_params and st.query_params.get("theme") in ["dark", "light"]:
+        st.session_state.current_theme = st.query_params.get("theme")
+    else:
+        st.session_state.current_theme = "light"
 
 if "time_window" not in st.session_state:
     st.session_state.time_window = "week"
@@ -99,7 +102,10 @@ if "google_user" not in st.session_state:
     st.session_state.google_user = None
 
 if "active_persona_id" not in st.session_state:
-    st.session_state.active_persona_id = "usr_underwriter_1"
+    if "role" in st.query_params and st.query_params.get("role") in ["it_admin", "admin"]:
+        st.session_state.active_persona_id = "usr_it_admin_1"
+    else:
+        st.session_state.active_persona_id = "usr_underwriter_1"
 
 # Active persona (supports live Google authentication or preset personas)
 persona = auth_rbac.get_persona_by_id(

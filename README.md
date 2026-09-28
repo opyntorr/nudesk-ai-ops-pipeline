@@ -125,7 +125,53 @@ flowchart LR
 
 ---
 
-## 5. Repository Structure
+## 5. Visual Cockpit Tour & Live Demonstration Gallery
+
+The following high-resolution captures illustrate the end-to-end execution of nuDesk Operations Studio across all operational personas and system subsystems:
+
+### 5.1 Credit Operations Triage Cockpit
+Ingests raw discovery call transcripts, isolates underwriting red flags, displays deterministic financial calculations, and stages automated Asana tasks for loan officers.
+
+![Credit Operations Cockpit](assets/screenshots/01_credit_triage_cockpit.png)
+
+### 5.2 Autonomous Agent Reasoning Trace & Deterministic Tool Loop
+Exposes the multi-step agent execution log. The agent invokes `tool_lookup_applicant_history` to inspect prior applicant records and `tool_compute_financial_ratios` to compute DSCR and DTI deterministically without numerical hallucinations, before synthesizing the final Pydantic response.
+
+![Agent Reasoning Trace](assets/screenshots/02_agent_reasoning_trace.png)
+
+### 5.3 Commercial Sales Operations (BDR Lead Scoring & Outreach)
+Scores commercial prospects on urgency, collateral viability, and working capital fit. Generates both an executive cold email draft and a 30-second conversational outbound telephone pitch.
+
+![Commercial Sales Cockpit](assets/screenshots/03_sales_bdr_cockpit.png)
+
+### 5.4 Talent Operations (Bilingual Candidate Screening)
+Automates bilingual interview assessment, grading CEFR English fluency, commercial empathy, and debt qualification aptitude while drafting behavioral probing questions for hiring managers.
+
+![Talent Operations Screening](assets/screenshots/04_hr_talent_screening.png)
+
+### 5.5 Executive KPI Dashboard & Operations Audit Trail
+Real-time operational intelligence tracking throughput, SLA adherence, and department-level distribution backed by a permanent SQLite audit trail (`operations_history.db`).
+
+![Executive KPI Dashboard](assets/screenshots/05_executive_kpis.png)
+
+### 5.6 IT System Workbench & Wispr Flow Voice Dictation Integration
+Administrative console providing model cascade testing, live database inspection, webhook health telemetry, and voice memo intake simulating Wispr Flow dictation.
+
+![IT System Workbench](assets/screenshots/06_it_workbench_wispr_flow.png)
+
+### 5.7 Inbound Voice Dictation Ingestion Confirmed
+Demonstrates immediate FIFO priority queue intake upon receiving a rapid voice dictation memo from an underwriter or BDR in the field.
+
+![Wispr Flow Intake Confirmed](assets/screenshots/07_wispr_intake_confirmed.png)
+
+### 5.8 High-Contrast Dark Mode Appearance
+Full WCAG AAA compliance supporting dark mode environments for late-shift underwriting teams.
+
+![Dark Mode Palette](assets/screenshots/08_dark_mode_palette.png)
+
+---
+
+## 6. Repository Structure
 
 ```text
 nudesk-ai-ops-pipeline/
@@ -151,6 +197,7 @@ nudesk-ai-ops-pipeline/
 ├── styles/
 │   └── nudesk_theme.py             # Design system tokens and WCAG AAA Light/Dark theme engine
 ├── scripts/
+│   ├── e2e_playwright_audit.py     # Playwright headless browser E2E test & screenshot capture
 │   ├── generate_synthetic_intake.py# Synthetic intake generator (Read AI, Fireflies, GDrive, Wispr)
 │   ├── ingest_incoming_file.py     # File and URL ingestion pipeline
 │   ├── start_tunnel.sh             # Cloudflare HTTPS tunnel for mobile demo
@@ -161,7 +208,7 @@ nudesk-ai-ops-pipeline/
 
 ---
 
-## 6. Quickstart Guide (Zero-Config Test)
+## 7. Quickstart Guide (Zero-Config Test)
 
 ### Prerequisites
 - Python 3.10+
@@ -198,7 +245,7 @@ Open your browser at `http://localhost:8501`.
 
 ---
 
-## 7. Developer Commands (Makefile)
+## 8. Developer Commands (Makefile)
 
 | Command | Description |
 |---|---|
@@ -212,7 +259,7 @@ Open your browser at `http://localhost:8501`.
 
 ---
 
-## 8. Continuous Integration & Test Suite
+## 9. Continuous Integration & Test Suite
 
 The repository is guarded by an automated GitHub Actions CI pipeline (`.github/workflows/ci.yml`) running on every push and pull request across **Python 3.10** and **Python 3.11**.
 
@@ -231,7 +278,7 @@ make test
 
 ---
 
-## 9. Running Local n8n Workflow Orchestration (Docker)
+## 10. Running Local n8n Workflow Orchestration (Docker)
 
 To test end-to-end webhook dispatch and Google Workspace routing locally:
 
@@ -246,7 +293,7 @@ To test end-to-end webhook dispatch and Google Workspace routing locally:
 
 ---
 
-## 10. Authors & Engineering Credits
+## 11. Authors & Engineering Credits
 
 - **Lead Operations & Automation Engineer:** Christian Omar Payán Torróntegui ([@opyntorr](https://github.com/opyntorr))
 - **AI Architecture & Implementation Co-pilot:** Antigravity (Google DeepMind)
