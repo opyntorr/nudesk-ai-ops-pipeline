@@ -1,4 +1,4 @@
-.PHONY: help install test eval run tunnel docker-up docker-down clean
+.PHONY: help install test eval run demo verify tunnel docker-up docker-down clean
 
 VENV := .venv
 PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else echo python3; fi)
@@ -13,6 +13,7 @@ help:
 	@echo "make eval        : Run AI agent evaluation & safety benchmarking harness"
 	@echo "make run         : Launch Streamlit web application on port 8501"
 	@echo "make demo        : Run Playwright automated multi-role UI simulation"
+	@echo "make verify      : Run master end-to-end verification suite (inputs, outputs, guardrails)"
 	@echo "make tunnel      : Start secure Cloudflare HTTPS tunnel for mobile demo"
 	@echo "make docker-up   : Spin up local n8n workflow automation container"
 	@echo "make docker-down : Stop local n8n container"
@@ -32,6 +33,9 @@ run:
 
 demo:
 	$(PYTHON) scripts/trigger_all_roles_demo.py
+
+verify:
+	$(PYTHON) scripts/execute_master_verification.py
 
 tunnel:
 	./scripts/start_tunnel.sh

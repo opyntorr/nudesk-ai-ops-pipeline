@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Helper script to update n8n workflow in database.sqlite with multi-role Gmail drafts
-for Credit, Sales, HR, Executive, and IT personas.
+Helper script to update n8n workflow in database.sqlite:
+- Sends formatted HTML email directly to Omar's Inbox for Executive Briefing
+- Creates Drafts for Credit, Sales, HR, and IT
 """
 import json
 import subprocess
@@ -83,13 +84,18 @@ for (const item of items) {
         timestamp: timestamp,
         digest_title: data.digest_title || 'Resumen Operativo Semanal',
         active_pipeline_usd: data.active_pipeline_usd || '$0 USD',
+        credit_volume_usd: data.credit_volume_usd || '$0 USD',
+        sales_arr_usd: data.sales_arr_usd || '$0 USD',
         sla_compliance_pct: data.sla_compliance_pct || '100%',
         total_operations: data.total_operations || 0,
         pending_count: data.pending_count || 0,
         processed_count: data.processed_count || 0,
+        credit_count: data.credit_count || 0,
+        sales_count: data.sales_count || 0,
+        hr_count: data.hr_count || 0,
         executive_summary: data.executive_summary || 'Resumen de operaciones consolidado para Mazatlan Hub.',
         operator: operator,
-        status: 'Synced with Gmail Executive Digest'
+        status: 'Sent to Executive Inbox'
       }
     });
   } else if (flow === 'it') {
@@ -197,7 +203,7 @@ return output;`;
   const gmailCreds = { gmailOAuth2: { id: "HpmyqoAqph28Rjgm", name: "Gmail account" } };
 
   // Remove any previous versions of these nodes if present
-  nodes = nodes.filter(n => !['Gmail - Create Credit Approval Draft', 'Gmail - Create Executive Digest Draft', 'Gmail - Create IT Health Alert Draft'].includes(n.name));
+  nodes = nodes.filter(n => !['Gmail - Create Credit Approval Draft', 'Gmail - Create Executive Digest Draft', 'Gmail - Send Executive Digest Email', 'Gmail - Create IT Health Alert Draft'].includes(n.name));
 
   // Add Gmail - Create Credit Approval Draft
   nodes.push({
@@ -217,18 +223,110 @@ return output;`;
     credentials: gmailCreds
   });
 
-  // Add Gmail - Create Executive Digest Draft
+  const htmlExecutiveMessage = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 640px; margin: 0 auto; background-color: #0d1117; color: #e6edf3; border-radius: 8px; overflow: hidden; border: 1px solid #30363d; box-shadow: 0 4px 20px rgba(0,0,0,0.4);">
+  <div style="background: linear-gradient(135deg, #161b22 0%, #1f2937 100%); padding: 26px 24px; border-bottom: 2px solid #238636;">
+    <div style="display: inline-block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; background-color: rgba(46, 160, 67, 0.2); color: #3fb950; border: 1px solid #238636; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px;">
+      Mazatlan Operations Studio &bull; Executive Digest
+    </div>
+    <h1 style="margin: 4px 0 6px 0; font-size: 22px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px;">
+      nuDesk Executive Operations Briefing
+    </h1>
+    <p style="margin: 0; font-size: 13px; color: #8b949e;">
+      {{ $json.digest_title }} &bull; Reporte Consolidado de Pipeline y Cumplimiento SLA
+    </p>
+  </div>
+
+  <div style="padding: 24px;">
+    <div style="margin-bottom: 22px;">
+      <table style="width: 100%; border-collapse: separate; border-spacing: 8px; margin: -8px;">
+        <tr>
+          <td style="width: 50%; background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; vertical-align: top;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #8b949e; font-weight: 600;">Credito Solicitado</div>
+            <div style="font-size: 24px; font-weight: 800; color: #3fb950; margin: 6px 0 2px 0;">{{ $json.credit_volume_usd }}</div>
+            <div style="font-size: 11px; color: #8b949e;">{{ $json.credit_count }} expedientes de factoraje/equipo</div>
+          </td>
+          <td style="width: 50%; background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; vertical-align: top;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #8b949e; font-weight: 600;">Pipeline Comercial (ARR)</div>
+            <div style="font-size: 24px; font-weight: 800; color: #58a6ff; margin: 6px 0 2px 0;">{{ $json.sales_arr_usd }}</div>
+            <div style="font-size: 11px; color: #8b949e;">{{ $json.sales_count }} prospectos BDR calificados</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="width: 50%; background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; vertical-align: top;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #8b949e; font-weight: 600;">Cumplimiento de SLA</div>
+            <div style="font-size: 24px; font-weight: 800; color: #d29922; margin: 6px 0 2px 0;">{{ $json.sla_compliance_pct }}</div>
+            <div style="font-size: 11px; color: #3fb950; font-weight: 600;">&lt; 15 min Turnaround Target</div>
+          </td>
+          <td style="width: 50%; background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; vertical-align: top;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #8b949e; font-weight: 600;">Volumen Operativo Total</div>
+            <div style="font-size: 24px; font-weight: 800; color: #ffffff; margin: 6px 0 2px 0;">{{ $json.total_operations }}</div>
+            <div style="font-size: 11px; color: #8b949e;">{{ $json.processed_count }} procesadas &bull; {{ $json.pending_count }} en cola</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 18px; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #58a6ff;">
+        Dictamen y Resumen Ejecutivo
+      </h3>
+      <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #c9d1d9;">
+        {{ $json.executive_summary }}
+      </p>
+    </div>
+
+    <div style="background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 18px; margin-bottom: 20px;">
+      <h3 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #8b949e;">
+        Rendimiento por Departamento (Mazatlan Hub)
+      </h3>
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <tr style="border-bottom: 1px solid #21262d;">
+          <th style="text-align: left; padding: 8px 0; color: #8b949e;">Departamento</th>
+          <th style="text-align: center; padding: 8px 0; color: #8b949e;">Volumen</th>
+          <th style="text-align: right; padding: 8px 0; color: #8b949e;">Estado</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #21262d;">
+          <td style="padding: 10px 0; font-weight: 600; color: #ffffff;">Credito &amp; Underwriting</td>
+          <td style="text-align: center; padding: 10px 0; color: #3fb950; font-weight: 700;">{{ $json.credit_count }} files</td>
+          <td style="text-align: right; padding: 10px 0;"><span style="background-color: rgba(63, 185, 80, 0.15); color: #3fb950; border: 1px solid rgba(63, 185, 80, 0.4); padding: 2px 7px; border-radius: 4px; font-size: 11px;">Sincronizado LOS</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #21262d;">
+          <td style="padding: 10px 0; font-weight: 600; color: #ffffff;">Ventas BDR (Comercial)</td>
+          <td style="text-align: center; padding: 10px 0; color: #58a6ff; font-weight: 700;">{{ $json.sales_count }} leads</td>
+          <td style="text-align: right; padding: 10px 0;"><span style="background-color: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4); padding: 2px 7px; border-radius: 4px; font-size: 11px;">Outreach Staged</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 10px 0; font-weight: 600; color: #ffffff;">Talento &amp; RH Bilingue</td>
+          <td style="text-align: center; padding: 10px 0; color: #bc8cff; font-weight: 700;">{{ $json.hr_count }} candidatos</td>
+          <td style="text-align: right; padding: 10px 0;"><span style="background-color: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.4); padding: 2px 7px; border-radius: 4px; font-size: 11px;">CEFR Validado</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="border-top: 1px solid #21262d; padding-top: 16px; font-size: 11px; color: #8b949e; line-height: 1.5;">
+      <p style="margin: 0 0 4px 0;">
+        <strong>Emisor / Auditor:</strong> {{ $json.operator }} &bull; <strong>Fecha:</strong> {{ $json.timestamp }}
+      </p>
+      <p style="margin: 0;">
+        Este informe fue sintetizado de manera deterministica por el orquestador nuDesk Operations Studio con integracion a Google Workspace. Confidencial para uso interno.
+      </p>
+    </div>
+  </div>
+</div>`;
+
+  // Add Gmail - Send Executive Digest Email (SENT DIRECTLY TO INBOX IN RICH HTML)
   nodes.push({
     parameters: {
-      resource: "draft",
-      operation: "create",
-      subject: "=nuDesk Executive - Resumen Operativo: {{ $json.digest_title }}",
-      emailType: "text",
-      message: "=nuDesk Executive Cockpit — Resumen Consolidado de Operaciones (Mazatlan Hub)\\n\\nVolumen de Capital Activo: {{ $json.active_pipeline_usd }}\\nCumplimiento de SLA: {{ $json.sla_compliance_pct }}\\nOperaciones Totales: {{ $json.total_operations }} ({{ $json.processed_count }} procesadas, {{ $json.pending_count }} en cola)\\n\\nResumen Ejecutivo:\\n{{ $json.executive_summary }}\\n\\nGenerado por: {{ $json.operator }}\\nFecha de Emision: {{ $json.timestamp }}\\nnuDesk Executive Operations Studio",
+      resource: "message",
+      operation: "send",
+      sendTo: "omarpayant@gmail.com",
+      subject: "=nuDesk Executive Briefing — {{ $json.digest_title }}",
+      emailType: "html",
+      message: "=" + htmlExecutiveMessage,
       options: {}
     },
     id: "b18f773c-4d12-4f81-81d3-6192ac82d123",
-    name: "Gmail - Create Executive Digest Draft",
+    name: "Gmail - Send Executive Digest Email",
     type: "n8n-nodes-base.gmail",
     typeVersion: 2.1,
     position: [-112, 784],
@@ -259,7 +357,7 @@ return output;`;
       [{ node: "Google Sheets - Credit LOS", type: "main", index: 0 }],
       [{ node: "Google Sheets - Sales CRM", type: "main", index: 0 }],
       [{ node: "Google Sheets - Talent Roster", type: "main", index: 0 }],
-      [{ node: "Gmail - Create Executive Digest Draft", type: "main", index: 0 }],
+      [{ node: "Gmail - Send Executive Digest Email", type: "main", index: 0 }],
       [{ node: "Gmail - Create IT Health Alert Draft", type: "main", index: 0 }]
     ]
   };
@@ -292,14 +390,14 @@ return output;`;
 """
 
 def main():
-    print("Applying multi-role n8n workflow update...")
+    print("Applying updated executive email workflow to n8n...")
     cmd = ["docker", "exec", "nudesk_n8n", "node", "-e", SCRIPT]
     res = subprocess.run(cmd, capture_output=True, text=True)
     print("STDOUT:", res.stdout)
     if res.stderr:
         print("STDERR:", res.stderr)
     if res.returncode == 0:
-        print("Restarting n8n container to reload memory cache...")
+        print("Restarting n8n container...")
         subprocess.run(["docker", "restart", "nudesk_n8n"], check=True)
         print("n8n restarted successfully.")
     else:

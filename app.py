@@ -2471,10 +2471,15 @@ with tabs[3]:
             exec_payload = {
                 "digest_title": f"Mazatlán Operations Report ({time_window_choices.get(exec_win, 'Selected Period')})",
                 "active_pipeline_usd": f"${total_credit_volume:,.0f} USD (Credit) | ${total_sales_arr:,.0f} USD (Sales ARR)",
+                "credit_volume_usd": f"${total_credit_volume:,.0f} USD",
+                "sales_arr_usd": f"${total_sales_arr:,.0f} USD",
                 "sla_compliance_pct": f"{sla_compliance_pct}%",
                 "total_operations": total_ops,
                 "pending_count": pending_total,
                 "processed_count": processed_total,
+                "credit_count": credit_total,
+                "sales_count": sales_total,
+                "hr_count": hr_total,
                 "executive_summary": (
                     f"Consolidated performance: {total_ops} operations recorded ({processed_total} processed, {pending_total} pending in queue). "
                     f"Credit volume reaches ${total_credit_volume:,.0f} USD across {credit_total} files. "
@@ -2488,7 +2493,7 @@ with tabs[3]:
                 flow_type="executive"
             )
             if d_ok:
-                st.success("Executive KPI Digest successfully dispatched to n8n. Draft generated in Gmail.")
+                st.success("Executive Briefing successfully dispatched to n8n! Rich HTML executive summary delivered directly to your Gmail Inbox.")
             else:
                 st.error(f"Dispatch failed: {d_msg}")
 
