@@ -187,6 +187,9 @@ nudesk-ai-ops-pipeline/
 ├── .gitignore                      # Security exclusions (ignoring .env and SQLite DBs)
 ├── Makefile                        # Developer automation (install, test, run, docker-up)
 ├── README.md                       # Architectural and technical documentation
+├── AGENTS.md                       # Agentic architecture & AI pairing directives (Claude & Gemini)
+├── agent_specs/
+│   └── tools_manifest.json         # Formal JSON schemas for function calling & agent tool catalog
 ├── requirements.txt                # Pinned dependencies (Streamlit, GenAI, Pydantic, Requests)
 ├── docker-compose.yml              # Container definition for local n8n instance
 ├── n8n_workflow_blueprint.json     # Closed-loop workflow blueprint (Inbound Intake & Outbound Sync)
