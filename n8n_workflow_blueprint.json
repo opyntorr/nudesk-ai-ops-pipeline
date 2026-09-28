@@ -1,6 +1,103 @@
 {
-  "name": "nuDesk Operations Studio - Multi-Flow Triage & Google Workspace Sync",
+  "name": "nuDesk Operations Studio - Closed-Loop Intake & Google Workspace Sync",
   "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "nudesk-inbound-intake",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "node-inbound-webhook",
+      "name": "Incoming Inbound Webhook (Google Forms / Dialers)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        -240
+      ],
+      "webhookId": "nudesk-inbound-intake-webhook"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "read",
+        "sheetId": "Inbound_Raw_Submissions",
+        "options": {
+          "filter": "status=NEW"
+        }
+      },
+      "id": "node-inbound-gsheets",
+      "name": "Google Sheets - Watch Inbound Submissions",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        180,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst output = [];\n\nfor (const item of items) {\n  const data = item.json.body || item.json;\n  const moduleType = (data.module_type || data.flow_type || 'credit').toLowerCase();\n  const entityName = data.entity_name || data.company_name || data.business_name || data.applicant_name || 'Inbound Commercial Prospect';\n  const headlineMetric = data.headline_metric || data.loan_amount_requested || (data.revenue ? `$${data.revenue} ARR` : '$250,000 USD | Working Capital');\n  const transcript = data.transcript_text || data.transcript || data.notes || 'Inbound application submitted via Google Sheets intake portal.';\n  const source = data.source_channel || 'Google Sheets Inbound Intake via n8n';\n  \n  output.push({\n    json: {\n      module_type: moduleType,\n      entity_name: entityName,\n      headline_metric: headlineMetric,\n      transcript_text: transcript,\n      source_channel: source,\n      doc_url: data.doc_url || '',\n      doc_note: data.doc_note || '',\n      metadata: {\n        intake_timestamp: new Date().toISOString(),\n        orchestrator: 'n8n Inbound Pipeline',\n        sheet_row_id: data.row_number || data.id || null\n      }\n    }\n  });\n}\n\nreturn output;"
+      },
+      "id": "node-inbound-transformer",
+      "name": "Sanitize & Normalize Inbound Application",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://172.17.0.1:8502/api/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-nuDesk-Auth-Token",
+              "value": "nudesk_ops_secure_token_v2"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "node-inbound-http-dispatch",
+      "name": "Dispatch to nuDesk Ingestion Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        -150
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "update",
+        "sheetId": "Inbound_Raw_Submissions",
+        "options": {
+          "status": "QUEUED_IN_NUDESK"
+        }
+      },
+      "id": "node-inbound-gsheets-update",
+      "name": "Google Sheets - Update Intake Status to Queued",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        980,
+        -150
+      ]
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -216,6 +313,50 @@
     }
   ],
   "connections": {
+    "Incoming Inbound Webhook (Google Forms / Dialers)": {
+      "main": [
+        [
+          {
+            "node": "Sanitize & Normalize Inbound Application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Watch Inbound Submissions": {
+      "main": [
+        [
+          {
+            "node": "Sanitize & Normalize Inbound Application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize & Normalize Inbound Application": {
+      "main": [
+        [
+          {
+            "node": "Dispatch to nuDesk Ingestion Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dispatch to nuDesk Ingestion Engine": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Update Intake Status to Queued",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Incoming nuDesk Webhook": {
       "main": [
         [

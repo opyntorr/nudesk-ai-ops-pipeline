@@ -881,6 +881,55 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertTrue(ok)
         self.assertTrue(payload["metadata"]["auth_token_present"])
 
+    def test_inbound_api_http_endpoints(self):
+        """QA Test: Verify zero-dependency Inbound API on port 8502 accepts HTTP ingestion."""
+        import inbound_api
+        import requests
+        ok = inbound_api.ensure_server_running(port=8502)
+        self.assertTrue(ok)
+
+        # Health check
+        res = requests.get("http://127.0.0.1:8502/api/health", timeout=3)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json().get("status"), "healthy")
+
+        # Ingestion endpoint
+        test_payload = {
+            "module_type": "credit",
+            "entity_name": "Test Inbound Logistics LLC",
+            "headline_metric": "$175,000 USD | Factoring",
+            "transcript_text": "Direct test transcript via inbound API.",
+            "source_channel": "Google Sheets Inbound Intake via n8n"
+        }
+        headers = {"X-nuDesk-Auth-Token": "nudesk_ops_secure_token_v2"}
+        ingest_res = requests.post("http://127.0.0.1:8502/api/ingest", json=test_payload, headers=headers, timeout=3)
+        self.assertEqual(ingest_res.status_code, 200)
+        self.assertTrue(ingest_res.json().get("success"))
+        self.assertIn("record_id", ingest_res.json())
+
+        # Simulate sheet intake endpoint
+        sim_res = requests.post("http://127.0.0.1:8502/api/simulate-google-sheet-intake", json={"module_type": "sales"}, timeout=3)
+        self.assertEqual(sim_res.status_code, 200)
+        self.assertTrue(sim_res.json().get("success"))
+
+    def test_google_sheets_inbound_intake_ui_and_payload(self):
+        """QA Test: Verify Google Sheets intake payload generator and presence in app.py."""
+        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+        payload = generate_synthetic_payload("gsheets", "credit")
+        self.assertEqual(payload["event"], "sheets.row_appended")
+        self.assertIn("sheet_id", payload)
+        self.assertIn("Sonora Pacific Produce", payload["client_name"])
+
+        fields = extract_ingestion_fields(payload, "gsheets", "credit")
+        self.assertEqual(fields["module_type"], "credit")
+        self.assertIn("Google Sheets", fields["source_channel"])
+
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+        self.assertIn("Google Sheets &bull; Inbound Submissions Intake via n8n", app_code)
+        self.assertIn("Inject Google Sheets Inbound Application via n8n", app_code)
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite

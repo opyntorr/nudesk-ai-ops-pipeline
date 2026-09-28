@@ -39,6 +39,8 @@ from synthetic_datasets import get_synthetic_dossier, render_dossier_links_html
 
 load_dotenv()
 database.init_db()
+import inbound_api
+inbound_api.ensure_server_running()
 
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(
@@ -3178,4 +3180,43 @@ with tabs[4]:
 
                 with st.expander("View Wispr Flow Voice Memo JSON Payload", expanded=False):
                     st.json(generate_synthetic_payload("wispr", "credit"))
+
+                # Scenario 6: Google Sheets Inbound Intake via n8n
+                st.markdown("""<div class="studio-card" style="margin-top:1rem; margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Google Sheets &bull; Inbound Submissions Intake via n8n</span>
+                <span class="nudesk-badge badge-green">Bidirectional n8n</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Source:</strong> Inbound Raw Submissions (Google Sheets Intake Table)<br>
+                <strong>Orchestrator:</strong> n8n Inbound Webhook &amp; Polling Bridge (:8502 Ingestion API)<br>
+                <strong>Entity:</strong> Sonora Pacific Produce Logistics (Nogales, AZ) &bull; Commercial Factoring Request
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject Google Sheets Inbound Application via n8n", width="stretch", key="btn_sim_gsheets_stream"):
+                    p = generate_synthetic_payload("gsheets", "credit")
+                    f = extract_ingestion_fields(p, "gsheets", "credit")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.session_state.active_credit_id = nid
+                    st.session_state.credit_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            inbound_n8n_url = os.getenv("N8N_INBOUND_WEBHOOK_URL", "http://localhost:5678/webhook/nudesk-inbound-intake")
+                            r = requests.post(inbound_n8n_url, json=p, timeout=3)
+                            disp_note = f" | n8n Intake: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n Intake: ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into Credit Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Credit Operations (Underwriting)' tab to run agentic triage on this incoming Google Sheets application.")
+
+                with st.expander("View Google Sheets Inbound Intake JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("gsheets", "credit"))
 

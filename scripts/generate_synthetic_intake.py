@@ -68,6 +68,45 @@ def generate_synthetic_payload(provider: str = "readai", module: str = "credit")
             "full_transcript_text": transcript,
             "summary": "Audio dictation memo transcribed via Wispr Flow speech-to-text engine."
         }
+    elif provider in ["gsheets", "google_sheets", "sheets"]:
+        if module == "sales":
+            entity = "Sonora Pacific Cold Logistics"
+            metric = "$2.4M ARR | 12 Refrigerated Trailing Units"
+            transcript = (
+                "[Inbound Submission via Google Sheets CRM Table]\n"
+                "Company: Sonora Pacific Cold Logistics\n"
+                "Contact: Diana Navarro (VP Logistics)\n"
+                "Seeking freight factoring facility and fuel advance line for cross-border routes Nogales-Phoenix."
+            )
+        elif module == "hr":
+            entity = "Daniela Mendoza"
+            metric = "Senior Bilingual Underwriter Applicant"
+            transcript = (
+                "[Inbound Candidate Application via Google Sheets Roster]\n"
+                "Applicant: Daniela Mendoza\n"
+                "4 years experience in cross-border equipment financing. C1 English fluency. Seeking $3,400 USD monthly."
+            )
+        else:
+            entity = "Sonora Pacific Produce Logistics"
+            metric = "$320,000 USD | Working Capital & Factoring"
+            transcript = (
+                "[Inbound Broker Submission via Google Sheets LOS Form]\n"
+                "Applicant: Ernesto Valenzuela (Managing Director)\n"
+                "Company: Sonora Pacific Produce Logistics\n"
+                "Request: $320,000 working capital line. Collateral: 12 refrigerated trailers ($410,000 appraisal).\n"
+                "Monthly revenue $200,000, monthly debt payments $48,000."
+            )
+        return {
+            "event": "sheets.row_appended",
+            "sheet_id": "Inbound_Raw_Submissions",
+            "row_id": random.randint(10, 99),
+            "client_name": entity,
+            "headline_metric": metric,
+            "department": module,
+            "source_app": "Google Sheets Inbound Intake via n8n",
+            "full_transcript_text": transcript,
+            "summary": "Inbound commercial lead ingested from Google Sheets intake table via n8n automation."
+        }
     else:
         # Generic synthetic generation
         entity = f"Sierra Freightways {random.randint(10, 99)} LLC (Nogales, AZ)"
@@ -114,6 +153,15 @@ def extract_ingestion_fields(raw_payload: dict, provider: str, module: str) -> d
         summary = raw_payload.get("summary", "Transcribed by Wispr Flow speech-to-text.")
         doc_url = "https://wisprflow.ai/memo/simulated-audio-intake"
         doc_note = f"Wispr Flow Audio Dictation ({raw_payload.get('dictation_id', 'memo')})"
+        mod = raw_payload.get("department", module)
+    elif provider in ["gsheets", "google_sheets", "sheets"]:
+        entity = raw_payload.get("client_name") or "Google Sheets Inbound Prospect"
+        metric = raw_payload.get("headline_metric", "$250,000 USD | Working Capital")
+        transcript = raw_payload.get("full_transcript_text", "")
+        source = "Google Sheets Inbound Intake via n8n"
+        summary = raw_payload.get("summary", "Inbound lead ingested from Google Sheets intake table via n8n.")
+        doc_url = f"https://docs.google.com/spreadsheets/d/{raw_payload.get('sheet_id', 'Inbound_Raw_Submissions')}"
+        doc_note = f"Google Sheet Row #{raw_payload.get('row_id', 1)} ({raw_payload.get('sheet_id', 'Inbound_Raw_Submissions')})"
         mod = raw_payload.get("department", module)
     else:
         # Read AI schema

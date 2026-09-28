@@ -50,58 +50,63 @@ nuDesk Operations Studio was specifically designed to mirror and integrate with 
 
 ```mermaid
 flowchart TD
-    subgraph Frontend ["Front-End Cockpit (Streamlit)"]
-        UI["nuDesk Operations Studio (app.py)"]
-        Theme["Design System (WCAG AAA Light & Dark Mode)"]
-        RBAC["Google Cloud OAuth 2.0 & RBAC (auth_rbac.py)"]
-    end
-
-    subgraph Ingestion ["Ingestion & Simulators"]
+    subgraph InboundSources ["Inbound Intake Sources"]
+        GSheetInbound["Google Sheets Intake Form\n(Inbound Raw Submissions)"]
         MeetBots["Fireflies.ai & Read AI Bots"]
         Wispr["Wispr Flow Voice Dictation Engine"]
         GDrive["Google Drive Document Intake"]
-        Queue["FIFO Priority Queue with SLA Clocks"]
     end
 
-    subgraph AgenticCore ["AI Agent Engine (ai_engine.py)"]
-        Cascade["Gemini Model Cascade (Google AI Studio)"]
+    subgraph n8nIngress ["n8n Inbound Orchestration"]
+        GSheetTrigger["Google Sheets Watcher\n(Status = NEW)"]
+        InboundWebhook["Inbound Webhook\n(/webhook/nudesk-inbound-intake)"]
+        Sanitizer["Sanitize & Normalize\nApplication Payload"]
+        HTTPDispatch["HTTP POST to nuDesk\n(:8502/api/ingest)"]
+    end
+
+    subgraph Cockpit ["nuDesk Operations Studio (Cockpit)"]
+        IngestAPI["Inbound Ingestion API (:8502)\n(inbound_api.py)"]
+        Queue["FIFO Priority Queue\n(Active SLA Clocks)"]
+        UI["Operations Studio UI (app.py)"]
+        AgenticCore["Autonomous AI Agent\n(Gemini Cascade + Tools)"]
         ToolDB["Tool: lookup_applicant_history()"]
-        ToolCalc["Tool: compute_financial_ratios() (DSCR/DTI)"]
-        Pydantic["Pydantic V2 Schemas (models.py)"]
-        Fallback["Zero-Config Demonstration Mode"]
+        ToolCalc["Tool: compute_financial_ratios()"]
+        Persistence[("SQLite Audit Trail\n(operations_history.db)")]
+        Dispatcher["Outbound Dispatcher\n(crm_dispatcher.py)"]
     end
 
-    subgraph Persistence ["Persistence Layer (database.py)"]
-        SQLite[("SQLite Audit Trail (operations_history.db)")]
-    end
-
-    subgraph Orchestration ["Orchestrator: n8n (Docker Container)"]
-        Webhook["Incoming nuDesk Webhook (X-nuDesk-Auth-Token)"]
+    subgraph n8nEgress ["n8n Outbound Orchestration"]
+        OutboundWebhook["Triage Webhook (:5678)\n(/webhook/nudesk-triage)"]
         Transformer["Format for Sheets, CRM & Mail"]
         Switch{"Route by Operation Type"}
     end
 
     subgraph Destinations ["Enterprise Endpoints"]
-        GSheets["Google Sheets (Universal CRM / LOS / Roster)"]
-        AsanaTask["Asana API (Underwriting & Credit Tasks)"]
-        GmailDraft["Gmail API (BDR Outreach & Follow-up Drafts)"]
+        CreditLOS["Google Sheets (Credit LOS Pipeline)"]
+        AsanaTask["Asana API (Underwriting Tasks)"]
+        SalesCRM["Google Sheets (Commercial Sales CRM)"]
+        GmailBDR["Gmail API (BDR Outreach Drafts)"]
+        TalentRoster["Google Sheets (Talent Roster)"]
+        GmailHR["Gmail API (Candidate Follow-Up)"]
     end
 
-    Ingestion --> Queue --> UI
+    GSheetInbound --> GSheetTrigger --> Sanitizer
+    MeetBots --> InboundWebhook --> Sanitizer
+    Wispr --> InboundWebhook
+    GDrive --> InboundWebhook
+    Sanitizer --> HTTPDispatch --> IngestAPI
+    IngestAPI --> Queue --> UI
     UI --> AgenticCore
     AgenticCore <--> ToolDB
     AgenticCore <--> ToolCalc
-    ToolDB <--> SQLite
+    ToolDB <--> Persistence
     AgenticCore --> UI
     UI --> Persistence
-    UI --> Webhook
-    Webhook --> Transformer --> Switch
-    Switch -- "Credit" --> GSheets
-    Switch -- "Credit" --> AsanaTask
-    Switch -- "Sales" --> GSheets
-    Switch -- "Sales" --> GmailDraft
-    Switch -- "HR" --> GSheets
-    Switch -- "HR" --> GmailDraft
+    UI --> Dispatcher --> OutboundWebhook
+    OutboundWebhook --> Transformer --> Switch
+    Switch -- "Credit" --> CreditLOS --> AsanaTask
+    Switch -- "Sales" --> SalesCRM --> GmailBDR
+    Switch -- "HR" --> TalentRoster --> GmailHR
 ```
 
 ---
@@ -184,8 +189,9 @@ nudesk-ai-ops-pipeline/
 ├── README.md                       # Architectural and technical documentation
 ├── requirements.txt                # Pinned dependencies (Streamlit, GenAI, Pydantic, Requests)
 ├── docker-compose.yml              # Container definition for local n8n instance
-├── n8n_workflow_blueprint.json     # Workflow blueprint for multi-flow triage & Workspace sync
+├── n8n_workflow_blueprint.json     # Closed-loop workflow blueprint (Inbound Intake & Outbound Sync)
 ├── app.py                          # Streamlit FinTech Operations Cockpit
+├── inbound_api.py                  # Zero-dependency HTTP ingestion API for n8n & Google Sheets
 ├── auth_rbac.py                    # Google Cloud OAuth 2.0 & strict RBAC whitelist engine
 ├── database.py                     # SQLite persistent audit trail & operations log
 ├── document_reader.py              # Multi-modal collateral ingestion (URLs & files)
@@ -198,12 +204,13 @@ nudesk-ai-ops-pipeline/
 │   └── nudesk_theme.py             # Design system tokens and WCAG AAA Light/Dark theme engine
 ├── scripts/
 │   ├── e2e_playwright_audit.py     # Playwright headless browser E2E test & screenshot capture
-│   ├── generate_synthetic_intake.py# Synthetic intake generator (Read AI, Fireflies, GDrive, Wispr)
+│   ├── generate_synthetic_intake.py# Synthetic intake generator (Read AI, Fireflies, GDrive, Wispr, GSheets)
 │   ├── ingest_incoming_file.py     # File and URL ingestion pipeline
 │   ├── start_tunnel.sh             # Cloudflare HTTPS tunnel for mobile demo
-│   └── test_n8n_pipeline.py        # End-to-end integration test runner
+│   ├── test_n8n_pipeline.py        # End-to-end integration test runner
+│   └── test_n8n_closed_loop.py     # Closed-loop round-trip test (Google Sheets -> n8n -> nuDesk -> Workspace)
 └── tests/
-    └── test_v2_suite.py            # Comprehensive 74-test automated suite
+    └── test_v2_suite.py            # Comprehensive 78-test automated suite
 ```
 
 ---
@@ -268,10 +275,11 @@ To run the full suite locally:
 make test
 ```
 
-### Test Suite Coverage (74 Tests):
+### Test Suite Coverage (78 Tests):
 - **Data Contracts:** Validates Pydantic V2 models for Credit, Sales, and HR.
 - **Agentic Tools:** Verifies deterministic calculation of DSCR and DTI ratios and historical database lookups.
 - **Voice Dictation:** Tests Wispr Flow payload parsing and ingestion.
+- **Closed-Loop Automation:** Verifies bidirectional Google Sheets intake, n8n webhook routing, and HTTP ingestion API on port 8502.
 - **Authentication & RBAC:** Verifies strict admin whitelist matching and OAuth URL construction.
 - **Persistence:** Verifies SQLite operations log, schema migrations, and SLA calculations without data loss.
 - **UI & Accessibility:** Validates WCAG AAA color contrast, container docks, and headless Streamlit execution.
