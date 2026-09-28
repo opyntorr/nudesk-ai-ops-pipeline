@@ -1,4 +1,4 @@
-.PHONY: help install test eval run demo verify tunnel docker-up docker-down clean
+.PHONY: help install test eval run demo verify tunnel lan docker-up docker-down clean
 
 VENV := .venv
 PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else echo python3; fi)
@@ -12,6 +12,7 @@ help:
 	@echo "make test        : Run full automated test suite"
 	@echo "make eval        : Run AI agent evaluation & safety benchmarking harness"
 	@echo "make run         : Launch Streamlit web application on port 8501"
+	@echo "make lan         : Show local WiFi URLs for phone & secondary laptop access"
 	@echo "make demo        : Run Playwright automated multi-role UI simulation"
 	@echo "make verify      : Run master end-to-end verification suite (inputs, outputs, guardrails)"
 	@echo "make tunnel      : Start secure Cloudflare HTTPS tunnel for mobile demo"
@@ -39,6 +40,9 @@ verify:
 
 tunnel:
 	./scripts/start_tunnel.sh
+
+lan:
+	@$(PYTHON) -c "import socket; s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.connect(('10.255.255.255', 1)); ip = s.getsockname()[0]; s.close(); print(f'nuDesk Local Network Access (Same WiFi):\n  Base URL:       http://{ip}:8501\n  Executive:      http://{ip}:8501/?role=executive\n  Credit Triage:  http://{ip}:8501/?role=credit_underwriter\n  Sales BDR:      http://{ip}:8501/?role=commercial_sales\n  Talent HR:      http://{ip}:8501/?role=hr_recruiter\n  mDNS Name:      http://opyntorr-Blade.local:8501')"
 
 docker-up:
 	docker compose up -d

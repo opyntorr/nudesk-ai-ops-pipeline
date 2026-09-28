@@ -174,6 +174,52 @@ Full WCAG AAA compliance supporting dark mode environments for late-shift underw
 
 ![Dark Mode Palette](assets/screenshots/08_dark_mode_palette.png)
 
+### 5.9 Responsive Mobile Experience (Android & Smartphone Viewport)
+Engineered for operational supervisors and underwriters connecting from smartphones and tablets. Utilizes responsive CSS media queries (`max-width: 900px`) and an accordion architecture where details, transcripts, AI triage actions, and synthesized underwriting dossiers open directly beneath each queue card (`Detalles & Operaciones`), keeping operational context immediately beneath the active item without jumping across disconnected columns. Includes 2x2 compact KPI grids, direct action buttons, and touch-scrolling tab navigation.
+
+#### Mobile Credit Operations & Discovery Dock (Top View)
+Demonstrates the immediate visibility of the active credit file and the primary triage action button on a Google Pixel 7 viewport.
+
+![Mobile Credit Cockpit](assets/screenshots/mobile_android_credit_cockpit.png)
+
+#### Mobile Credit Underwriting Dossier & Synthesized Memo
+Displays the completed credit evaluation memo, deterministic DTI ratio, and automated Asana compliance tasks rendered natively on mobile.
+
+![Mobile Credit Dossier](assets/screenshots/mobile_android_credit_dossier.png)
+
+#### Mobile Commercial Sales (BDR Outreach & Lead Scoring)
+Shows rapid commercial prospect qualification and staged cold outreach pitches optimized for mobile review.
+
+![Mobile Sales Cockpit](assets/screenshots/mobile_android_sales_cockpit.png)
+
+#### Mobile Executive KPI Dashboard & Operations Audit
+Presents consolidated team throughput, departmental distribution, and SLA adherence metrics formatted in high-contrast compact cards.
+
+![Mobile Executive Dashboard](assets/screenshots/mobile_android_exec_dashboard.png)
+
+### 5.10 Mac Desktop Operations (MacBook Pro High-Resolution Environment)
+Native high-resolution desktop view illustrating the dual-panel split-screen architecture across key operational modules:
+
+#### Mac Credit Operations Workspace
+Full split-screen cockpit showing the live intake queue on the left and the active underwriting canvas on the right.
+
+![Mac Credit Workspace](assets/screenshots/desktop_mac_credit_underwriting.png)
+
+#### Mac Executive Operations Digest & Telemetry
+Executive portfolio view featuring dynamic Altair throughput donut charts, rolling SLA compliance metrics, and direct Gmail digest dispatching.
+
+![Mac Executive Digest](assets/screenshots/desktop_mac_executive_digest.png)
+
+#### Mac IT System Governance Workbench
+Administrative console for live Gemini cascade telemetry, SQLite database workbench, and automated webhook dispatch monitoring.
+
+![Mac IT Governance](assets/screenshots/desktop_mac_it_governance.png)
+
+### 5.11 n8n Workflow Automation & Closed-Loop Multi-Flow Engine
+Visual workflow orchestration running in Docker. Ingests authenticated webhooks (`X-nuDesk-Auth-Token`) from nuDesk Operations Studio, routes records across Credit, Commercial Sales, HR Talent, Executive, and IT Governance branches, appends audit rows to Google Sheets, creates Asana compliance tasks, and drafts formatted Gmail notifications.
+
+![n8n Workflow Blueprint](assets/screenshots/n8n_multimodule_workflow.png)
+
 ---
 
 ## 6. Repository Structure

@@ -229,6 +229,435 @@ def get_transcript_for_entity(entity_name: str, module_type: str, raw_json_str: 
         return BENCHMARK_HR_TRANSCRIPT, "https://example.com/resumes/sofia-valdez-underwriter.pdf", "Attached Resume & C1 Cambridge Certificate"
 
 
+# ----------------- INLINE CARD EXPANDERS (MOBILE-FIRST ACCORDION) -----------------
+def render_inline_pending_credit(rec, is_active, p_persona, p_api_key, p_webhook_url):
+    with st.expander(f"Detalles & Operaciones ({rec['entity_name']})", expanded=is_active):
+        sla = database.calculate_sla_status(rec["timestamp"])
+        st.markdown(f"**Intake Channel:** `{rec['source_channel']}` &bull; **SLA Status:** `{sla['label']}` &bull; **Timestamp:** `{rec['timestamp']}`")
+        raw_text, doc_url_val, doc_note_val = get_transcript_for_entity(
+            rec["entity_name"], "credit", rec.get("full_output_json")
+        )
+        st.text_area(
+            "Call Transcript:",
+            value=rec.get("transcript_text") or raw_text,
+            height=130,
+            disabled=True,
+            key=f"c_inl_txt_{rec['id']}"
+        )
+        if doc_url_val:
+            st.markdown(f"**Supporting Document:** [{doc_url_val}]({doc_url_val})")
+        if doc_note_val:
+            st.caption(f"Verification Note: {doc_note_val}")
+
+        run_btn = st.button("Run Credit Triage", type="primary", width="stretch", key=f"btn_c_run_inl_{rec['id']}")
+        if run_btn:
+            st.session_state.active_credit_id = rec["id"]
+            with st.spinner("Analyzing transcript & collateral with Gemini cascade..."):
+                output, agent_trace, is_fb, msg = ai_engine.agentic_credit_triage(
+                    transcript=rec.get("transcript_text") or raw_text,
+                    api_key=p_api_key,
+                    supplementary_doc=doc_url_val or "",
+                    entity_name_hint=rec.get("entity_name", "")
+                )
+                st.session_state.credit_result = (output, is_fb, msg, agent_trace)
+            st.rerun()
+
+        if is_active and st.session_state.credit_result:
+            credit_out: CreditTriageOutput = st.session_state.credit_result[0]
+            is_fallback = st.session_state.credit_result[1]
+            status_msg = st.session_state.credit_result[2]
+
+            if is_fallback:
+                st.info(f"Demonstration Benchmark Mode: {status_msg}")
+            else:
+                st.success(f"{status_msg}")
+
+            st.markdown(f"""<div class="kpi-container" style="margin-top:0.5rem;">
+<div class="kpi-card"><div class="kpi-label">Risk Assessment</div><div class="kpi-value">{credit_out.risk_tier}</div><div class="kpi-sub">Committee Tier</div></div>
+<div class="kpi-card"><div class="kpi-label">Requested Capital</div><div class="kpi-value">${credit_out.loan_amount_requested_usd:,.0f}</div><div class="kpi-sub">Term Debt</div></div>
+<div class="kpi-card"><div class="kpi-label">Stated Monthly Rev</div><div class="kpi-value">${credit_out.stated_monthly_revenue_usd:,.0f}</div><div class="kpi-sub">Verified Gross</div></div>
+<div class="kpi-card"><div class="kpi-label">Estimated DTI</div><div class="kpi-value">{credit_out.estimated_dti_ratio * 100:.1f}%</div><div class="kpi-sub">Debt-to-Income</div></div>
+</div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Executive Underwriting Memo")
+            st.markdown(f"""<div class="studio-card">
+<div class="studio-card-header"><span class="studio-card-title">{credit_out.business_name} ({credit_out.applicant_name})</span><span class="nudesk-badge badge-navy">{credit_out.industry}</span></div>
+<p style="color:var(--nd-text); font-size:0.92rem; line-height:1.6;">{credit_out.executive_summary}</p>
+</div>""", unsafe_allow_html=True)
+
+            if credit_out.red_flags:
+                st.markdown("**Identified Underwriting Red Flags:**")
+                for flag in credit_out.red_flags:
+                    st.markdown(f'<div class="flag-item">&bull; {flag}</div>', unsafe_allow_html=True)
+
+            st.markdown("#### Asana Operational Tasks")
+            for task in credit_out.asana_tasks:
+                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{task.task_title}</div><span class="task-assignee">{task.assignee_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
+</div>""", unsafe_allow_html=True)
+
+            c_analyst_note = st.text_area(
+                "Analyst Sign-Off Notes / Loan Covenants (Optional):",
+                placeholder="e.g. Verified deposits; lien subordination agreement in good standing.",
+                key=f"c_note_inl_{rec['id']}"
+            )
+            c_recipient_email = "robert.martinez@apexfleet-demo.com"
+            if st.button("Approve & Sign-Off (Auto-Advance)", type="primary", width="stretch", key=f"btn_c_disp_inl_{rec['id']}"):
+                rec_id = rec["id"]
+                database.mark_operation_processed(
+                    record_id=rec_id,
+                    dispatch_status="Synced",
+                    headline_metric=f"{credit_out.risk_tier} | ${credit_out.loan_amount_requested_usd:,.0f} USD",
+                    assessment_summary=credit_out.executive_summary,
+                    full_output_json=credit_out.model_dump(),
+                    operator_name=p_persona.name,
+                    operator_role=p_persona.role_title,
+                    analyst_notes=c_analyst_note
+                )
+                crm_dispatcher.dispatch_to_n8n(
+                    webhook_url=p_webhook_url,
+                    payload={**credit_out.model_dump(), "recipient_email": c_recipient_email, "analyst_notes": c_analyst_note},
+                    flow_type="credit"
+                )
+                next_pending = database.get_next_pending_operation("credit", exclude_id=rec_id)
+                st.session_state.credit_result = None
+                if next_pending:
+                    st.session_state.active_credit_id = next_pending["id"]
+                else:
+                    st.session_state.active_credit_id = "manual"
+                st.rerun()
+
+
+def render_inline_processed_credit(rec, is_active):
+    entity_str = rec.get("entity_name", "")
+    with st.expander(f"Detalles & Expediente ({entity_str})", expanded=is_active):
+        data_dict = {}
+        try:
+            data_dict = json.loads(rec.get("full_output_json", "{}"))
+        except Exception:
+            data_dict = {}
+        summary_text = rec.get("assessment_summary") or data_dict.get("executive_summary", "")
+        st.markdown("**Executive Underwriting Memo & Audit Dossier:**")
+        st.markdown(f"""<div class="studio-card">
+<p style="color:var(--nd-text); font-size:0.92rem; line-height:1.6;">{summary_text}</p>
+</div>""", unsafe_allow_html=True)
+
+        if rec.get("analyst_notes"):
+            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:4px solid var(--nd-green); padding:0.65rem 0.9rem; border-radius:4px; margin-bottom:0.75rem; font-size:0.88rem; color:var(--nd-text);">
+<strong>Sign-Off Notes:</strong> {rec['analyst_notes']}
+<div style="font-size:0.75rem; color:var(--nd-muted); margin-top:0.25rem;">Signed off by: {rec.get('operator_name', 'Underwriter')} &bull; Status: {rec.get('dispatch_status', 'Synced')}</div>
+</div>""", unsafe_allow_html=True)
+
+        red_flags = data_dict.get("red_flags", [])
+        if red_flags:
+            st.markdown("**Identified Underwriting Red Flags:**")
+            for flag in red_flags:
+                st.markdown(f'<div class="flag-item">&bull; {flag}</div>', unsafe_allow_html=True)
+
+        asana_tasks = data_dict.get("asana_tasks", [])
+        if asana_tasks:
+            st.markdown("**Operational Workstream & Asana Tasks:**")
+            for task in asana_tasks:
+                if isinstance(task, dict):
+                    t_title, t_role, t_prio = task.get("task_title", ""), task.get("assignee_role", ""), task.get("priority", "Medium")
+                else:
+                    t_title = getattr(task, "task_title", str(task))
+                    t_role = getattr(task, "assignee_role", "Operations")
+                    t_prio = getattr(task, "priority", "Medium")
+                badge_class = "badge-red" if t_prio == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{t_title}</div><span class="task-assignee">{t_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{t_prio}</span></div>
+</div>""", unsafe_allow_html=True)
+
+        st.text_area(
+            "Archived Transcript:",
+            value=rec.get("transcript_text") or data_dict.get("transcript", ""),
+            height=120,
+            disabled=True,
+            key=f"cp_inl_txt_{rec['id']}"
+        )
+
+
+def render_inline_pending_sales(rec, is_active, p_persona, p_api_key, p_webhook_url):
+    with st.expander(f"Detalles & Operaciones ({rec['entity_name']})", expanded=is_active):
+        sla = database.calculate_sla_status(rec["timestamp"])
+        st.markdown(f"**Lead Channel:** `{rec['source_channel']}` &bull; **SLA Status:** `{sla['label']}` &bull; **Timestamp:** `{rec['timestamp']}`")
+        raw_text, doc_url_val, doc_note_val = get_transcript_for_entity(
+            rec["entity_name"], "sales", rec.get("full_output_json")
+        )
+        st.text_area(
+            "Discovery Notes & Cold Call Recording:",
+            value=rec.get("transcript_text") or raw_text,
+            height=130,
+            disabled=True,
+            key=f"s_inl_txt_{rec['id']}"
+        )
+        if doc_url_val:
+            st.markdown(f"**Target Company Dossier:** [{doc_url_val}]({doc_url_val})")
+
+        run_btn = st.button("Analyze Commercial Lead", type="primary", width="stretch", key=f"btn_s_run_inl_{rec['id']}")
+        if run_btn:
+            st.session_state.active_sales_id = rec["id"]
+            with st.spinner("Scoring commercial prospect & crafting outreach..."):
+                output, is_fb, msg = ai_engine.qualify_sales_lead(
+                    lead_info=rec.get("transcript_text") or raw_text,
+                    api_key=p_api_key,
+                    supplementary_doc=doc_url_val or ""
+                )
+                st.session_state.sales_result = (output, is_fb, msg)
+            st.rerun()
+
+        if is_active and st.session_state.sales_result:
+            sales_out: SalesLeadOutput = st.session_state.sales_result[0]
+            is_fallback = st.session_state.sales_result[1]
+            status_msg = st.session_state.sales_result[2]
+
+            if is_fallback:
+                st.info(f"Demonstration Benchmark Mode: {status_msg}")
+            else:
+                st.success(f"{status_msg}")
+
+            st.markdown(f"""<div class="kpi-container" style="margin-top:0.5rem;">
+<div class="kpi-card"><div class="kpi-label">Lead Score</div><div class="kpi-value">{sales_out.lead_score} / 100</div><div class="kpi-sub">Outbound Priority</div></div>
+<div class="kpi-card"><div class="kpi-label">Annual Revenue</div><div class="kpi-value">${sales_out.annual_revenue_usd:,.0f}</div><div class="kpi-sub">ARR Estimate</div></div>
+<div class="kpi-card"><div class="kpi-label">Commercial Fleet</div><div class="kpi-value">{sales_out.fleet_size} Units</div><div class="kpi-sub">Power Units</div></div>
+<div class="kpi-card"><div class="kpi-label">Contact Target</div><div class="kpi-value" style="font-size:0.95rem;">{sales_out.contact_person}</div><div class="kpi-sub">{sales_out.contact_role}</div></div>
+</div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Commercial Value Proposition Memo")
+            st.markdown(f"""<div class="studio-card">
+<div class="studio-card-header"><span class="studio-card-title">{sales_out.company_name}</span><span class="nudesk-badge badge-green">{sales_out.contact_person}</span></div>
+<p style="color:var(--nd-text); font-size:0.88rem;">{sales_out.score_rationale}</p>
+<div style="margin-top:0.75rem;"><strong>Cold Email Draft:</strong><div class="script-box">{sales_out.cold_email_en}</div></div>
+</div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Asana Operational Tasks")
+            for task in sales_out.asana_tasks:
+                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{task.task_title}</div><span class="task-assignee">{task.assignee_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
+</div>""", unsafe_allow_html=True)
+
+            s_analyst_note = st.text_area(
+                "BDR Outreach Notes (Optional):",
+                placeholder="e.g. Spoke to dispatch director; high interest in 24-hr advance.",
+                key=f"s_note_inl_{rec['id']}"
+            )
+            s_recipient_email = "robert.martinez@apexfleet-demo.com"
+            if st.button("Qualify Lead & Stage Outreach (Auto-Advance)", type="primary", width="stretch", key=f"btn_s_disp_inl_{rec['id']}"):
+                rec_id = rec["id"]
+                database.mark_operation_processed(
+                    record_id=rec_id,
+                    dispatch_status="Synced",
+                    headline_metric=f"Score: {sales_out.lead_score}/100 | ${sales_out.annual_revenue_usd:,.0f} ARR",
+                    assessment_summary=sales_out.score_rationale,
+                    full_output_json=sales_out.model_dump(),
+                    operator_name=p_persona.name,
+                    operator_role=p_persona.role_title,
+                    analyst_notes=s_analyst_note
+                )
+                crm_dispatcher.dispatch_to_n8n(
+                    webhook_url=p_webhook_url,
+                    payload={**sales_out.model_dump(), "recipient_email": s_recipient_email, "analyst_notes": s_analyst_note},
+                    flow_type="sales"
+                )
+                next_pending_s = database.get_next_pending_operation("sales", exclude_id=rec_id)
+                st.session_state.sales_result = None
+                if next_pending_s:
+                    st.session_state.active_sales_id = next_pending_s["id"]
+                else:
+                    st.session_state.active_sales_id = "manual"
+                st.rerun()
+
+
+def render_inline_processed_sales(rec, is_active):
+    entity_str = rec.get("entity_name", "")
+    with st.expander(f"Detalles & Expediente ({entity_str})", expanded=is_active):
+        data_dict = {}
+        try:
+            data_dict = json.loads(rec.get("full_output_json", "{}"))
+        except Exception:
+            data_dict = {}
+        summary_text = rec.get("assessment_summary") or data_dict.get("score_rationale", "")
+        st.markdown("**Commercial Assessment Summary & CRM Dossier:**")
+        st.markdown(f"""<div class="studio-card">
+<p style="color:var(--nd-text); font-size:0.92rem; line-height:1.6;">{summary_text}</p>
+</div>""", unsafe_allow_html=True)
+
+        if rec.get("analyst_notes"):
+            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:4px solid var(--nd-green); padding:0.65rem 0.9rem; border-radius:4px; margin-bottom:0.75rem; font-size:0.88rem; color:var(--nd-text);">
+<strong>BDR Sign-Off Notes:</strong> {rec['analyst_notes']}
+<div style="font-size:0.75rem; color:var(--nd-muted); margin-top:0.25rem;">Signed off by: {rec.get('operator_name', 'BDR Specialist')} &bull; Status: {rec.get('dispatch_status', 'Synced')}</div>
+</div>""", unsafe_allow_html=True)
+
+        asana_tasks = data_dict.get("asana_tasks", [])
+        if asana_tasks:
+            st.markdown("**Outreach Workstream & Tasks:**")
+            for task in asana_tasks:
+                if isinstance(task, dict):
+                    t_title, t_role, t_prio = task.get("task_title", ""), task.get("assignee_role", ""), task.get("priority", "Medium")
+                else:
+                    t_title = getattr(task, "task_title", str(task))
+                    t_role = getattr(task, "assignee_role", "BDR")
+                    t_prio = getattr(task, "priority", "Medium")
+                badge_class = "badge-red" if t_prio == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{t_title}</div><span class="task-assignee">{t_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{t_prio}</span></div>
+</div>""", unsafe_allow_html=True)
+
+        st.text_area(
+            "Archived Discovery Notes:",
+            value=rec.get("transcript_text") or data_dict.get("lead_info", ""),
+            height=120,
+            disabled=True,
+            key=f"sp_inl_txt_{rec['id']}"
+        )
+
+
+def render_inline_pending_hr(rec, is_active, p_persona, p_api_key, p_webhook_url):
+    with st.expander(f"Detalles & Operaciones ({rec['entity_name']})", expanded=is_active):
+        sla = database.calculate_sla_status(rec["timestamp"])
+        cand_area = database.get_candidate_area(rec)
+        st.markdown(f"**Target Role:** `{cand_area}` &bull; **SLA Status:** `{sla['label']}` &bull; **Timestamp:** `{rec['timestamp']}`")
+        raw_text, doc_url_val, doc_note_val = get_transcript_for_entity(
+            rec["entity_name"], "hr", rec.get("full_output_json")
+        )
+        st.text_area(
+            "Screening Interview Transcript:",
+            value=rec.get("transcript_text") or raw_text,
+            height=130,
+            disabled=True,
+            key=f"h_inl_txt_{rec['id']}"
+        )
+        if doc_url_val:
+            st.markdown(f"**Candidate Portfolio / CV:** [{doc_url_val}]({doc_url_val})")
+
+        run_btn = st.button("Grade Candidate Screening", type="primary", width="stretch", key=f"btn_h_run_inl_{rec['id']}")
+        if run_btn:
+            st.session_state.active_hr_id = rec["id"]
+            with st.spinner("Grading candidate screening..."):
+                output, is_fb, msg = ai_engine.analyze_hr_interview(
+                    interview_transcript=rec.get("transcript_text") or raw_text,
+                    api_key=p_api_key,
+                    supplementary_doc=doc_url_val or ""
+                )
+                st.session_state.hr_result = (output, is_fb, msg)
+            st.rerun()
+
+        if is_active and st.session_state.hr_result:
+            hr_out: HRTalentOutput = st.session_state.hr_result[0]
+            is_fallback = st.session_state.hr_result[1]
+            status_msg = st.session_state.hr_result[2]
+
+            if is_fallback:
+                st.info(f"Demonstration Benchmark Mode: {status_msg}")
+            else:
+                st.success(f"{status_msg}")
+
+            fit_color = "#3EA258" if hr_out.candidate_fit_tier == "High Fit" else ("#D97706" if hr_out.candidate_fit_tier == "Moderate Fit" else "#DC2626")
+            st.markdown(f"""<div class="kpi-container" style="margin-top:0.5rem;">
+<div class="kpi-card"><div class="kpi-label">Candidate Fit (AI)</div><div class="kpi-value" style="color:{fit_color}; font-size:1.15rem;">{hr_out.candidate_fit_tier}</div><div class="kpi-sub">Score: {hr_out.candidate_fit_score} / 100</div></div>
+<div class="kpi-card"><div class="kpi-label">Psicométricos</div><div class="kpi-value">{hr_out.psychometrics_score} / 100</div><div class="kpi-sub">Personality & Diligence</div></div>
+<div class="kpi-card"><div class="kpi-label">Test Conocimientos</div><div class="kpi-value">{hr_out.knowledge_test_score} / 100</div><div class="kpi-sub">{hr_out.application_area}</div></div>
+<div class="kpi-card"><div class="kpi-label">English Fluency</div><div class="kpi-value" style="font-size:1.1rem;">{hr_out.english_cefr_level}</div><div class="kpi-sub">Bilingual Assessment</div></div>
+</div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Candidate Evaluation Memo")
+            st.markdown(f"""<div class="studio-card">
+<div class="studio-card-header"><span class="studio-card-title">{hr_out.candidate_name} &bull; {hr_out.target_role}</span><span class="nudesk-badge badge-green">{hr_out.candidate_fit_tier}</span></div>
+<p style="color:var(--nd-text); font-size:0.88rem; line-height:1.6;">{hr_out.screening_memo_es}</p>
+</div>""", unsafe_allow_html=True)
+
+            st.markdown("#### Asana Operational Tasks")
+            for task in hr_out.asana_tasks:
+                badge_class = "badge-red" if task.priority == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{task.task_title}</div><span class="task-assignee">{task.assignee_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
+</div>""", unsafe_allow_html=True)
+
+            h_analyst_note = st.text_area(
+                "Recruiter Sign-Off Notes (Optional):",
+                placeholder="e.g. Exceptional bilingual fluency and credit memo grasp.",
+                key=f"h_note_inl_{rec['id']}"
+            )
+            h_recipient_email = "valeria.beltran@mazatlan-talent.mx"
+            if st.button("Approve Candidate & Advance (Auto-Advance)", type="primary", width="stretch", key=f"btn_h_disp_inl_{rec['id']}"):
+                rec_id = rec["id"]
+                database.mark_operation_processed(
+                    record_id=rec_id,
+                    dispatch_status="Synced",
+                    headline_metric=f"{hr_out.candidate_fit_tier} ({hr_out.candidate_fit_score}/100) | {hr_out.english_cefr_level}",
+                    assessment_summary=hr_out.screening_memo_es,
+                    full_output_json=hr_out.model_dump(),
+                    operator_name=p_persona.name,
+                    operator_role=p_persona.role_title,
+                    analyst_notes=h_analyst_note
+                )
+                crm_dispatcher.dispatch_to_n8n(
+                    webhook_url=p_webhook_url,
+                    payload={**hr_out.model_dump(), "recipient_email": h_recipient_email, "analyst_notes": h_analyst_note},
+                    flow_type="hr"
+                )
+                next_pending_h = database.get_next_pending_operation("hr", exclude_id=rec_id)
+                st.session_state.hr_result = None
+                if next_pending_h:
+                    st.session_state.active_hr_id = next_pending_h["id"]
+                else:
+                    st.session_state.active_hr_id = "manual"
+                st.rerun()
+
+
+def render_inline_processed_hr(rec, is_active):
+    entity_str = rec.get("entity_name", "")
+    with st.expander(f"Detalles & Expediente ({entity_str})", expanded=is_active):
+        data_dict = {}
+        try:
+            data_dict = json.loads(rec.get("full_output_json", "{}"))
+        except Exception:
+            data_dict = {}
+        summary_text = rec.get("assessment_summary") or data_dict.get("screening_memo_es", "")
+        st.markdown("**Talent Assessment Summary & Hiring Dossier:**")
+        st.markdown(f"""<div class="studio-card">
+<p style="color:var(--nd-text); font-size:0.92rem; line-height:1.6;">{summary_text}</p>
+</div>""", unsafe_allow_html=True)
+
+        if rec.get("analyst_notes"):
+            st.markdown(f"""<div style="background:var(--nd-surface-alt); border-left:4px solid var(--nd-green); padding:0.65rem 0.9rem; border-radius:4px; margin-bottom:0.75rem; font-size:0.88rem; color:var(--nd-text);">
+<strong>Recruiter Sign-Off Notes:</strong> {rec['analyst_notes']}
+<div style="font-size:0.75rem; color:var(--nd-muted); margin-top:0.25rem;">Signed off by: {rec.get('operator_name', 'Talent Lead')} &bull; Status: {rec.get('dispatch_status', 'Synced')}</div>
+</div>""", unsafe_allow_html=True)
+
+        asana_tasks = data_dict.get("asana_tasks", [])
+        if asana_tasks:
+            st.markdown("**Hiring Workflow & Tasks:**")
+            for task in asana_tasks:
+                if isinstance(task, dict):
+                    t_title, t_role, t_prio = task.get("task_title", ""), task.get("assignee_role", ""), task.get("priority", "Medium")
+                else:
+                    t_title = getattr(task, "task_title", str(task))
+                    t_role = getattr(task, "assignee_role", "HR")
+                    t_prio = getattr(task, "priority", "Medium")
+                badge_class = "badge-red" if t_prio == "High" else "badge-teal"
+                st.markdown(f"""<div class="task-item">
+<div><div class="task-title">{t_title}</div><span class="task-assignee">{t_role}</span></div>
+<div><span class="nudesk-badge {badge_class}">{t_prio}</span></div>
+</div>""", unsafe_allow_html=True)
+
+        st.text_area(
+            "Archived Screening Notes:",
+            value=rec.get("transcript_text") or data_dict.get("interview_transcript", ""),
+            height=120,
+            disabled=True,
+            key=f"hp_inl_txt_{rec['id']}"
+        )
+
+
 # ----------------- TIME WINDOW CHOICES -----------------
 time_window_choices = {
     "week": "Last 7 Days (Rolling)",
@@ -431,6 +860,7 @@ with tabs[0]:
 
     # ---------------- LEFT PANEL: QUEUE & AUDIT HUB ----------------
     with col_c_queue:
+        st.markdown('<div class="cockpit-queue-col"></div>', unsafe_allow_html=True)
         def on_credit_tab_change():
             curr_tab = st.session_state.get("credit_queue_tab_key", "")
             if "Pending" in curr_tab:
@@ -537,6 +967,8 @@ with tabs[0]:
                         st.session_state.active_credit_id = rec["id"]
                         st.session_state.credit_result = None
                         st.rerun()
+
+                    render_inline_pending_credit(rec, is_active, persona, current_api_key, current_webhook_url)
             else:
                 st.info("Pending intake queue is clear. No unresolved credit calls.")
 
@@ -636,11 +1068,14 @@ with tabs[0]:
                         st.session_state.active_credit_id = rec["id"]
                         st.session_state.credit_result = None
                         st.rerun()
+
+                    render_inline_processed_credit(rec, is_active)
             else:
                 st.info("No processed underwriting memos found in this timeframe.")
 
     # ---------------- RIGHT PANEL: ACTIVE DECISION CANVAS ----------------
     with col_c_canvas:
+        st.markdown('<div class="cockpit-canvas-col"></div>', unsafe_allow_html=True)
         is_manual = (st.session_state.active_credit_id == "manual")
         active_credit_rec = None
 
@@ -980,9 +1415,11 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
 <div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
 </div>""", unsafe_allow_html=True)
 
+                c_recipient_email = "robert.martinez@apexfleet-demo.com"
                 st.markdown("#### Credit Approval Notification Draft (Gmail Ready)")
+                st.markdown(f"**Destinatario / To:** `{c_recipient_email}`")
                 credit_email_preview = (
-                    f"Estimado/a {credit_out.applicant_name},\n\n"
+                    f"Estimado {credit_out.applicant_name} ({credit_out.business_name}),\n\n"
                     "Esperamos que se encuentre muy bien al momento de recibir este comunicado.\n\n"
                     "Por medio de la presente, nos complace informarle que el Comité de Crédito y Suscripción de Riesgos de "
                     "nuDesk Operations Studio ha finalizado exitosamente el análisis financiero y documental correspondiente a la "
@@ -1061,7 +1498,7 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
                         # Webhook dispatch to n8n
                         crm_dispatcher.dispatch_to_n8n(
                             webhook_url=current_webhook_url,
-                            payload={**credit_out.model_dump(), "analyst_notes": c_analyst_note},
+                            payload={**credit_out.model_dump(), "recipient_email": c_recipient_email, "analyst_notes": c_analyst_note},
                             flow_type="credit"
                         )
 
@@ -1174,6 +1611,7 @@ with tabs[1]:
 
     # ---------------- LEFT PANEL: SALES QUEUE & AUDIT ----------------
     with col_s_queue:
+        st.markdown('<div class="cockpit-queue-col"></div>', unsafe_allow_html=True)
         def on_sales_tab_change():
             curr_tab = st.session_state.get("sales_queue_tab_key", "")
             if "Pending" in curr_tab:
@@ -1267,6 +1705,8 @@ with tabs[1]:
                         st.session_state.active_sales_id = rec["id"]
                         st.session_state.sales_result = None
                         st.rerun()
+
+                    render_inline_pending_sales(rec, is_active, persona, current_api_key, current_webhook_url)
             else:
                 st.info("Pending commercial lead queue is clear.")
 
@@ -1365,11 +1805,14 @@ with tabs[1]:
                         st.session_state.active_sales_id = rec["id"]
                         st.session_state.sales_result = None
                         st.rerun()
+
+                    render_inline_processed_sales(rec, is_active)
             else:
                 st.info("No qualified leads found in this timeframe.")
 
     # ---------------- RIGHT PANEL: SALES DECISION CANVAS ----------------
     with col_s_canvas:
+        st.markdown('<div class="cockpit-canvas-col"></div>', unsafe_allow_html=True)
         is_manual_s = (st.session_state.active_sales_id == "manual")
         active_sales_rec = None
 
@@ -1640,7 +2083,9 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
 </div>
 </div>""", unsafe_allow_html=True)
 
+                s_recipient_email = "mvance@sunbeltlogistics-demo.com"
                 st.markdown("#### Qualification Rationale & Cold Email")
+                st.markdown(f"**Destinatario / To:** `{s_recipient_email}`")
                 st.markdown(f"""<div class="studio-card">
 <div class="studio-card-header">
 <span class="studio-card-title">{sales_out.company_name}</span>
@@ -1697,7 +2142,7 @@ Qualified by: {active_sales_rec.get('operator_name', 'BDR Specialist')} &bull; S
 
                         crm_dispatcher.dispatch_to_n8n(
                             webhook_url=current_webhook_url,
-                            payload={**sales_out.model_dump(), "analyst_notes": s_analyst_note},
+                            payload={**sales_out.model_dump(), "recipient_email": s_recipient_email, "analyst_notes": s_analyst_note},
                             flow_type="sales"
                         )
 
@@ -1828,6 +2273,7 @@ with tabs[2]:
 
     # ---------------- LEFT PANEL: HR QUEUE & AUDIT ----------------
     with col_h_queue:
+        st.markdown('<div class="cockpit-queue-col"></div>', unsafe_allow_html=True)
         def on_hr_tab_change():
             curr_tab = st.session_state.get("hr_queue_tab_key", "")
             if "Pending" in curr_tab:
@@ -1930,6 +2376,8 @@ with tabs[2]:
                         st.session_state.active_hr_id = rec["id"]
                         st.session_state.hr_result = None
                         st.rerun()
+
+                    render_inline_pending_hr(rec, is_active, persona, current_api_key, current_webhook_url)
             else:
                 st.info("Pending candidate screening queue is clear for this filter.")
 
@@ -2054,11 +2502,14 @@ with tabs[2]:
                         st.session_state.active_hr_id = rec["id"]
                         st.session_state.hr_result = None
                         st.rerun()
+
+                    render_inline_processed_hr(rec, is_active)
             else:
                 st.info("No candidate scorecards found for this filter.")
 
     # ---------------- RIGHT PANEL: HR DECISION CANVAS ----------------
     with col_h_canvas:
+        st.markdown('<div class="cockpit-canvas-col"></div>', unsafe_allow_html=True)
         is_manual_h = (st.session_state.active_hr_id == "manual")
         active_hr_rec = None
 
@@ -2349,9 +2800,12 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 <strong>Q{idx}:</strong> {q}
 </div>""", unsafe_allow_html=True)
 
+                hr_recipient_email = "sofia.valdez.candidate@gmail.com" if "sofia" in hr_out.candidate_name.lower() else "talento.candidato@nudesk-demo.com"
                 st.markdown("#### Candidate Follow-up Email Draft (Gmail Ready)")
+                st.markdown(f"**Destinatario / To:** `{hr_recipient_email}`")
+                candidate_saludo = f"Estimada {hr_out.candidate_name}," if any(hr_out.candidate_name.lower().startswith(x) for x in ["sofia", "mariana", "valeria"]) else f"Estimado {hr_out.candidate_name},"
                 hr_email_preview = (
-                    f"Estimado/a {hr_out.candidate_name},\n\n"
+                    f"{candidate_saludo}\n\n"
                     "Esperamos que este mensaje te encuentre muy bien.\n\n"
                     "Queremos agradecerte sinceramente el tiempo, la apertura y el entusiasmo que nos compartiste durante "
                     f"nuestra reciente entrevista para la posición de {hr_out.applied_role} en nuDesk Operations Studio. Fue un "
@@ -2430,7 +2884,7 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
 
                         crm_dispatcher.dispatch_to_n8n(
                             webhook_url=current_webhook_url,
-                            payload={**hr_out.model_dump(), "analyst_notes": h_analyst_note},
+                            payload={**hr_out.model_dump(), "recipient_email": hr_recipient_email, "analyst_notes": h_analyst_note},
                             flow_type="hr"
                         )
 
@@ -2546,10 +3000,13 @@ with tabs[3]:
 </div>
 </div>""", unsafe_allow_html=True)
 
+    exec_recipient_email = "omarpayant@gmail.com"
+    st.markdown(f"**Destinatario / To:** `{exec_recipient_email}`")
     col_ebtn_l, col_ebtn_c, col_ebtn_r = st.columns([1, 2, 1])
     with col_ebtn_c:
         if st.button("Dispatch Executive Operations Digest to Gmail", key="btn_exec_dispatch_email", type="primary", width="stretch"):
             exec_payload = {
+                "recipient_email": exec_recipient_email,
                 "digest_title": f"Mazatlán Operations Report ({time_window_choices.get(exec_win, 'Selected Period')})",
                 "active_pipeline_usd": f"${total_credit_volume:,.0f} USD (Credit) | ${total_sales_arr:,.0f} USD (Sales ARR)",
                 "credit_volume_usd": f"${total_credit_volume:,.0f} USD",
@@ -3057,11 +3514,14 @@ with tabs[4]:
             with col_d3:
                 st.metric("Pydantic Schemas", "3 Active (Credit, Sales, HR)")
 
+            it_recipient_list = "omarpayant@gmail.com, it-ops@nudesk.io, devops@nudesk.io, ciso-alerts@nudesk.io, infrastructure@nudesk.io"
+            st.markdown(f"**Lista de Distribución / Destinatarios (Múltiples):** `{it_recipient_list}`")
             col_it_btn_l, col_it_btn_c, col_it_btn_r = st.columns([1, 2, 1])
             with col_it_btn_c:
                 if st.button("Dispatch IT Security & System Health Digest to Gmail", key="btn_it_dispatch_email", type="primary", width="stretch"):
                     db_stats = database.get_database_stats()
                     it_payload = {
+                        "recipient_email": it_recipient_list,
                         "alert_title": "AI Gateway, SQLite Integrity & Security Audit",
                         "gemini_latency_ms": 284,
                         "sqlite_integrity": f"Verified ({db_stats.get('total_records', 0)} records in database, 0 corruption)",

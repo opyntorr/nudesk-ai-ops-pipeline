@@ -103,9 +103,9 @@ def reconcile_deterministic_ratios(
         memo.estimated_dti_ratio = round(computed_dti, 4)
         was_overridden = True
 
-    # If the mathematical calculation flagged High Risk, the memo cannot downgrade to Low Risk
-    if computed_risk == "High Risk" and memo.risk_tier == "Low Risk":
-        reconciliation_notes.append("Elevated risk tier from Low Risk to High Risk based on deterministic debt coverage breach.")
+    # If the mathematical calculation flagged High Risk, the memo cannot downgrade
+    if computed_risk == "High Risk" and memo.risk_tier != "High Risk":
+        reconciliation_notes.append(f"Elevated risk tier from {memo.risk_tier} to High Risk based on deterministic debt coverage breach.")
         memo.risk_tier = "High Risk"
         was_overridden = True
 

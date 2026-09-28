@@ -57,7 +57,7 @@ def test_model_connectivity(model_name: str, api_key: Optional[str] = None) -> D
 
     try:
         from google import genai
-        client = genai.Client(api_key=effective_key)
+        client = genai.Client(api_key=effective_key, http_options={"timeout": 10000})
         resp = client.models.generate_content(
             model=model_name,
             contents="Respond with only OK"
@@ -83,8 +83,8 @@ def test_model_connectivity(model_name: str, api_key: Optional[str] = None) -> D
 
 def _get_api_key(explicit_key: Optional[str] = None) -> Optional[str]:
     """Retrieve API key from explicit argument or environment variable."""
-    if explicit_key and explicit_key.strip():
-        return explicit_key.strip()
+    if explicit_key is not None:
+        return explicit_key.strip() if explicit_key.strip() else None
     env_key = os.getenv("GEMINI_API_KEY", "")
     return env_key.strip() if env_key else None
 
@@ -112,7 +112,7 @@ def analyze_credit_call(
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=effective_key)
+        client = genai.Client(api_key=effective_key, http_options={"timeout": 15000})
 
         doc_section = ""
         if supplementary_doc and supplementary_doc.strip():
@@ -190,7 +190,7 @@ def qualify_sales_lead(
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=effective_key)
+        client = genai.Client(api_key=effective_key, http_options={"timeout": 15000})
 
         doc_section = ""
         if supplementary_doc and supplementary_doc.strip():
@@ -268,7 +268,7 @@ def analyze_hr_interview(
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=effective_key)
+        client = genai.Client(api_key=effective_key, http_options={"timeout": 15000})
 
         doc_section = ""
         if supplementary_doc and supplementary_doc.strip():
