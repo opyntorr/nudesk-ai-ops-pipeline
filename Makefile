@@ -12,6 +12,7 @@ help:
 	@echo "make test        : Run full automated test suite"
 	@echo "make eval        : Run AI agent evaluation & safety benchmarking harness"
 	@echo "make run         : Launch Streamlit web application on port 8501"
+	@echo "make demo        : Run Playwright automated multi-role UI simulation"
 	@echo "make tunnel      : Start secure Cloudflare HTTPS tunnel for mobile demo"
 	@echo "make docker-up   : Spin up local n8n workflow automation container"
 	@echo "make docker-down : Stop local n8n container"
@@ -28,6 +29,9 @@ eval:
 
 run:
 	$(STREAMLIT) run app.py --server.port 8501
+
+demo:
+	$(PYTHON) scripts/trigger_all_roles_demo.py
 
 tunnel:
 	./scripts/start_tunnel.sh
