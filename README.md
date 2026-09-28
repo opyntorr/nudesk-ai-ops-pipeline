@@ -177,25 +177,15 @@ Full WCAG AAA compliance supporting dark mode environments for late-shift underw
 ### 5.9 Responsive Mobile Experience (Android & Smartphone Viewport)
 Engineered for operational supervisors and underwriters connecting from smartphones and tablets. Utilizes responsive CSS media queries (`max-width: 900px`) and an accordion architecture where details, transcripts, AI triage actions, and synthesized underwriting dossiers open directly beneath each queue card (`Detalles & Operaciones`), keeping operational context immediately beneath the active item without jumping across disconnected columns. Includes 2x2 compact KPI grids, direct action buttons, and touch-scrolling tab navigation.
 
-#### Mobile Credit Operations & Discovery Dock (Top View)
-Demonstrates the immediate visibility of the active credit file and the primary triage action button on a Google Pixel 7 viewport.
+| Mobile Credit Operations & Queue | Mobile Underwriting Dossier & Memo |
+|:---:|:---:|
+| <img src="assets/screenshots/mobile_android_credit_cockpit.png" width="300" alt="Mobile Credit Cockpit" /> | <img src="assets/screenshots/mobile_android_credit_dossier.png" width="300" alt="Mobile Credit Dossier" /> |
+| **Active queue file & triage action dock** | **Synthesized memo, DTI ratio & Asana tasks** |
 
-<img src="assets/screenshots/mobile_android_credit_cockpit.png" width="340" alt="Mobile Credit Cockpit" />
-
-#### Mobile Credit Underwriting Dossier & Synthesized Memo
-Displays the completed credit evaluation memo, deterministic DTI ratio, and automated Asana compliance tasks rendered natively on mobile.
-
-<img src="assets/screenshots/mobile_android_credit_dossier.png" width="340" alt="Mobile Credit Dossier" />
-
-#### Mobile Commercial Sales (BDR Outreach & Lead Scoring)
-Shows rapid commercial prospect qualification and staged cold outreach pitches optimized for mobile review.
-
-<img src="assets/screenshots/mobile_android_sales_cockpit.png" width="340" alt="Mobile Sales Cockpit" />
-
-#### Mobile Executive KPI Dashboard & Operations Audit
-Presents consolidated team throughput, departmental distribution, and SLA adherence metrics formatted in high-contrast compact cards.
-
-<img src="assets/screenshots/mobile_android_exec_dashboard.png" width="340" alt="Mobile Executive Dashboard" />
+| Mobile Commercial Sales (BDR) | Mobile Executive KPI Dashboard |
+|:---:|:---:|
+| <img src="assets/screenshots/mobile_android_sales_cockpit.png" width="300" alt="Mobile Sales Cockpit" /> | <img src="assets/screenshots/mobile_android_exec_dashboard.png" width="300" alt="Mobile Executive Dashboard" /> |
+| **Commercial qualification & cold outreach** | **Consolidated throughput & SLA cards** |
 
 ### 5.10 Mac Desktop Operations (MacBook Pro High-Resolution Environment)
 Native high-resolution desktop view illustrating the dual-panel split-screen architecture across key operational modules:
@@ -219,6 +209,36 @@ Administrative console for live Gemini cascade telemetry, SQLite database workbe
 Visual workflow orchestration running in Docker. Ingests authenticated webhooks (`X-nuDesk-Auth-Token`) from nuDesk Operations Studio, routes records across Credit, Commercial Sales, HR Talent, Executive, and IT Governance branches, appends audit rows to Google Sheets, creates Asana compliance tasks, and drafts formatted Gmail notifications.
 
 ![n8n Workflow Blueprint](assets/screenshots/n8n_multimodule_workflow.png)
+
+### 5.12 Automated Email Delivery & Multi-Role Operational Drafts (Gmail Closed Loop)
+As part of the n8n closed-loop automation, all triaged dossiers and memos generate formatted operational drafts directly inside Gmail via authenticated Google Workspace integration. Operational specialists review and approve pre-written correspondence with full context, deterministic metrics, and Asana task links before dispatch:
+
+#### 1. Commercial Credit Underwriting Approval Memo
+Synthesizes the complete financial evaluation for Apex Fleet Repair, incorporating deterministic DSCR (1.42), calculated DTI (28.4%), Tier 1 risk assessment, approved principal recommendation ($150,000), and automated Asana KYC compliance tracking.
+
+<img src="assets/screenshots/gmail_draft_credit_underwriting.png" width="850" alt="Gmail Draft Credit Underwriting Memo" />
+
+#### 2. Commercial Sales BDR Outreach Pitch
+Drafts a targeted cold prospecting email for Sunbelt Logistics based on voice note qualification, highlighting cash-flow optimization and fleet financing solutions tailored to logistics operators.
+
+<img src="assets/screenshots/gmail_draft_sales_bdr.png" width="850" alt="Gmail Draft Sales BDR Outreach" />
+
+#### 3. Bilingual HR Talent Screening & Interview Invitation
+Generates a structured candidate assessment memo and bilingual interview invitation for Valeria Beltrán, detailing CEFR English proficiency (C1), commercial aptitude evaluation, and tailored behavioral probing questions for the hiring manager.
+
+<img src="assets/screenshots/gmail_draft_hr_recruitment.png" width="850" alt="Gmail Draft HR Talent Invitation" />
+
+#### 4. IT Governance Telemetry & Security Audit
+Automated system report detailing Gemini model cascade performance, SQLite database integrity, webhook event delivery latencies, and security interceptor logs.
+
+<img src="assets/screenshots/gmail_draft_it_telemetry.png" width="850" alt="Gmail Draft IT Telemetry" />
+
+### 5.13 Executive Operations Briefing HTML Inbox Delivery
+Comprehensive executive digest dispatched directly to operational leadership via HTML-formatted email. Aggregates multi-departmental KPIs, credit risk distribution, BDR pipeline velocity, HR candidate flow, and active Asana compliance tasks in a single glanceable dashboard view:
+
+<p align="center">
+  <img src="assets/screenshots/email_executive_briefing_html.png" width="620" alt="Executive Operations Briefing HTML Email" />
+</p>
 
 ---
 
