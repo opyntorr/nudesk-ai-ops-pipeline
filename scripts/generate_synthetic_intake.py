@@ -40,6 +40,34 @@ def generate_synthetic_payload(provider: str = "readai", module: str = "credit")
         return load_fixture("fireflies_sales_call.json")
     elif provider == "gdrive":
         return load_fixture("gdrive_intake_quote.json")
+    elif provider in ["wispr", "wispr_flow"]:
+        if module == "sales":
+            entity = "Calafia Cross-Border Freight (Otay Mesa, CA)"
+            metric = "$2.8M ARR | 14 Refrigerated 53ft Fleet"
+            transcript = (
+                "[Wispr Flow Voice Dictation — Audio Memo from BDR Sarah Jenkins]\n"
+                "\"Spoke with Diana Navarro at Calafia Freight. High urgency for $250k spot factoring line. "
+                "45-day broker payment terms from C.H. Robinson. Immediate outreach proposal requested.\""
+            )
+        else:
+            entity = "Apex Fleet Repair (Dallas, TX)"
+            metric = "$85,000 USD | Equipment Term Loan (Voice Update)"
+            transcript = (
+                "[Wispr Flow Voice Dictation — Audio Memo from Senior Underwriter Robert Martinez]\n"
+                "\"Follow-up with Robert Martinez regarding $85k lift loan. Monthly gross revenue verified at $38.5k. "
+                "IRS tax lien documentation confirmed under active 36-month installment plan at $410/mo. Clean bank balances.\""
+            )
+        return {
+            "event": "voice_dictation.completed",
+            "dictation_id": f"wispr_{random.randint(10000, 99999)}",
+            "author": "Operational Specialist (Mazatlán Hub)",
+            "client_name": entity,
+            "headline_metric": metric,
+            "department": module,
+            "source_app": "Wispr Flow for Mac / Enterprise Voice Intake",
+            "full_transcript_text": transcript,
+            "summary": "Audio dictation memo transcribed via Wispr Flow speech-to-text engine."
+        }
     else:
         # Generic synthetic generation
         entity = f"Sierra Freightways {random.randint(10, 99)} LLC (Nogales, AZ)"
@@ -78,6 +106,15 @@ def extract_ingestion_fields(raw_payload: dict, provider: str, module: str) -> d
         doc_url = raw_payload.get("webViewLink", "")
         doc_note = f"Drive File: {raw_payload.get('name')} ({raw_payload.get('size')} bytes)"
         mod = raw_payload.get("department", module)
+    elif provider in ["wispr", "wispr_flow"]:
+        entity = raw_payload.get("client_name") or "Wispr Flow Voice Note"
+        metric = raw_payload.get("headline_metric", "Voice Dictation Memo")
+        transcript = raw_payload.get("full_transcript_text", "")
+        source = "Wispr Flow (Voice Dictation)"
+        summary = raw_payload.get("summary", "Transcribed by Wispr Flow speech-to-text.")
+        doc_url = "https://wisprflow.ai/memo/simulated-audio-intake"
+        doc_note = f"Wispr Flow Audio Dictation ({raw_payload.get('dictation_id', 'memo')})"
+        mod = raw_payload.get("department", module)
     else:
         # Read AI schema
         entity = raw_payload.get("client_name") or raw_payload.get("title", "Read AI Meeting")
@@ -104,7 +141,7 @@ def extract_ingestion_fields(raw_payload: dict, provider: str, module: str) -> d
 
 def main():
     parser = argparse.ArgumentParser(description="Simulate synthetic incoming meeting bot & webhook streams.")
-    parser.add_argument("--provider", choices=["readai", "fireflies", "gdrive"], default="readai", help="Bot provider schema")
+    parser.add_argument("--provider", choices=["readai", "fireflies", "gdrive", "wispr"], default="readai", help="Bot provider schema")
     parser.add_argument("--module", choices=["credit", "sales", "hr"], default="credit", help="Target module")
     parser.add_argument("--dispatch-n8n", action="store_true", help="Post webhook payload directly to local n8n container")
     parser.add_argument("--webhook-url", default="http://localhost:5678/webhook/incoming-meeting", help="n8n webhook URL")

@@ -897,23 +897,32 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
                     if uploaded_doc:
                         supp_doc += f"\nUploaded File: {uploaded_doc.name}\n" + document_reader.extract_text_from_file(uploaded_doc)
 
-                    output, is_fb, msg = ai_engine.analyze_credit_call(
+                    output, agent_trace, is_fb, msg = ai_engine.agentic_credit_triage(
                         transcript=credit_input_text,
                         api_key=current_api_key,
-                        supplementary_doc=supp_doc
+                        supplementary_doc=supp_doc,
+                        entity_name_hint=active_credit_rec.get("entity_name", "") if active_credit_rec else ""
                     )
-                    st.session_state.credit_result = (output, is_fb, msg)
+                    st.session_state.credit_result = (output, is_fb, msg, agent_trace)
 
             # Output Results
             if st.session_state.credit_result:
                 credit_out: CreditTriageOutput = st.session_state.credit_result[0]
                 is_fallback = st.session_state.credit_result[1]
                 status_msg = st.session_state.credit_result[2]
+                agent_trace = st.session_state.credit_result[3] if len(st.session_state.credit_result) > 3 else []
 
                 if is_fallback:
                     st.info(f"Demonstration Benchmark Mode: {status_msg}")
                 else:
                     st.success(f"{status_msg}")
+
+                if agent_trace:
+                    with st.expander("Agent Reasoning & Deterministic Tool Execution Trace", expanded=False):
+                        for step_info in agent_trace:
+                            st.markdown(f"**Step {step_info.get('step')}:** {step_info.get('agent_thought')}")
+                            st.caption(f"Invoked Tool: `{step_info.get('tool_called')}`")
+                            st.json(step_info.get("tool_output", {}))
 
                 st.markdown(f"""<div class="kpi-container">
 <div class="kpi-card">
@@ -3125,3 +3134,42 @@ with tabs[4]:
 
                 with st.expander("View Google Drive Ingestion JSON Payload", expanded=False):
                     st.json(generate_synthetic_payload("gdrive", "credit"))
+
+                # Scenario 5: Wispr Flow Voice Dictation Memo
+                st.markdown("""<div class="studio-card" style="margin-top:1rem; margin-bottom:0.75rem;">
+                <div class="studio-card-header">
+                <span class="studio-card-title">Wispr Flow &bull; Voice Dictation Audio Memo</span>
+                <span class="nudesk-badge badge-blue">Voice Dictation</span>
+                </div>
+                <p style="color:var(--nd-text); font-size:0.86rem; margin:0.35rem 0;">
+                <strong>Source:</strong> Wispr Flow Voice Dictation Engine<br>
+                <strong>Author:</strong> Senior Underwriter Robert Martinez (Audio Note)<br>
+                <strong>Entity:</strong> Apex Fleet Repair (Dallas, TX) &bull; Equipment Term Loan Update
+                </p>
+                </div>""", unsafe_allow_html=True)
+
+                if st.button("Inject Wispr Flow Voice Dictation Memo", width="stretch", key="btn_sim_wispr_stream"):
+                    p = generate_synthetic_payload("wispr", "credit")
+                    f = extract_ingestion_fields(p, "wispr", "credit")
+                    nid = database.ingest_pending_record(
+                        module_type=f["module_type"], entity_name=f["entity_name"], headline_metric=f["headline_metric"],
+                        transcript_text=f["transcript_text"], assessment_summary=f["assessment_summary"], source_channel=f["source_channel"],
+                        doc_url=f["doc_url"], doc_note=f["doc_note"], metadata_extra=f["metadata_extra"]
+                    )
+                    st.session_state.active_credit_id = nid
+                    st.session_state.credit_result = None
+
+                    disp_note = ""
+                    if forward_to_n8n:
+                        try:
+                            r = requests.post(inbound_webhook_url, json=p, timeout=3)
+                            disp_note = f" | n8n: HTTP {r.status_code}"
+                        except Exception as exc:
+                            disp_note = f" | n8n unreachable ({str(exc)[:30]})"
+
+                    st.success(f"Ingested Record #{nid}: {f['entity_name']} into Credit Queue! Active SLA clock started.{disp_note}")
+                    st.info("Switch to the 'Credit Operations (Underwriting)' tab to review the transcribed voice memo.")
+
+                with st.expander("View Wispr Flow Voice Memo JSON Payload", expanded=False):
+                    st.json(generate_synthetic_payload("wispr", "credit"))
+

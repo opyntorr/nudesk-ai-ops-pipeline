@@ -810,12 +810,84 @@ class TestNuDeskOpsV2Suite(unittest.TestCase):
         self.assertIn("Inject Google Drive Intake File", app_code)
         self.assertIn("Test n8n Webhook Status", app_code)
 
+    def test_agentic_tool_compute_financial_ratios(self):
+        """QA Test: Verify deterministic financial ratio tool eliminates numerical hallucination."""
+        import ai_engine
+        ratios = ai_engine.tool_compute_financial_ratios(
+            monthly_revenue=50000.0,
+            requested_amount=100000.0,
+            existing_monthly_debt=2000.0,
+            term_months=24,
+            annual_rate=0.12
+        )
+        self.assertIn("dti_ratio", ratios)
+        self.assertIn("dscr_ratio", ratios)
+        self.assertIn("deterministic_risk_tier", ratios)
+        self.assertEqual(ratios["monthly_revenue_usd"], 50000.0)
+        self.assertGreater(ratios["dscr_ratio"], 0.0)
+        self.assertIn(ratios["deterministic_risk_tier"], ["Low Risk", "Moderate Risk", "High Risk"])
+
+    def test_agentic_tool_lookup_applicant_history(self):
+        """QA Test: Verify agent tool queries SQLite database for prior applicant history."""
+        import ai_engine
+        res = ai_engine.tool_lookup_applicant_history("Apex Fleet Repair")
+        self.assertEqual(res["status"], "success")
+        self.assertIn("prior_records_found", res)
+        self.assertIsInstance(res["history"], list)
+
+    def test_agentic_credit_triage_loop(self):
+        """QA Test: Verify autonomous agent multi-step loop returns structured memo and tool trace."""
+        import ai_engine
+        output, trace, is_fb, msg = ai_engine.agentic_credit_triage(
+            transcript="[00:00:01] Underwriter: Reviewing equipment loan for Apex Fleet Repair.",
+            api_key="",
+            entity_name_hint="Apex Fleet Repair"
+        )
+        self.assertIsInstance(output, CreditTriageOutput)
+        self.assertEqual(len(trace), 3)
+        self.assertEqual(trace[0]["tool_called"], "tool_lookup_applicant_history")
+        self.assertEqual(trace[1]["tool_called"], "tool_compute_financial_ratios")
+        self.assertEqual(trace[2]["tool_called"], "analyze_credit_call")
+        self.assertIsInstance(is_fb, bool)
+        self.assertIn("Agentic execution completed", msg)
+
+    def test_wispr_flow_synthetic_intake_and_ui(self):
+        """QA Test: Verify Wispr Flow voice dictation generator and presence in app.py."""
+        from scripts.generate_synthetic_intake import generate_synthetic_payload, extract_ingestion_fields
+        payload = generate_synthetic_payload("wispr", "credit")
+        self.assertIn("Wispr Flow", payload.get("source_app", ""))
+        self.assertIn("dictation_id", payload)
+
+        fields = extract_ingestion_fields(payload, "wispr", "credit")
+        self.assertEqual(fields["source_channel"], "Wispr Flow (Voice Dictation)")
+        self.assertEqual(fields["module_type"], "credit")
+
+        # Verify UI presence in app.py
+        app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app.py"))
+        with open(app_path, "r", encoding="utf-8") as f:
+            app_code = f.read()
+
+        self.assertIn("Wispr Flow &bull; Voice Dictation Audio Memo", app_code)
+        self.assertIn("Inject Wispr Flow Voice Dictation Memo", app_code)
+
+    def test_crm_dispatcher_auth_token_header(self):
+        """QA Test: Verify dispatcher injects X-nuDesk-Auth-Token and metadata flag."""
+        import crm_dispatcher
+        ok, msg, payload = crm_dispatcher.dispatch_to_n8n(
+            webhook_url="",
+            payload={"test_field": "val"},
+            flow_type="credit"
+        )
+        self.assertTrue(ok)
+        self.assertTrue(payload["metadata"]["auth_token_present"])
+
 
 # Backwards compatibility alias
 TestDeskMateV2Suite = TestNuDeskOpsV2Suite
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
