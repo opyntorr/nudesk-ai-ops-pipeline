@@ -47,7 +47,7 @@ def run_multi_role_operations():
             print(" - Triggered 'Run Credit Triage'. Waiting for Gemini cascade...")
 
         try:
-            btn_c_approve = page.wait_for_selector('button:has-text("Approve & Sign-Off (Auto-Advance)"), button:has-text("Approve & Sync")', timeout=20000)
+            btn_c_approve = page.wait_for_selector('button:has-text("Approve & Sign-Off (Auto-Advance)"), button:has-text("Approve & Sync")', timeout=30000)
             if btn_c_approve:
                 btn_c_approve.scroll_into_view_if_needed()
                 btn_c_approve.click()
@@ -63,7 +63,7 @@ def run_multi_role_operations():
         tab_sales = page.locator('button[role="tab"]:has-text("Commercial Sales"), [data-testid="stTab"]:has-text("Commercial Sales")').first
         if tab_sales.count() > 0:
             tab_sales.click()
-            time.sleep(2)
+            time.sleep(3)
 
         # Click Analyze Commercial Lead
         btn_s_run = page.locator('button:has-text("Analyze Commercial Lead")').first
@@ -73,7 +73,7 @@ def run_multi_role_operations():
             print(" - Triggered 'Analyze Commercial Lead'. Waiting for AI scoring...")
 
         try:
-            btn_s_qualify = page.wait_for_selector('button:has-text("Qualify Lead & Stage Outreach"), button:has-text("Sync Lead to CRM")', timeout=20000)
+            btn_s_qualify = page.wait_for_selector('button:has-text("Qualify Lead & Stage Outreach"), button:has-text("Sync Lead to CRM")', timeout=30000)
             if btn_s_qualify:
                 btn_s_qualify.scroll_into_view_if_needed()
                 btn_s_qualify.click()
@@ -89,7 +89,7 @@ def run_multi_role_operations():
         tab_hr = page.locator('button[role="tab"]:has-text("Talent Operations"), [data-testid="stTab"]:has-text("Talent Operations")').first
         if tab_hr.count() > 0:
             tab_hr.click()
-            time.sleep(2)
+            time.sleep(3)
 
         # Click Grade Candidate Screening
         btn_h_run = page.locator('button:has-text("Grade Candidate Screening")').first
@@ -99,7 +99,7 @@ def run_multi_role_operations():
             print(" - Triggered 'Grade Candidate Screening'. Waiting for evaluation...")
 
         try:
-            btn_h_advance = page.wait_for_selector('button:has-text("Advance Candidate & Sign-Off"), button:has-text("Advance Candidate")', timeout=20000)
+            btn_h_advance = page.wait_for_selector('button:has-text("Advance Candidate & Sign-Off"), button:has-text("Advance Candidate")', timeout=30000)
             if btn_h_advance:
                 btn_h_advance.scroll_into_view_if_needed()
                 btn_h_advance.click()

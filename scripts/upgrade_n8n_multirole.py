@@ -2,13 +2,12 @@
 """
 Helper script to update n8n workflow in database.sqlite:
 - Sends formatted HTML email directly to Omar's Inbox for Executive Briefing
-- Creates Drafts for Credit, Sales, HR, and IT
+- Creates long, humane, standardized Drafts for Credit, Sales, HR, and IT
 """
-import json
 import subprocess
-import os
+import json
 
-SCRIPT = """
+SCRIPT = r"""
 const sqlite3 = require('/usr/local/lib/node_modules/n8n/node_modules/sqlite3');
 const db = new sqlite3.Database('/home/node/.n8n/database.sqlite');
 
@@ -38,44 +37,93 @@ for (const item of items) {
   const flow = (body.flow_type || meta.flow_type || 'credit').toLowerCase();
   
   const timestamp = meta.dispatch_timestamp || new Date().toISOString();
-  const operator = meta.operator_name || 'Operational Specialist';
+  const operator = meta.operator_name || 'Especialista Operativo';
   
   if (flow === 'sales') {
+    const company = data.company_name || data.business_name || 'Empresa Aliada';
+    const contact = data.contact_person || data.applicant_name || 'Estimado/a Directivo/a';
+    const industry = data.industry || 'Comercio y Logistica';
+    const revFormatted = data.annual_revenue_usd ? Number(data.annual_revenue_usd).toLocaleString('en-US') : '2,400,000';
+    
+    const subject = 'Alianza Comercial nuDesk & ' + company + ' | Soluciones de Liquidez y Capital de Trabajo';
+    const draftBody = 'Estimado/a ' + contact + ',\n\n' +
+      'Espero que se encuentre muy bien al recibir esta comunicacion.\n\n' +
+      'Nos ponemos en contacto desde nuDesk Operations Studio tras haber revisado detenidamente la destacada presencia y crecimiento operativo de ' + company + ' dentro del sector de ' + industry + '. Sabemos por experiencia en la industria que mantener el ritmo comercial y asegurar entregas continuas exige una gestion de flujo de caja sumamente rigurosa, en especial cuando los plazos de cobranza con clientes y distribuidores suelen dilatarse de 30 a 60 dias.\n\n' +
+      'Nuestro objetivo en nuDesk es respaldar a empresas comerciales de alto rendimiento mediante facilidades financieras agiles que eliminen la friccion tradicional. Desde nuestro centro de operaciones en Mazatlan, ofrecemos esquemas de factoraje de cobranza acelerada y lineas de credito de trabajo estructuradas que permiten convertir cuentas por cobrar en liquidez disponible en menos de 48 horas sin garantias hipotecarias gravosas.\n\n' +
+      'Considerando el volumen comercial de ' + company + ' (estimado en $' + revFormatted + ' USD anuales), hemos diseñado alternativas de financiamiento a la medida orientadas a:\n\n' +
+      '1. Acelerar el flujo de efectivo operativo: Obtener anticipos inmediatos sobre facturas comerciales emitidas, sin tener que esperar ventanas de pago extendidas.\n' +
+      '2. Proteger la operacion y compromisos esenciales: Garantizar fondos inmediatos para nomina operativa, fletes, mantenimiento y compras a proveedores estrategicos.\n' +
+      '3. Respaldar nuevas oportunidades de mercado: Atender pedidos de mayor escala con la tranquilidad de contar con una linea de credito disponible y sin tramites burocraticos engorrosos.\n\n' +
+      'Nos encantaria poder conversar brevemente con usted en una videollamada exploratoria de 15 minutos durante esta semana para presentarle formalmente como trabajamos y analizar si nuestras facilidades de liquidez representan una ventaja tangible para ' + company + '.\n\n' +
+      '¿Tendria disponibilidad para una llamada este proximo martes o jueves por la mañana? Con gusto nos adecuamos a la fecha y hora que mejor convenga a su agenda.\n\n' +
+      'Agradezco de antemano su amable tiempo y atencion a esta invitacion, y quedo a sus ordenes para cualquier consulta preliminar.\n\n' +
+      'Atentamente,\n\n' +
+      operator + '\n' +
+      'Desarrollo de Negocios & Alianzas Comerciales\n' +
+      'nuDesk Operations Studio — Mazatlan Hub';
+
     output.push({
       json: {
         flow_type: 'sales',
         pipeline_type: 'Sales Operations',
         timestamp: timestamp,
-        company_name: data.company_name || data.business_name || 'N/A',
-        contact_person: data.contact_person || data.applicant_name || 'N/A',
-        industry: data.industry || 'General Commercial',
+        company_name: company,
+        contact_person: contact,
+        industry: industry,
         annual_revenue_usd: data.annual_revenue_usd || 0,
         lead_score: data.lead_score || 0,
         lead_tier: data.lead_tier || (data.lead_score >= 85 ? 'Hot Lead' : (data.lead_score >= 70 ? 'Qualified' : 'Review')),
-        draft_email_subject: data.draft_outreach_subject || \`nuDesk Commercial Partnership - \${data.company_name || 'Inquiry'}\`,
-        draft_email_body: data.draft_outreach_body || data.score_rationale || 'We reviewed your freight operations and identified tailored credit facility options.',
+        draft_email_subject: subject,
+        draft_email_body: draftBody,
         analyst_notes: data.analyst_notes || '',
         operator: operator,
         status: 'Synced with Google Sheets CRM & Gmail Drafts'
       }
     });
+
   } else if (flow === 'hr') {
+    const candidate = data.candidate_name || data.applicant_name || 'Estimado/a Candidato/a';
+    const role = data.target_role || data.applied_role || 'Analista Comercial Bilingüe';
+    
+    const subject = 'nuDesk Talent Hub | Seguimiento a tu proceso de seleccion - ' + candidate;
+    const draftBody = 'Estimado/a ' + candidate + ',\n\n' +
+      'Esperamos que este mensaje te encuentre muy bien.\n\n' +
+      'Queremos agradecerte sinceramente el tiempo, la apertura y el entusiasmo que nos compartiste durante nuestra reciente entrevista para la posicion de ' + role + ' en nuDesk Operations Studio. Fue un verdadero gusto conversar contigo y profundizar en tu trayectoria, tus intereses y los proyectos en los que has participado.\n\n' +
+      'Tras una detallada sesion de deliberacion del comite de Atraccion de Talento del Mazatlan Hub, nos complace informarte que tu perfil ha sido seleccionado favorablemente para avanzar a la siguiente etapa de nuestro proceso: la Evaluacion Tecnica y Caso Practico Operativo.\n\n' +
+      'Durante nuestra conversacion valoramos especialmente tu claridad de pensamiento, tu solidez en la comunicacion bilingüe y tu enfoque resolutivo ante retos operativos, cualidades que consideramos fundamentales para la excelencia en nuestros servicios financieros.\n\n' +
+      'Para brindarte certidumbre sobre lo que viene, a continuacion te compartimos los aspectos clave de esta siguiente fase:\n\n' +
+      '1. Objetivo de la Sesion:\n' +
+      'Nos interesa conocer de manera practica tu metodologia de trabajo y como abordas situaciones reales del dia a dia, privilegiando el sentido comun, la atencion al detalle y la estructura analitica sobre cualquier respuesta memorizada.\n\n' +
+      '2. Modalidad y Duracion:\n' +
+      'El ejercicio se llevara a cabo de forma remota a traves de una sesion guiada por uno de nuestros lideres de area, con una duracion aproximada de 45 a 60 minutos. No requiere preparacion tecnica exhaustiva previa, unicamente un equipo con conexion estable y tu disposicion habitual.\n\n' +
+      '3. Coordinacion de Horarios:\n' +
+      'Con el proposito de respetar tus compromisos actuales, te pedimos de favor responder a este correo indicandonos dos opciones de fecha y horario que te resulten convenientes durante los proximos dias (de lunes a viernes, entre 9:00 AM y 5:00 PM CST). A la brevedad te confirmaremos la cita en tu calendario con el enlace correspondiente.\n\n' +
+      'Si tienes cualquier duda respecto a la dinamica, requieres alguna consideracion particular de agenda o simplemente deseas conversar sobre algun aspecto de la posicion antes de la sesion, no dudes en escribirnos directamente respondiendo a este correo.\n\n' +
+      'Te reiteramos nuestro agradecimiento por considerar a nuDesk como el siguiente paso en tu desarrollo profesional y te deseamos el mayor de los exitos en esta evaluacion.\n\n' +
+      'Con un cordial saludo,\n\n' +
+      operator + '\n' +
+      'Especialista de Atraccion de Talento & Cultura\n' +
+      'nuDesk Operations Studio — Mazatlan Talent Hub';
+
     output.push({
       json: {
         flow_type: 'hr',
         pipeline_type: 'HR Talent Screening',
         timestamp: timestamp,
-        candidate_name: data.candidate_name || data.applicant_name || 'N/A',
-        target_role: data.target_role || data.applied_role || 'Commercial Credit Analyst',
-        cefr_level: data.english_fluency_cefr || data.cefr || 'B2',
-        competency_score: data.technical_competency_score || data.fit_score || 0,
+        candidate_name: candidate,
+        target_role: role,
+        cefr_level: data.english_fluency_cefr || data.cefr || data.bilingual_fluency_rating || 'B2',
+        competency_score: data.technical_competency_score || data.fit_score || data.candidate_fit_score || 0,
         salary_expectation_usd: data.salary_expectation_monthly_usd || 0,
-        hiring_recommendation: data.hiring_recommendation || data.action || 'Advance to Case Study',
+        hiring_recommendation: data.hiring_recommendation || data.action || data.recommended_action || 'Advance to Case Study',
         interviewer_notes: data.analyst_notes || '',
+        draft_email_subject: subject,
+        draft_email_body: draftBody,
         operator: operator,
         status: 'Synced with Google Sheets Talent Roster & Gmail'
       }
     });
+
   } else if (flow === 'executive') {
     output.push({
       json: {
@@ -98,39 +146,116 @@ for (const item of items) {
         status: 'Sent to Executive Inbox'
       }
     });
+
   } else if (flow === 'it') {
+    const alertTitle = data.alert_title || 'Auditoria de Integridad y Model Cascade';
+    const latency = data.gemini_latency_ms || 284;
+    const dbIntegrity = data.sqlite_integrity || 'OK (0 errores)';
+    const piiStatus = data.pii_masking_status || 'Enforced (100% verificado)';
+    const injections = data.injections_blocked !== undefined ? data.injections_blocked : 0;
+    const dockerStatus = data.docker_n8n_status || 'Healthy (Puerto 5678)';
+    const details = data.details || 'Todos los microservicios, guardrails y pasarelas operan dentro de los umbrales nominales.';
+
+    const subject = 'nuDesk IT Ops | Bitacora de Integridad de Sistemas, Telemetria y Ciberseguridad - ' + alertTitle;
+    const draftBody = 'Estimado equipo de Infraestructura, Seguridad y Operaciones de Sistemas de nuDesk,\n\n' +
+      'Por medio del presente informe tecnico se emite la bitacora consolidada de integridad operativa, latencia de modelos y estado de defensas de ciberseguridad correspondiente al ciclo de supervision en Mazatlan Operations Hub.\n\n' +
+      'El diagnostico automatizado confirma que la arquitectura de microservicios, bases de datos transaccionales y pasarelas de automatizacion operan bajo condiciones normales de estabilidad y resiliencia, cumpliendo al 100% con los acuerdos de nivel de servicio (SLA) corporativos.\n\n' +
+      'A continuacion, se detalla el estado actual de los componentes supervisados:\n\n' +
+      '1. Cascada de Modelos de Inteligencia Artificial (Google Gemini):\n' +
+      '- Estado: Operativo y balanceado en cascada multi-modelo.\n' +
+      '- Latencia Promedio Registrada: ' + latency + ' ms por solicitud de inferencia.\n' +
+      '- Resiliencia Zero-Config: Mecanismo de contingencia offline verificado y respaldado por contratos estrictos Pydantic V2 sin excepciones no capturadas.\n\n' +
+      '2. Integridad de Base de Datos y Trazabilidad Transaccional:\n' +
+      '- Motor Operativo: SQLite de alta concurrencia con bloqueos atomicos y control de transacciones.\n' +
+      '- Diagnostico de Integridad: ' + dbIntegrity + '.\n' +
+      '- Registro de Auditoria: 100% de operaciones sincronizadas con temporizadores de SLA activos y calculo de antigüedad FIFO.\n\n' +
+      '3. Interceptores de Ciberdefensa y Privacidad de Datos:\n' +
+      '- Enmascaramiento de PII: ' + piiStatus + ' (Filtros regex activos para SSN, EIN y tarjetas de pago corporativas).\n' +
+      '- Firewall Anti-Inyeccion de Prompts: ' + injections + ' firmas adversariales neutralizadas oportunamente en fase de pre-vuelo.\n' +
+      '- Reconciliacion Matematica Post-Vuelo: Verificacion cruzada algoritmica de ratios financieros (DTI / DSCR) para eliminar alucinaciones numericas.\n\n' +
+      '4. Pasarela de Automatizacion y Ecosistema n8n:\n' +
+      '- Contenedor Docker: ' + dockerStatus + '.\n' +
+      '- Integracion Externa: Webhooks de ingesta (Read.ai / Fireflies) y sincronizacion con Google Workspace (Gmail / Sheets) y Asana operando satisfactoriamente.\n\n' +
+      'Observaciones Tecnicas y Diagnostico del Especialista:\n' +
+      details + '\n\n' +
+      'Dictamen de Cumplimiento Tecnico:\n' +
+      'La infraestructura mantiene una disponibilidad nominal ininterrumpida y una postura de seguridad robusta, apta para el soporte continuo de operaciones financieras bilingües.\n\n' +
+      'Atentamente,\n\n' +
+      operator + '\n' +
+      'Arquitectura de Sistemas & Ciberseguridad\n' +
+      'nuDesk IT Infrastructure Workbench — Mazatlan Hub';
+
     output.push({
       json: {
         flow_type: 'it',
         pipeline_type: 'IT Infrastructure & Security',
         timestamp: timestamp,
-        alert_title: data.alert_title || 'Auditoria de Integridad y Model Cascade',
-        gemini_latency_ms: data.gemini_latency_ms || 284,
-        sqlite_integrity: data.sqlite_integrity || 'OK (0 errors)',
-        pii_masking_status: data.pii_masking_status || 'Enforced (100%)',
-        injections_blocked: data.injections_blocked || 0,
-        docker_n8n_status: data.docker_n8n_status || 'Healthy (Port 5678)',
-        details: data.details || 'Todos los microservicios y guardrails operan dentro de los umbrales nominales.',
+        alert_title: alertTitle,
+        gemini_latency_ms: latency,
+        sqlite_integrity: dbIntegrity,
+        pii_masking_status: piiStatus,
+        injections_blocked: injections,
+        docker_n8n_status: dockerStatus,
+        details: details,
+        draft_email_subject: subject,
+        draft_email_body: draftBody,
         operator: operator,
         status: 'Synced with Gmail IT Alert'
       }
     });
+
   } else {
     // Default to Credit flow
+    const company = data.business_name || data.company_name || 'Empresa Solicitante';
+    const applicant = data.applicant_name || data.contact_person || 'Estimado/a Solicitante';
+    const loanAmt = data.loan_amount_requested_usd ? Number(data.loan_amount_requested_usd).toLocaleString('en-US') : '85,000';
+    const collateral = data.collateral_type || 'Garantias Comerciales y Flujos de Facturacion';
+    const riskTier = data.risk_tier || 'Riesgo Moderado';
+    const execSummary = data.executive_summary || 'Evaluacion favorable basada en volumen de ventas comprobable y capacidad de pago suficiente.';
+
+    const subject = 'nuDesk Underwriting | Dictamen Favorable y Terminos de Aprobacion Preliminar - ' + company;
+    const draftBody = 'Estimado/a ' + applicant + ',\n\n' +
+      'Esperamos que se encuentre muy bien al momento de recibir este comunicado.\n\n' +
+      'Por medio de la presente, nos complace informarle que el Comite de Credito y Suscripcion de Riesgos de nuDesk Operations Studio ha finalizado exitosamente el analisis financiero y documental correspondiente a la solicitud de financiamiento ingresada en favor de ' + company + '.\n\n' +
+      'Tras una rigurosa revision de sus flujos operativos, capacidad de pago y las garantias presentadas, hemos emitido un dictamen de aprobacion preliminar para una facilidad crediticia comercial por un monto de $' + loanAmt + ' USD. Felicitamos a su equipo directivo por la solidez y el orden financiero demostrado durante este proceso de evaluacion.\n\n' +
+      'A continuacion, le compartimos el resumen de las condiciones preliminares aprobadas:\n\n' +
+      '1. Empresa Acreditada: ' + company + '\n' +
+      '2. Representante / Contacto Principal: ' + applicant + '\n' +
+      '3. Monto Aprobado: $' + loanAmt + ' USD\n' +
+      '4. Tipo de Facilidad: Linea de Credito Comercial / Arrendamiento de Equipo\n' +
+      '5. Esquema de Garantia / Colateral: ' + collateral + '\n' +
+      '6. Dictamen de Riesgo: ' + riskTier + ' (Perfil calificado y solvente bajo politica prudencial)\n\n' +
+      'Resumen Ejecutivo del Dictamen:\n' +
+      execSummary + '\n\n' +
+      'Guia de Siguientes Pasos para Formalizacion y Dispersion:\n' +
+      'Con la finalidad de proceder a la firma contractual y efectuar la dispersion de los recursos en su cuenta bancaria a la brevedad, requerimos coordinar conjuntamente las siguientes etapas:\n\n' +
+      'Paso 1: Validacion Documental Final: Recepcion de identificacion oficial vigente del representante legal, constancia de situacion fiscal actualizada (no mayor a 30 dias) y comprobante de cuenta bancaria receptora.\n' +
+      'Paso 2: Firma de Instrumentos Contractuales: Formalizacion digital del contrato marco de apertura de credito y pagare correspondiente mediante nuestra plataforma segura con validez juridica.\n' +
+      'Paso 3: Programacion y Dispersion: Confirmacion de fondos y transferencia a su cuenta corporativa en un plazo no mayor a 24 horas habiles posteriores a la firma.\n\n' +
+      'Su expediente ha sido asignado a nuestra mesa de operaciones en Mazatlan, quienes le estaran brindando acompañamiento personalizado durante toda la fase de firma y desembolso.\n\n' +
+      'Si requiere aclarar cualquier termino de la aprobacion, coordinar aspectos especificos de la dispersion o tiene alguna consulta sobre la documentacion requerida, por favor comuniquese directamente respondiendo a este correo o contactando a su oficial asignado.\n\n' +
+      'Reiteramos nuestro agradecimiento por elegir a nuDesk como su aliado financiero estrategico y le deseamos continuo exito en la expansion de ' + company + '.\n\n' +
+      'Atentamente,\n\n' +
+      operator + '\n' +
+      'Oficial de Credito & Suscripcion de Riesgos\n' +
+      'nuDesk Underwriting Operations — Mazatlan Hub';
+
     output.push({
       json: {
         flow_type: 'credit',
         pipeline_type: 'Credit Operations',
         timestamp: timestamp,
-        company_name: data.business_name || data.company_name || 'N/A',
-        applicant_name: data.applicant_name || data.contact_person || 'N/A',
+        company_name: company,
+        applicant_name: applicant,
         loan_amount_usd: data.loan_amount_requested_usd || 0,
         dti_ratio: data.dti_ratio || 'N/A',
-        risk_tier: data.risk_tier || 'Moderate',
-        collateral: data.collateral_type || 'General Assets',
-        executive_summary: data.executive_summary || '',
-        red_flags: Array.isArray(data.red_flags) ? data.red_flags.join('; ') : (data.red_flags || 'None reported'),
+        risk_tier: riskTier,
+        collateral: collateral,
+        executive_summary: execSummary,
+        red_flags: Array.isArray(data.red_flags) ? data.red_flags.join('; ') : (data.red_flags || 'Ninguna registrada'),
         analyst_notes: data.analyst_notes || '',
+        draft_email_subject: subject,
+        draft_email_body: draftBody,
         operator: operator,
         status: 'Synced with Google Sheets Credit LOS, Asana & Gmail'
       }
@@ -199,20 +324,28 @@ return output;`;
     };
   }
 
-  // 3. Ensure Gmail nodes exist for Credit, Executive, IT
+  // 3. Ensure Gmail nodes exist and are configured
   const gmailCreds = { gmailOAuth2: { id: "HpmyqoAqph28Rjgm", name: "Gmail account" } };
 
-  // Remove any previous versions of these nodes if present
-  nodes = nodes.filter(n => !['Gmail - Create Credit Approval Draft', 'Gmail - Create Executive Digest Draft', 'Gmail - Send Executive Digest Email', 'Gmail - Create IT Health Alert Draft'].includes(n.name));
+  // Remove existing Gmail nodes to cleanly reinstall with updated parameters
+  const gmailNodeNames = [
+    'Gmail - Create Credit Approval Draft',
+    'Gmail - Create BDR Outreach Draft',
+    'Gmail - Create Candidate Follow-up Draft',
+    'Gmail - Create Executive Digest Draft',
+    'Gmail - Send Executive Digest Email',
+    'Gmail - Create IT Health Alert Draft'
+  ];
+  nodes = nodes.filter(n => !gmailNodeNames.includes(n.name));
 
   // Add Gmail - Create Credit Approval Draft
   nodes.push({
     parameters: {
       resource: "draft",
       operation: "create",
-      subject: "=nuDesk Underwriting - Dictamen Aprobado: {{ $json.company_name }}",
+      subject: "={{ $json.draft_email_subject }}",
       emailType: "text",
-      message: "=Dictamen Formal de Credito Comercial Aprobado (nuDesk Underwriting Hub)\\n\\nEmpresa: {{ $json.company_name }}\\nContacto: {{ $json.applicant_name }}\\nMonto Solicitado: ${{ $json.loan_amount_usd }} USD\\nNivel de Riesgo: {{ $json.risk_tier }}\\nRatio DTI: {{ $json.dti_ratio }}\\nColateral / Garantia: {{ $json.collateral }}\\n\\nResumen Ejecutivo:\\n{{ $json.executive_summary }}\\n\\nFlags de Riesgo / Red Flags:\\n{{ $json.red_flags }}\\n\\nOperador Asignado: {{ $json.operator }}\\nFecha de Aprobacion: {{ $json.timestamp }}\\nnuDesk Operations Studio — Mazatlan Hub",
+      message: "={{ $json.draft_email_body }}",
       options: {}
     },
     id: "e45f992a-8c01-4b72-98e1-5128ab91c890",
@@ -220,6 +353,42 @@ return output;`;
     type: "n8n-nodes-base.gmail",
     typeVersion: 2.1,
     position: [-112, 160],
+    credentials: gmailCreds
+  });
+
+  // Add Gmail - Create BDR Outreach Draft
+  nodes.push({
+    parameters: {
+      resource: "draft",
+      operation: "create",
+      subject: "={{ $json.draft_email_subject }}",
+      emailType: "text",
+      message: "={{ $json.draft_email_body }}",
+      options: {}
+    },
+    id: "a413723f-9af3-4f0c-ac6b-10bf0e1cbd37",
+    name: "Gmail - Create BDR Outreach Draft",
+    type: "n8n-nodes-base.gmail",
+    typeVersion: 2.1,
+    position: [-112, 464],
+    credentials: gmailCreds
+  });
+
+  // Add Gmail - Create Candidate Follow-up Draft
+  nodes.push({
+    parameters: {
+      resource: "draft",
+      operation: "create",
+      subject: "={{ $json.draft_email_subject }}",
+      emailType: "text",
+      message: "={{ $json.draft_email_body }}",
+      options: {}
+    },
+    id: "5e51ce65-3af0-4577-b09b-347ada23a195",
+    name: "Gmail - Create Candidate Follow-up Draft",
+    type: "n8n-nodes-base.gmail",
+    typeVersion: 2.1,
+    position: [-112, 624],
     credentials: gmailCreds
   });
 
@@ -296,7 +465,7 @@ return output;`;
           <td style="text-align: right; padding: 10px 0;"><span style="background-color: rgba(88, 166, 255, 0.15); color: #58a6ff; border: 1px solid rgba(88, 166, 255, 0.4); padding: 2px 7px; border-radius: 4px; font-size: 11px;">Outreach Staged</span></td>
         </tr>
         <tr>
-          <td style="padding: 10px 0; font-weight: 600; color: #ffffff;">Talento &amp; RH Bilingue</td>
+          <td style="padding: 10px 0; font-weight: 600; color: #ffffff;">Talento &amp; RH Bilingüe</td>
           <td style="text-align: center; padding: 10px 0; color: #bc8cff; font-weight: 700;">{{ $json.hr_count }} candidatos</td>
           <td style="text-align: right; padding: 10px 0;"><span style="background-color: rgba(188, 140, 255, 0.15); color: #bc8cff; border: 1px solid rgba(188, 140, 255, 0.4); padding: 2px 7px; border-radius: 4px; font-size: 11px;">CEFR Validado</span></td>
         </tr>
@@ -338,9 +507,9 @@ return output;`;
     parameters: {
       resource: "draft",
       operation: "create",
-      subject: "=nuDesk IT Ops - Diagnostico del Sistema: {{ $json.alert_title }}",
+      subject: "={{ $json.draft_email_subject }}",
       emailType: "text",
-      message: "=nuDesk IT Infrastructure & Security Audit (Mazatlan Hub)\\n\\nEstado de Componentes:\\n- Google Gemini Cascade: Activo (Latencia: {{ $json.gemini_latency_ms }} ms)\\n- Base de Datos SQLite: {{ $json.sqlite_integrity }}\\n- Enmascaramiento PII (SSN/EIN): {{ $json.pii_masking_status }}\\n- Intentos de Inyeccion Neutralizados: {{ $json.injections_blocked }}\\n- Docker n8n Gateway: {{ $json.docker_n8n_status }}\\n\\nDetalles del Diagnostico:\\n{{ $json.details }}\\n\\nOperador / Arquitecto: {{ $json.operator }}\\nFecha de Auditoria: {{ $json.timestamp }}\\nnuDesk IT & Infrastructure Workbench",
+      message: "={{ $json.draft_email_body }}",
       options: {}
     },
     id: "c29f884d-5e23-4a92-92e4-7203bd93e234",
@@ -371,6 +540,22 @@ return output;`;
     ]
   };
 
+  connections["Google Sheets - Sales CRM"] = {
+    main: [
+      [
+        { node: "Gmail - Create BDR Outreach Draft", type: "main", index: 0 }
+      ]
+    ]
+  };
+
+  connections["Google Sheets - Talent Roster"] = {
+    main: [
+      [
+        { node: "Gmail - Create Candidate Follow-up Draft", type: "main", index: 0 }
+      ]
+    ]
+  };
+
   const updatedNodesStr = JSON.stringify(nodes);
   const updatedConnectionsStr = JSON.stringify(connections);
 
@@ -390,7 +575,7 @@ return output;`;
 """
 
 def main():
-    print("Applying updated executive email workflow to n8n...")
+    print("Applying standardized, human-centric multi-role draft workflow to n8n...")
     cmd = ["docker", "exec", "nudesk_n8n", "node", "-e", SCRIPT]
     res = subprocess.run(cmd, capture_output=True, text=True)
     print("STDOUT:", res.stdout)

@@ -980,6 +980,46 @@ Signed off by: {active_credit_rec.get('operator_name', 'Underwriter')} &bull; St
 <div><span class="nudesk-badge {badge_class}">{task.priority}</span></div>
 </div>""", unsafe_allow_html=True)
 
+                st.markdown("#### Credit Approval Notification Draft (Gmail Ready)")
+                credit_email_preview = (
+                    f"Estimado/a {credit_out.applicant_name},\n\n"
+                    "Esperamos que se encuentre muy bien al momento de recibir este comunicado.\n\n"
+                    "Por medio de la presente, nos complace informarle que el Comité de Crédito y Suscripción de Riesgos de "
+                    "nuDesk Operations Studio ha finalizado exitosamente el análisis financiero y documental correspondiente a la "
+                    f"solicitud de financiamiento ingresada en favor de {credit_out.business_name}.\n\n"
+                    "Tras una rigurosa revisión de sus flujos operativos, capacidad de pago y las garantías presentadas, hemos emitido "
+                    f"un dictamen de aprobación preliminar para una facilidad crediticia comercial por un monto de ${credit_out.loan_amount_requested_usd:,.0f} USD. "
+                    "Felicitamos a su equipo directivo por la solidez y el orden financiero demostrado durante este proceso de evaluación.\n\n"
+                    "A continuación, le compartimos el resumen de las condiciones preliminares aprobadas:\n\n"
+                    f"1. Empresa Acreditada: {credit_out.business_name}\n"
+                    f"2. Representante / Contacto Principal: {credit_out.applicant_name}\n"
+                    f"3. Monto Aprobado: ${credit_out.loan_amount_requested_usd:,.0f} USD\n"
+                    "4. Tipo de Facilidad: Línea de Crédito Comercial / Arrendamiento de Equipo\n"
+                    "5. Esquema de Garantía / Colateral: Garantías Comerciales y Flujos de Facturación\n"
+                    f"6. Dictamen de Riesgo: {credit_out.risk_tier} (Perfil calificado y solvente bajo política prudencial)\n\n"
+                    "Resumen Ejecutivo del Dictamen:\n"
+                    f"{credit_out.executive_summary}\n\n"
+                    "Guía de Siguientes Pasos para Formalización y Dispersión:\n"
+                    "Con la finalidad de proceder a la firma contractual y efectuar la dispersión de los recursos en su cuenta bancaria a la brevedad, "
+                    "requerimos coordinar conjuntamente las siguientes etapas:\n\n"
+                    "Paso 1: Validación Documental Final (identificación oficial, constancia fiscal < 30 días y comprobante de cuenta bancaria receptora).\n"
+                    "Paso 2: Firma de Instrumentos Contractuales mediante plataforma segura con validez jurídica.\n"
+                    "Paso 3: Programación y Dispersión de fondos a su cuenta corporativa en menos de 24 horas hábiles tras la firma.\n\n"
+                    "Su expediente ha sido asignado a nuestra mesa de operaciones en Mazatlán, quienes le estarán brindando acompañamiento personalizado.\n\n"
+                    "Reiteramos nuestro agradecimiento por elegir a nuDesk como su aliado financiero estratégico y le deseamos continuo éxito en sus operaciones.\n\n"
+                    "Atentamente,\n\n"
+                    f"{persona.name}\n"
+                    "Oficial de Crédito & Suscripción de Riesgos\n"
+                    "nuDesk Underwriting Operations — Mazatlán Hub"
+                )
+                st.markdown(f"""<div class="studio-card">
+<div class="studio-card-header">
+<span class="studio-card-title">{credit_out.business_name} &bull; Dictamen Aprobado</span>
+<span class="nudesk-badge badge-green">{credit_out.risk_tier}</span>
+</div>
+<div class="script-box" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">{credit_email_preview}</div>
+</div>""", unsafe_allow_html=True)
+
                 # Human-in-the-Loop Sign-off & One-Click Auto-Advance
                 st.markdown("#### Underwriter Verification & Sign-Off")
                 c_analyst_note = st.text_area(
@@ -2307,6 +2347,47 @@ Audited by: {active_hr_rec.get('operator_name', 'Talent Recruiter')} &bull; Stat
                 for idx, q in enumerate(hr_out.next_interview_focus_questions, 1):
                     st.markdown(f"""<div style="background:var(--nd-surface-alt); border:1px solid var(--nd-border); border-radius:4px; padding:0.65rem 0.9rem; margin-bottom:0.5rem; font-size:0.88rem; color:var(--nd-text);">
 <strong>Q{idx}:</strong> {q}
+</div>""", unsafe_allow_html=True)
+
+                st.markdown("#### Candidate Follow-up Email Draft (Gmail Ready)")
+                hr_email_preview = (
+                    f"Estimado/a {hr_out.candidate_name},\n\n"
+                    "Esperamos que este mensaje te encuentre muy bien.\n\n"
+                    "Queremos agradecerte sinceramente el tiempo, la apertura y el entusiasmo que nos compartiste durante "
+                    f"nuestra reciente entrevista para la posición de {hr_out.applied_role} en nuDesk Operations Studio. Fue un "
+                    "verdadero gusto conversar contigo y profundizar en tu trayectoria, tus intereses y los proyectos en los que has participado.\n\n"
+                    "Tras una detallada sesión de deliberación del comité de Atracción de Talento del Mazatlán Hub, nos complace "
+                    "informarte que tu perfil ha sido seleccionado favorablemente para avanzar a la siguiente etapa de nuestro proceso: "
+                    "la Evaluación Técnica y Caso Práctico Operativo.\n\n"
+                    "Durante nuestra conversación valoramos especialmente tu claridad de pensamiento, tu solidez en la comunicación bilingüe "
+                    "y tu enfoque resolutivo ante retos operativos, cualidades que consideramos fundamentales para la excelencia en nuestros servicios financieros.\n\n"
+                    "Para brindarte certidumbre sobre lo que viene, a continuación te compartimos los aspectos clave de esta siguiente fase:\n\n"
+                    "1. Objetivo de la Sesión:\n"
+                    "Nos interesa conocer de manera práctica tu metodología de trabajo y cómo abordas situaciones reales del día a día, "
+                    "privilegiando el sentido común, la atención al detalle y la estructura analítica sobre cualquier respuesta memorizada.\n\n"
+                    "2. Modalidad y Duración:\n"
+                    "El ejercicio se llevará a cabo de forma remota a través de una sesión guiada por uno de nuestros líderes de área, "
+                    "con una duración aproximada de 45 a 60 minutos. No requiere preparación técnica exhaustiva previa, únicamente un equipo "
+                    "con conexión estable y tu disposición habitual.\n\n"
+                    "3. Coordinación de Horarios:\n"
+                    "Con el propósito de respetar tus compromisos actuales, te pedimos de favor responder a este correo indicándonos "
+                    "dos opciones de fecha y horario que te resulten convenientes durante los próximos días (de lunes a viernes, entre 9:00 AM y 5:00 PM CST). "
+                    "A la brevedad te confirmaremos la cita en tu calendario con el enlace correspondiente.\n\n"
+                    "Si tienes cualquier duda respecto a la dinámica, requieres alguna consideración particular de agenda o simplemente "
+                    "deseas conversar sobre algún aspecto de la posición antes de la sesión, no dudes en escribirnos directamente respondiendo a este correo.\n\n"
+                    "Te reiteramos nuestro agradecimiento por considerar a nuDesk como el siguiente paso en tu desarrollo profesional y te deseamos "
+                    "el mayor de los éxitos en esta evaluación.\n\n"
+                    "Con un cordial saludo,\n\n"
+                    f"{persona.name}\n"
+                    "Especialista de Atracción de Talento & Cultura\n"
+                    "nuDesk Operations Studio — Mazatlán Talent Hub"
+                )
+                st.markdown(f"""<div class="studio-card">
+<div class="studio-card-header">
+<span class="studio-card-title">{hr_out.candidate_name} &bull; Invitación a Caso Práctico</span>
+<span class="nudesk-badge badge-green">{hr_out.recommended_action}</span>
+</div>
+<div class="script-box" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">{hr_email_preview}</div>
 </div>""", unsafe_allow_html=True)
 
                 st.markdown("#### Recruiter Verification & Sign-Off")
