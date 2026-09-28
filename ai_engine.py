@@ -347,6 +347,7 @@ def tool_lookup_applicant_history(business_name: str) -> Dict[str, Any]:
 
     try:
         import database
+        database.init_db()
         records = database.get_filtered_operations(
             module_filter="credit",
             search_query=clean_name,

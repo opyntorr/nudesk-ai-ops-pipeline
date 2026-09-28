@@ -832,3 +832,12 @@ def vacuum_database() -> Dict[str, Any]:
     }
 
 
+# Auto-initialize SQLite schema and organic benchmarks on module import
+try:
+    init_db()
+except Exception:
+    pass
+
+
+
+

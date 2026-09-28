@@ -14,6 +14,10 @@ from streamlit.testing.v1 import AppTest
 
 class TestNuDeskOpsV2Suite(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        database.init_db()
+
     def test_pydantic_models(self):
         # Credit
         self.assertEqual(MOCK_FALLBACK_CREDIT.applicant_name, "Robert Martinez")
