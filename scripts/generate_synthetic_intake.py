@@ -40,6 +40,73 @@ def generate_synthetic_payload(provider: str = "readai", module: str = "credit")
         return load_fixture("fireflies_sales_call.json")
     elif provider == "gdrive":
         return load_fixture("gdrive_intake_quote.json")
+    elif provider in ["wispr", "wispr_flow"]:
+        if module == "sales":
+            entity = "Calafia Cross-Border Freight (Otay Mesa, CA)"
+            metric = "$2.8M ARR | 14 Refrigerated 53ft Fleet"
+            transcript = (
+                "[Wispr Flow Voice Dictation — Audio Memo from BDR Sarah Jenkins]\n"
+                "\"Spoke with Diana Navarro at Calafia Freight. High urgency for $250k spot factoring line. "
+                "45-day broker payment terms from C.H. Robinson. Immediate outreach proposal requested.\""
+            )
+        else:
+            entity = "Apex Fleet Repair (Dallas, TX)"
+            metric = "$85,000 USD | Equipment Term Loan (Voice Update)"
+            transcript = (
+                "[Wispr Flow Voice Dictation — Audio Memo from Senior Underwriter Robert Martinez]\n"
+                "\"Follow-up with Robert Martinez regarding $85k lift loan. Monthly gross revenue verified at $38.5k. "
+                "IRS tax lien documentation confirmed under active 36-month installment plan at $410/mo. Clean bank balances.\""
+            )
+        return {
+            "event": "voice_dictation.completed",
+            "dictation_id": f"wispr_{random.randint(10000, 99999)}",
+            "author": "Operational Specialist (Mazatlán Hub)",
+            "client_name": entity,
+            "headline_metric": metric,
+            "department": module,
+            "source_app": "Wispr Flow for Mac / Enterprise Voice Intake",
+            "full_transcript_text": transcript,
+            "summary": "Audio dictation memo transcribed via Wispr Flow speech-to-text engine."
+        }
+    elif provider in ["gsheets", "google_sheets", "sheets"]:
+        if module == "sales":
+            entity = "Sonora Pacific Cold Logistics"
+            metric = "$2.4M ARR | 12 Refrigerated Trailing Units"
+            transcript = (
+                "[Inbound Submission via Google Sheets CRM Table]\n"
+                "Company: Sonora Pacific Cold Logistics\n"
+                "Contact: Diana Navarro (VP Logistics)\n"
+                "Seeking freight factoring facility and fuel advance line for cross-border routes Nogales-Phoenix."
+            )
+        elif module == "hr":
+            entity = "Daniela Mendoza"
+            metric = "Senior Bilingual Underwriter Applicant"
+            transcript = (
+                "[Inbound Candidate Application via Google Sheets Roster]\n"
+                "Applicant: Daniela Mendoza\n"
+                "4 years experience in cross-border equipment financing. C1 English fluency. Seeking $3,400 USD monthly."
+            )
+        else:
+            entity = "Sonora Pacific Produce Logistics"
+            metric = "$320,000 USD | Working Capital & Factoring"
+            transcript = (
+                "[Inbound Broker Submission via Google Sheets LOS Form]\n"
+                "Applicant: Ernesto Valenzuela (Managing Director)\n"
+                "Company: Sonora Pacific Produce Logistics\n"
+                "Request: $320,000 working capital line. Collateral: 12 refrigerated trailers ($410,000 appraisal).\n"
+                "Monthly revenue $200,000, monthly debt payments $48,000."
+            )
+        return {
+            "event": "sheets.row_appended",
+            "sheet_id": "Inbound_Raw_Submissions",
+            "row_id": random.randint(10, 99),
+            "client_name": entity,
+            "headline_metric": metric,
+            "department": module,
+            "source_app": "Google Sheets Inbound Intake via n8n",
+            "full_transcript_text": transcript,
+            "summary": "Inbound commercial lead ingested from Google Sheets intake table via n8n automation."
+        }
     else:
         # Generic synthetic generation
         entity = f"Sierra Freightways {random.randint(10, 99)} LLC (Nogales, AZ)"
@@ -78,6 +145,24 @@ def extract_ingestion_fields(raw_payload: dict, provider: str, module: str) -> d
         doc_url = raw_payload.get("webViewLink", "")
         doc_note = f"Drive File: {raw_payload.get('name')} ({raw_payload.get('size')} bytes)"
         mod = raw_payload.get("department", module)
+    elif provider in ["wispr", "wispr_flow"]:
+        entity = raw_payload.get("client_name") or "Wispr Flow Voice Note"
+        metric = raw_payload.get("headline_metric", "Voice Dictation Memo")
+        transcript = raw_payload.get("full_transcript_text", "")
+        source = "Wispr Flow (Voice Dictation)"
+        summary = raw_payload.get("summary", "Transcribed by Wispr Flow speech-to-text.")
+        doc_url = "https://wisprflow.ai/memo/simulated-audio-intake"
+        doc_note = f"Wispr Flow Audio Dictation ({raw_payload.get('dictation_id', 'memo')})"
+        mod = raw_payload.get("department", module)
+    elif provider in ["gsheets", "google_sheets", "sheets"]:
+        entity = raw_payload.get("client_name") or "Google Sheets Inbound Prospect"
+        metric = raw_payload.get("headline_metric", "$250,000 USD | Working Capital")
+        transcript = raw_payload.get("full_transcript_text", "")
+        source = "Google Sheets Inbound Intake via n8n"
+        summary = raw_payload.get("summary", "Inbound lead ingested from Google Sheets intake table via n8n.")
+        doc_url = f"https://docs.google.com/spreadsheets/d/{raw_payload.get('sheet_id', 'Inbound_Raw_Submissions')}"
+        doc_note = f"Google Sheet Row #{raw_payload.get('row_id', 1)} ({raw_payload.get('sheet_id', 'Inbound_Raw_Submissions')})"
+        mod = raw_payload.get("department", module)
     else:
         # Read AI schema
         entity = raw_payload.get("client_name") or raw_payload.get("title", "Read AI Meeting")
@@ -104,7 +189,7 @@ def extract_ingestion_fields(raw_payload: dict, provider: str, module: str) -> d
 
 def main():
     parser = argparse.ArgumentParser(description="Simulate synthetic incoming meeting bot & webhook streams.")
-    parser.add_argument("--provider", choices=["readai", "fireflies", "gdrive"], default="readai", help="Bot provider schema")
+    parser.add_argument("--provider", choices=["readai", "fireflies", "gdrive", "wispr"], default="readai", help="Bot provider schema")
     parser.add_argument("--module", choices=["credit", "sales", "hr"], default="credit", help="Target module")
     parser.add_argument("--dispatch-n8n", action="store_true", help="Post webhook payload directly to local n8n container")
     parser.add_argument("--webhook-url", default="http://localhost:5678/webhook/incoming-meeting", help="n8n webhook URL")

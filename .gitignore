@@ -9,3 +9,8 @@ n8n_data/
 .idea/
 .vscode/
 *.db
+*.json.secret
+*service_account*.json
+credentials*.json
+*.pem
+*.key

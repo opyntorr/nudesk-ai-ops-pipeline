@@ -1,0 +1,121 @@
+{
+  "manifest_version": "1.0.0",
+  "project": "nuDesk Operations Studio",
+  "organization": "nuDesk MX",
+  "framework": "Google Gemini & Anthropic Claude Agent Tooling",
+  "tools": [
+    {
+      "name": "tool_lookup_applicant_history",
+      "description": "Queries the persistent SQLite database for prior loan or financing applications associated with a commercial applicant or business entity.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "business_name": {
+            "type": "string",
+            "description": "Legal or commercial business name to search in the historical operations audit trail."
+          }
+        },
+        "required": ["business_name"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "business_query": {"type": "string"},
+          "records_found": {"type": "integer"},
+          "historical_records": {"type": "array"},
+          "has_prior_history": {"type": "boolean"},
+          "historical_red_flags": {"type": "array"}
+        }
+      }
+    },
+    {
+      "name": "tool_compute_financial_ratios",
+      "description": "Calculates exact Debt-to-Income (DTI) and Debt Service Coverage Ratio (DSCR) deterministically using mathematical formulas, eliminating numerical hallucinations in underwriting memos.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "monthly_revenue_usd": {
+            "type": "number",
+            "description": "Verified or stated gross monthly revenue in USD."
+          },
+          "requested_loan_usd": {
+            "type": "number",
+            "description": "Total principal amount requested for commercial line or term debt."
+          },
+          "existing_monthly_debt_usd": {
+            "type": "number",
+            "description": "Current ongoing monthly debt obligations."
+          },
+          "interest_rate_annual": {
+            "type": "number",
+            "default": 0.12,
+            "description": "Estimated annual interest rate (e.g. 0.12 for 12%)."
+          },
+          "term_months": {
+            "type": "integer",
+            "default": 36,
+            "description": "Amortization or repayment term in months."
+          },
+          "existing_ebitda_annual": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Annual EBITDA or operating cash flow for DSCR computation."
+          },
+          "annual_debt_service_usd": {
+            "type": "number",
+            "default": 0.0,
+            "description": "Total annual debt service obligations."
+          }
+        },
+        "required": ["monthly_revenue_usd", "requested_loan_usd"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "monthly_revenue_usd": {"type": "number"},
+          "requested_loan_usd": {"type": "number"},
+          "estimated_new_monthly_payment_usd": {"type": "number"},
+          "total_monthly_obligations_usd": {"type": "number"},
+          "dti_ratio": {"type": "number"},
+          "dti_percentage": {"type": "number"},
+          "dscr_ratio": {"type": "number"},
+          "deterministic_risk_tier": {"type": "string", "enum": ["Low Risk", "Moderate Risk", "High Risk"]},
+          "ratio_rationale": {"type": "string"}
+        }
+      }
+    },
+    {
+      "name": "tool_inbound_api_ingest",
+      "description": "Receives external applications from n8n, Google Sheets, or webhooks and inserts them into the nuDesk FIFO operational queue with active SLA tracking.",
+      "endpoint": "http://127.0.0.1:8502/api/ingest",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "module_type": {
+            "type": "string",
+            "enum": ["credit", "sales", "hr"]
+          },
+          "entity_name": {"type": "string"},
+          "headline_metric": {"type": "string"},
+          "transcript_text": {"type": "string"},
+          "source_channel": {"type": "string"},
+          "doc_url": {"type": "string"}
+        },
+        "required": ["module_type", "entity_name", "headline_metric", "transcript_text"]
+      }
+    },
+    {
+      "name": "tool_dispatch_to_n8n",
+      "description": "Dispatches validated dossiers to the n8n orchestrator with transport-level X-nuDesk-Auth-Token authentication for Google Workspace and Asana routing.",
+      "endpoint": "http://127.0.0.1:5678/webhook/nudesk-triage",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "flow_type": {"type": "string", "enum": ["credit", "sales", "hr"]},
+          "payload": {"type": "object"}
+        },
+        "required": ["flow_type", "payload"]
+      }
+    }
+  ]
+}

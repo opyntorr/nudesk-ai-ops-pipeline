@@ -57,15 +57,10 @@ def init_db() -> None:
     cursor.execute("DELETE FROM operations_history WHERE entity_name LIKE '%Test Enterprise%' OR entity_name LIKE '%Benchmark Enterprise%' OR operator_name = 'Unit Test Operator'")
     conn.commit()
 
-    # Seed organic benchmarks if pending records are absent, total count is low, or dirty records exist
-    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE dispatch_status LIKE '%n8n%' OR entity_name LIKE '%Benchmark Enterprise%'")
-    dirty_count = cursor.fetchone()["count"]
-    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE is_processed = 0")
-    pending_count = cursor.fetchone()["count"]
-    cursor.execute("SELECT COUNT(*) as count FROM operations_history WHERE module_type = 'hr' AND full_output_json LIKE '%candidate_fit_tier%'")
-    hr_schema_count = cursor.fetchone()["count"]
-    if dirty_count > 0 or pending_count < 4 or hr_schema_count == 0:
-        cursor.execute("DELETE FROM operations_history")
+    # Seed organic benchmarks if database is freshly initialized or empty
+    cursor.execute("SELECT COUNT(*) as count FROM operations_history")
+    total_count = cursor.fetchone()["count"]
+    if total_count == 0:
         seed_organic_benchmarks(conn)
 
     conn.close()
@@ -835,5 +830,14 @@ def vacuum_database() -> Dict[str, Any]:
         "size_after_bytes": size_after,
         "reclaimed_bytes": max(0, size_before - size_after)
     }
+
+
+# Auto-initialize SQLite schema and organic benchmarks on module import
+try:
+    init_db()
+except Exception:
+    pass
+
+
 
 

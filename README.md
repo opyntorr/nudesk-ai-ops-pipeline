@@ -12,110 +12,267 @@ At **nuDesk MX**, operational teams in Mazatlán, Sinaloa partner with US commer
 
 Traditional BPOs scale operational capacity by linearly increasing headcount ("seat count"), resulting in high overhead, employee fatigue on manual data entry, and delayed turnaround times. nuDesk disrupts this paradigm through the **Cyborg Organization Model**: pairing bilingual human specialists with domain-trained AI agents to multiply productivity while safeguarding credit compliance.
 
-**nuDesk Operations Studio** is an enterprise-ready prototype designed to eliminate the two most common operational bottlenecks faced by nuDesk teams:
+**nuDesk Operations Studio** eliminates the most common operational bottlenecks faced by cross-border FinServ teams:
 
 1. **Credit Operations (Post-Call Discovery Triage):**
-   - **The Problem:** Loan officers and discovery agents conduct 15-to-30 minute calls with US business owners. Manually listening to recordings or reading transcripts to extract financial parameters (debt, revenue, equipment quotes, tax liens) and creating underwriting tickets takes 40+ minutes per file.
-   - **The Solution:** Ingests raw call transcripts (from dialers or Fireflies.ai), extracts key financial variables into strict Pydantic JSON schemas, computes an initial risk tier (Low, Moderate, High), isolates underwriting red flags, and automatically generates prioritized action items for the underwriting team (Asana-ready).
+   - **Problem:** Loan officers and discovery agents conduct 15-to-30 minute calls with US business owners. Manually listening to recordings or reading transcripts to extract financial parameters (debt, revenue, equipment quotes, tax liens) and creating underwriting tickets takes 40+ minutes per file.
+   - **Solution:** Ingests raw call transcripts (from dialers, Fireflies.ai, or Wispr Flow audio memos), invokes deterministic financial calculation tools, extracts key financial variables into strict Pydantic JSON schemas, computes an initial risk tier (Low, Moderate, High), isolates underwriting red flags, and automatically generates prioritized action items for Asana.
 
 2. **Sales Operations (BDR Lead Scoring & Rapid Outreach):**
-   - **The Problem:** Business Development Representatives (BDRs) in Mazatlán prospecting US logistics, construction, and manufacturing companies must manually research company viability, assess working capital fit, and draft custom outreach messages.
-   - **The Solution:** Ingests raw commercial prospect profiles, computes a lead score from 1 to 100 based on urgency and collateral viability, provides clear underwriting rationale, and generates both an executive cold email draft and a 30-second telephone pitch tailored for high-conversion speed-to-lead dialing.
+   - **Problem:** Business Development Representatives (BDRs) in Mazatlán prospecting US logistics, construction, and manufacturing companies must manually research company viability, assess working capital fit, and draft custom outreach messages.
+   - **Solution:** Ingests commercial prospect profiles, computes an objective lead score from 1 to 100 based on urgency and collateral viability, provides clear underwriting rationale, and generates both an executive cold email draft and a 30-second telephone pitch tailored for high-conversion outbound dialing.
 
 3. **HR Solutions (Bilingual Talent Screening):**
-   - **The Problem:** Vetting high-volume candidate interviews for English fluency, commercial empathy, and debt qualification skills requires hours of interview review.
-   - **The Solution:** Evaluates CEFR fluency, scores cultural competencies, identifies candidate red flags, and drafts targeted behavioral probing questions for hiring managers.
+   - **Problem:** Vetting high-volume candidate interviews for English fluency, commercial empathy, and debt qualification skills requires hours of interview review.
+   - **Solution:** Evaluates CEFR fluency, scores cultural competencies, identifies candidate red flags, and drafts targeted behavioral probing questions for hiring managers.
 
 4. **Enterprise Dispatch & Hyperautomation (n8n & Google Workspace):**
-   - Validated data structures are dispatched via HTTP POST webhooks to a local **n8n** orchestration engine (running in Docker), which routes and persists data into Google Sheets (acting as a live CRM/Pipeline tracker) and stages email drafts.
+   - Validated data structures are dispatched via HTTP POST webhooks to a local **n8n** orchestration engine (running in Docker), which routes and persists data into Google Sheets (acting as a live CRM/Pipeline tracker), stages email drafts in Gmail, and creates tasks in Asana.
 
 ---
 
-## 2. Architectural Highlights & "Harness Engineering"
+## 2. Alignment with Enterprise Tech Stack
 
-A foundational principle of this project is **Model-Agnostic Architecture**. 
+nuDesk Operations Studio was specifically designed to mirror and integrate with the enterprise technology stack utilized by the company:
 
-Large Language Models (LLMs) are evolving at rapid speed. Designing business software directly coupled to a specific model creates brittle systems vulnerable to API deprecation or vendor lock-in. 
+| Enterprise Tool | Integration in nuDesk Operations Studio | Implementation Details |
+|---|---|---|
+| **Claude Code & Gemini Antigravity** | Model-Agnostic Inference Cascade & Agentic Engine | Candidate cascade supporting `gemini-3.5-flash-lite`, `gemini-3.5-flash`, and `gemini-1.5-pro` with automatic fallback to pre-computed benchmark records. |
+| **Google Cloud Platform (GCP)** | OAuth 2.0 Single Sign-On & GenAI API | Live Google Workspace login via Google Cloud Console credentials with role-based access control (RBAC). |
+| **Wispr Flow** | Inbound Voice Dictation Audio Memo Intake | Specialized intake channel that ingests rapid audio dictation memos from underwriters and BDRs, converting speech transcripts into structured data. |
+| **Fireflies.ai / Read AI** | Meeting Recorder Webhook Simulator | Ingestion studio for dialer and Google Meet call transcripts with automated FIFO priority queue and live SLA tracking. |
+| **Asana** | Automated Underwriting Task Assignment | Automatic generation of standard operating tasks with urgency priority ("High", "Medium", "Low") and operational role assignments. |
+| **Google Workspace (Sheets & Gmail)** | Universal CRM & Staged Outreach Drafts | n8n routes triaged records into Google Sheets (Credit LOS, Sales CRM, Talent Roster) and creates reviewable drafts directly in the Gmail outbox. |
 
-In this application, the LLM is treated strictly as an interchangeable inference engine. The permanent enterprise value resides in the **Harness**:
-- **Strict Data Contracts:** Pydantic schemas enforce type safety and structure at compile and runtime.
-- **Fail-Safe Fallback:** If an API key is absent, expired, or rate-limited, the application gracefully transitions to Demonstration Mode, providing realistic synthetic records without throwing runtime exceptions.
-- **Decoupled Orchestration:** Workflow routing, data transformation, and CRM synchronization are handled by n8n, ensuring that changes to downstream destinations (e.g. migrating from Google Sheets to HubSpot or Salesforce) require zero changes to the core AI engine.
-- **Google Cloud Console OAuth 2.0 & RBAC:** Live Google Workspace Single Sign-On paired with granular role-based access control, isolating sensitive IT configurations from non-technical operators.
-- **Design System & Theme Engine:** WCAG AAA high-contrast minimalist Light Mode default with an instant Dark Mode toggle, styled to match nuDesk brand tokens.
+---
 
-```text
-+-----------------------------------------------------------------------------------+
-|                           nuDesk Operations Studio                                |
-|                 (Streamlit Front-End + High-Contrast Theme)                       |
-+-----------------------------------------------------------------------------------+
-           |                                                       |
-           | 1. Raw Call Transcript / Lead Info                    | 3. Dispatch JSON
-           v                                                       v
-+------------------------------------+             +--------------------------------+
-|       ai_engine.py                 |             |       crm_dispatcher.py        |
-|  - Google Gemini (Flash-Lite / Flash)|             |  - HTTP POST with retry logic  |
-|  - Pydantic Structured Outputs     |             |  - Simulation Mode Fallback    |
-|  - Model-Agnostic Schema Guards    |             +--------------------------------+
-+------------------------------------+                             |
-           |                                                       | 4. Webhook Trigger
-           v 2. Validated Schema Instances                         v
-+-----------------------------------------------------------------------------------+
-|                        Local Orchestrator: n8n (Docker)                           |
-|       Endpoint: http://localhost:5678/webhook/nudesk-triage                       |
-+-----------------------------------------------------------------------------------+
-           |                                                       |
-           | Branch A: Credit Operations                           | Branch B: Sales Operations
-           v                                                       v
-+------------------------------------+             +--------------------------------+
-|  - Underwriting Google Sheet Row   |             |  - Sales Pipeline CRM Update   |
-|  - Asana Task Creation via API     |             |  - Gmail Outbox Draft Staging  |
-+------------------------------------+             +--------------------------------+
+## 3. System Architecture & Data Flow
+
+```mermaid
+flowchart TD
+    subgraph InboundSources ["Inbound Intake Sources"]
+        GSheetInbound["Google Sheets Intake Form\n(Inbound Raw Submissions)"]
+        MeetBots["Fireflies.ai & Read AI Bots"]
+        Wispr["Wispr Flow Voice Dictation Engine"]
+        GDrive["Google Drive Document Intake"]
+    end
+
+    subgraph n8nIngress ["n8n Inbound Orchestration"]
+        GSheetTrigger["Google Sheets Watcher\n(Status = NEW)"]
+        InboundWebhook["Inbound Webhook\n(/webhook/nudesk-inbound-intake)"]
+        Sanitizer["Sanitize & Normalize\nApplication Payload"]
+        HTTPDispatch["HTTP POST to nuDesk\n(:8502/api/ingest)"]
+    end
+
+    subgraph Cockpit ["nuDesk Operations Studio (Cockpit)"]
+        IngestAPI["Inbound Ingestion API (:8502)\n(inbound_api.py)"]
+        Queue["FIFO Priority Queue\n(Active SLA Clocks)"]
+        UI["Operations Studio UI (app.py)"]
+        AgenticCore["Autonomous AI Agent\n(Gemini Cascade + Tools)"]
+        ToolDB["Tool: lookup_applicant_history()"]
+        ToolCalc["Tool: compute_financial_ratios()"]
+        Persistence[("SQLite Audit Trail\n(operations_history.db)")]
+        Dispatcher["Outbound Dispatcher\n(crm_dispatcher.py)"]
+    end
+
+    subgraph n8nEgress ["n8n Outbound Orchestration"]
+        OutboundWebhook["Triage Webhook (:5678)\n(/webhook/nudesk-triage)"]
+        Transformer["Format for Sheets, CRM & Mail"]
+        Switch{"Route by Operation Type"}
+    end
+
+    subgraph Destinations ["Enterprise Endpoints"]
+        CreditLOS["Google Sheets (Credit LOS Pipeline)"]
+        AsanaTask["Asana API (Underwriting Tasks)"]
+        SalesCRM["Google Sheets (Commercial Sales CRM)"]
+        GmailBDR["Gmail API (BDR Outreach Drafts)"]
+        TalentRoster["Google Sheets (Talent Roster)"]
+        GmailHR["Gmail API (Candidate Follow-Up)"]
+    end
+
+    GSheetInbound --> GSheetTrigger --> Sanitizer
+    MeetBots --> InboundWebhook --> Sanitizer
+    Wispr --> InboundWebhook
+    GDrive --> InboundWebhook
+    Sanitizer --> HTTPDispatch --> IngestAPI
+    IngestAPI --> Queue --> UI
+    UI --> AgenticCore
+    AgenticCore <--> ToolDB
+    AgenticCore <--> ToolCalc
+    ToolDB <--> Persistence
+    AgenticCore --> UI
+    UI --> Persistence
+    UI --> Dispatcher --> OutboundWebhook
+    OutboundWebhook --> Transformer --> Switch
+    Switch -- "Credit" --> CreditLOS --> AsanaTask
+    Switch -- "Sales" --> SalesCRM --> GmailBDR
+    Switch -- "HR" --> TalentRoster --> GmailHR
 ```
 
 ---
 
-## 3. Repository Structure
+## 4. Autonomous Agent Loop (Tool Calling & Deterministic Grounding)
+
+To eliminate numerical hallucinations (such as incorrect Debt-to-Income or coverage ratios), the AI engine uses deterministic tool grounding:
+
+```mermaid
+flowchart LR
+    A["Raw Call Transcript / Voice Note"] --> B["Agent Core (ai_engine.py)"]
+    B --> C["Step 1: Check Database\n(tool_lookup_applicant_history)"]
+    C --> D["Past Credit Records &\nHistorical Red Flags"]
+    D --> B
+    B --> E["Step 2: Deterministic Calculation\n(tool_compute_financial_ratios)"]
+    E --> F["Exact DSCR Ratio &\nVerified DTI Percentage"]
+    F --> B
+    B --> G["Step 3: Grounded Synthesis\n(Gemini 3.5 Flash-Lite)"]
+    G --> H["Validated Pydantic Instance\n(CreditTriageOutput)"]
+```
+
+---
+
+## 5. Visual Cockpit Tour & Live Demonstration Gallery
+
+The following high-resolution captures illustrate the end-to-end execution of nuDesk Operations Studio across all operational personas and system subsystems:
+
+### 5.1 Credit Operations Triage Cockpit
+Ingests raw discovery call transcripts, isolates underwriting red flags, displays deterministic financial calculations, and stages automated Asana tasks for loan officers.
+
+![Credit Operations Cockpit](assets/screenshots/01_credit_triage_cockpit.png)
+
+### 5.2 Autonomous Agent Reasoning Trace & Deterministic Tool Loop
+Exposes the multi-step agent execution log. The agent invokes `tool_lookup_applicant_history` to inspect prior applicant records and `tool_compute_financial_ratios` to compute DSCR and DTI deterministically without numerical hallucinations, before synthesizing the final Pydantic response.
+
+![Agent Reasoning Trace](assets/screenshots/02_agent_reasoning_trace.png)
+
+### 5.3 Commercial Sales Operations (BDR Lead Scoring & Outreach)
+Scores commercial prospects on urgency, collateral viability, and working capital fit. Generates both an executive cold email draft and a 30-second conversational outbound telephone pitch.
+
+![Commercial Sales Cockpit](assets/screenshots/03_sales_bdr_cockpit.png)
+
+### 5.4 Talent Operations (Bilingual Candidate Screening)
+Automates bilingual interview assessment, grading CEFR English fluency, commercial empathy, and debt qualification aptitude while drafting behavioral probing questions for hiring managers.
+
+![Talent Operations Screening](assets/screenshots/04_hr_talent_screening.png)
+
+### 5.5 Executive KPI Dashboard & Operations Audit Trail
+Real-time operational intelligence tracking throughput, SLA adherence, and department-level distribution backed by a permanent SQLite audit trail (`operations_history.db`).
+
+![Executive KPI Dashboard](assets/screenshots/05_executive_kpis.png)
+
+### 5.6 IT System Workbench & Wispr Flow Voice Dictation Integration
+Administrative console providing model cascade testing, live database inspection, webhook health telemetry, and voice memo intake simulating Wispr Flow dictation.
+
+![IT System Workbench](assets/screenshots/06_it_workbench_wispr_flow.png)
+
+### 5.7 Inbound Voice Dictation Ingestion Confirmed
+Demonstrates immediate FIFO priority queue intake upon receiving a rapid voice dictation memo from an underwriter or BDR in the field.
+
+![Wispr Flow Intake Confirmed](assets/screenshots/07_wispr_intake_confirmed.png)
+
+### 5.8 High-Contrast Dark Mode Appearance
+Full WCAG AAA compliance supporting dark mode environments for late-shift underwriting teams.
+
+![Dark Mode Palette](assets/screenshots/08_dark_mode_palette.png)
+
+### 5.9 Responsive Mobile Experience (Android & Smartphone Viewport)
+Engineered for operational supervisors and underwriters connecting from smartphones and tablets. Utilizes responsive CSS media queries (`max-width: 900px`) and an accordion architecture where details, transcripts, AI triage actions, and synthesized underwriting dossiers open directly beneath each queue card (`Detalles & Operaciones`), keeping operational context immediately beneath the active item without jumping across disconnected columns. Includes 2x2 compact KPI grids, direct action buttons, and touch-scrolling tab navigation.
+
+#### Mobile Credit Operations & Discovery Dock (Top View)
+Demonstrates the immediate visibility of the active credit file and the primary triage action button on a Google Pixel 7 viewport.
+
+![Mobile Credit Cockpit](assets/screenshots/mobile_android_credit_cockpit.png)
+
+#### Mobile Credit Underwriting Dossier & Synthesized Memo
+Displays the completed credit evaluation memo, deterministic DTI ratio, and automated Asana compliance tasks rendered natively on mobile.
+
+![Mobile Credit Dossier](assets/screenshots/mobile_android_credit_dossier.png)
+
+#### Mobile Commercial Sales (BDR Outreach & Lead Scoring)
+Shows rapid commercial prospect qualification and staged cold outreach pitches optimized for mobile review.
+
+![Mobile Sales Cockpit](assets/screenshots/mobile_android_sales_cockpit.png)
+
+#### Mobile Executive KPI Dashboard & Operations Audit
+Presents consolidated team throughput, departmental distribution, and SLA adherence metrics formatted in high-contrast compact cards.
+
+![Mobile Executive Dashboard](assets/screenshots/mobile_android_exec_dashboard.png)
+
+### 5.10 Mac Desktop Operations (MacBook Pro High-Resolution Environment)
+Native high-resolution desktop view illustrating the dual-panel split-screen architecture across key operational modules:
+
+#### Mac Credit Operations Workspace
+Full split-screen cockpit showing the live intake queue on the left and the active underwriting canvas on the right.
+
+![Mac Credit Workspace](assets/screenshots/desktop_mac_credit_underwriting.png)
+
+#### Mac Executive Operations Digest & Telemetry
+Executive portfolio view featuring dynamic Altair throughput donut charts, rolling SLA compliance metrics, and direct Gmail digest dispatching.
+
+![Mac Executive Digest](assets/screenshots/desktop_mac_executive_digest.png)
+
+#### Mac IT System Governance Workbench
+Administrative console for live Gemini cascade telemetry, SQLite database workbench, and automated webhook dispatch monitoring.
+
+![Mac IT Governance](assets/screenshots/desktop_mac_it_governance.png)
+
+### 5.11 n8n Workflow Automation & Closed-Loop Multi-Flow Engine
+Visual workflow orchestration running in Docker. Ingests authenticated webhooks (`X-nuDesk-Auth-Token`) from nuDesk Operations Studio, routes records across Credit, Commercial Sales, HR Talent, Executive, and IT Governance branches, appends audit rows to Google Sheets, creates Asana compliance tasks, and drafts formatted Gmail notifications.
+
+![n8n Workflow Blueprint](assets/screenshots/n8n_multimodule_workflow.png)
+
+---
+
+## 6. Repository Structure
 
 ```text
 nudesk-ai-ops-pipeline/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml              # GitHub Actions CI pipeline (Python 3.10 & 3.11)
-├── .env.example                # Template for environment configuration
-├── .gitignore                  # Exclusions (ignoring .env and SQLite DBs)
-├── Makefile                    # Developer commands (install, test, run, tunnel)
-├── README.md                   # Technical documentation and evaluation brief
-├── requirements.txt            # Minimal, pinned Python dependencies
-├── docker-compose.yml          # Container configuration for local n8n instance
-├── n8n_workflow_blueprint.json # Importable workflow blueprint for n8n
-├── app.py                      # V2 Enterprise nuDesk Operations Studio
-├── app_v1_legacy.py            # V1 Prototype reference backup
-├── auth_rbac.py                # Google Cloud Console OAuth 2.0 & RBAC engine
-├── database.py                 # SQLite persistent audit trail & operations log
-├── document_reader.py          # Multi-modal collateral ingestion (URLs & files)
-├── meeting_queue.py            # Automated meeting queue (Read AI / Fireflies simulator)
-├── models.py                   # Pydantic schemas (Credit, Sales, HR)
-├── ai_engine.py                # Multi-model inference cascade (Gemini 3.5 Flash-Lite)
-├── crm_dispatcher.py           # Resilient webhook dispatcher to n8n
-├── mock_data.py                # Benchmark transcripts and candidate records
+│       └── ci.yml                  # GitHub Actions CI pipeline (Python 3.10 & 3.11)
+├── .env.example                    # Environment template (Gemini, OAuth, Webhooks, Admin emails)
+├── .gitignore                      # Security exclusions (ignoring .env and SQLite DBs)
+├── Makefile                        # Developer automation (install, test, run, docker-up)
+├── README.md                       # Architectural and technical documentation
+├── AGENTS.md                       # Agentic architecture & AI pairing directives (Claude & Gemini)
+├── agent_specs/
+│   └── tools_manifest.json         # Formal JSON schemas for function calling & agent tool catalog
+├── agent_guardrails.py             # Pre-flight PII masking, injection defense, & post-flight override
+├── requirements.txt                # Pinned dependencies (Streamlit, GenAI, Pydantic, Requests)
+├── docker-compose.yml              # Container definition for local n8n instance
+├── n8n_workflow_blueprint.json     # Closed-loop workflow blueprint (Inbound Intake & Outbound Sync)
+├── app.py                          # Streamlit FinTech Operations Cockpit
+├── inbound_api.py                  # Zero-dependency HTTP ingestion API for n8n & Google Sheets
+├── auth_rbac.py                    # Google Cloud OAuth 2.0 & strict RBAC whitelist engine
+├── database.py                     # SQLite persistent audit trail & operations log
+├── document_reader.py              # Multi-modal collateral ingestion (URLs & files)
+├── meeting_queue.py                # Automated meeting queue (Read AI, Fireflies, Wispr Flow)
+├── models.py                       # Pydantic schemas (Credit, Sales, HR, AsanaTask)
+├── ai_engine.py                    # Multi-model cascade & autonomous agent tools
+├── crm_dispatcher.py               # Resilient webhook dispatcher with auth token support
+├── mock_data.py                    # Benchmark transcripts and candidate records
 ├── styles/
-│   └── nudesk_theme.py         # Design system tokens and Light/Dark theme engine
+│   └── nudesk_theme.py             # Design system tokens and WCAG AAA Light/Dark theme engine
+├── evals/
+│   └── agent_eval_harness.py       # Autonomous agent evaluation & safety benchmarking suite
 ├── scripts/
-│   └── start_tunnel.sh         # One-click Cloudflare HTTPS tunnel for mobile demo
+│   ├── e2e_playwright_audit.py     # Playwright headless browser E2E test & screenshot capture
+│   ├── generate_synthetic_intake.py# Synthetic intake generator (Read AI, Fireflies, GDrive, Wispr, GSheets)
+│   ├── ingest_incoming_file.py     # File and URL ingestion pipeline
+│   ├── start_tunnel.sh             # Cloudflare HTTPS tunnel for mobile demo
+│   ├── test_n8n_pipeline.py        # End-to-end integration test runner
+│   └── test_n8n_closed_loop.py     # Closed-loop round-trip test (Google Sheets -> n8n -> nuDesk -> Workspace)
 └── tests/
-    └── test_v2_suite.py        # Automated test suite (Pydantic, RBAC, OAuth, DB)
+    └── test_v2_suite.py            # Comprehensive 82-test automated suite
 ```
 
 ---
 
-## 4. Quickstart Installation Guide
+## 7. Quickstart Guide (Zero-Config Test)
 
 ### Prerequisites
-- Python 3.10+ installed
-- Docker & Docker Compose (optional, for local n8n testing)
-- (Optional) Free Google AI Studio API key from [aistudio.google.com](https://aistudio.google.com/)
-- (Optional) Google Cloud Console OAuth 2.0 Credentials for Live Google Login
+- Python 3.10+
+- (Optional) Docker & Docker Compose (for local n8n container)
+- (Optional) Google AI Studio API key from [aistudio.google.com](https://aistudio.google.com/)
 
 ### Step 1: Clone and Set Up Virtual Environment
 ```bash
@@ -125,7 +282,7 @@ cd nudesk-ai-ops-pipeline
 python3 -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Install dependencies via Makefile or pip
+# Install dependencies
 make install
 ```
 
@@ -133,9 +290,9 @@ make install
 ```bash
 cp .env.example .env
 ```
-- **Live AI Mode:** Open `.env` and paste your `GEMINI_API_KEY`.
-- **Google OAuth 2.0:** Enter `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from Google Cloud Console. Set Authorized redirect URIs to `http://localhost:8501`.
-- **Demonstration Mode (Zero Config):** If left blank, the application launches in 100% transparent **Demonstration Mode**. Evaluators can test all dashboard metrics, inspect risk tiers, generate Asana tasks, view outreach drafts, and switch between simulated corporate roles.
+- **Zero-Config Demonstration Mode:** If `.env` is left with placeholder values, the application runs with 100% functionality using pre-computed realistic benchmarks and synthetic agent traces.
+- **Live AI Mode:** Paste your `GEMINI_API_KEY` into `.env`.
+- **Google OAuth 2.0:** Enter `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from Google Cloud Console.
 
 ### Step 3: Run the Dashboard
 ```bash
@@ -147,58 +304,63 @@ Open your browser at `http://localhost:8501`.
 
 ---
 
-## 5. Developer Commands (Makefile)
-
-Common workflows are automated through standard Makefile targets:
+## 8. Developer Commands (Makefile)
 
 | Command | Description |
 |---|---|
-| `make install` | Installs all Python dependencies into the active environment |
-| `make test` | Executes the full automated test suite with verbose reporting |
+| `make install` | Installs all Python dependencies into active virtual environment |
+| `make test` | Executes the 82-test automated unit test suite |
+| `make eval` | Executes the AI agent safety, PII redaction, and injection benchmarking harness |
 | `make run` | Starts the Streamlit dashboard on port 8501 |
-| `make tunnel` | Launches the Cloudflare HTTPS tunnel for cross-device mobile testing |
-| `make docker-up` | Launches the local n8n workflow container in the background |
+| `make tunnel` | Launches secure Cloudflare HTTPS tunnel for mobile/remote testing |
+| `make docker-up` | Launches local n8n container in the background |
 | `make docker-down` | Gracefully shuts down the local n8n container |
 | `make clean` | Removes bytecode caches and temporary files |
 
 ---
 
-## 6. Continuous Integration (CI/CD)
+## 9. Continuous Integration & Test Suite
 
-Every push and Pull Request to this repository triggers an automated CI pipeline via **GitHub Actions** (`.github/workflows/ci.yml`):
-- Verifies clean Python syntax compilation across all operational modules.
-- Executes the full unit test suite on both **Python 3.10** and **Python 3.11**.
-- Guarantees zero regression on Pydantic schemas, RBAC logic, OAuth URL generators, and database operations.
+The repository is guarded by an automated GitHub Actions CI pipeline (`.github/workflows/ci.yml`) running on every push and pull request across **Python 3.10** and **Python 3.11**.
+
+To run the full suite locally:
+```bash
+make test
+```
+
+To run the AI agent evaluation & safety benchmarking harness:
+```bash
+make eval
+```
+
+### Test Suite Coverage (82 Tests):
+- **Data Contracts:** Validates Pydantic V2 models for Credit, Sales, and HR.
+- **Agentic Tools:** Verifies deterministic calculation of DSCR and DTI ratios and historical database lookups.
+- **Agent Guardrails & Interceptors:** Verifies pre-flight PII masking (SSN, EIN, Card), prompt injection detection, and post-flight mathematical reconciliation.
+- **Voice Dictation:** Tests Wispr Flow payload parsing and ingestion.
+- **Closed-Loop Automation:** Verifies bidirectional Google Sheets intake, n8n webhook routing, and HTTP ingestion API on port 8502.
+- **Authentication & RBAC:** Verifies strict admin whitelist matching and OAuth URL construction.
+- **Persistence:** Verifies SQLite operations log, schema migrations, and SLA calculations without data loss.
+- **UI & Accessibility:** Validates WCAG AAA color contrast, container docks, and headless Streamlit execution.
 
 ---
 
-## 7. Running the Local n8n Orchestrator (Docker)
+## 10. Running Local n8n Workflow Orchestration (Docker)
 
 To test end-to-end webhook dispatch and Google Workspace routing locally:
 
-1. Launch n8n:
+1. Start the n8n container:
    ```bash
    make docker-up
    ```
-2. Access the visual editor at `http://localhost:5678/`.
+2. Open the visual workflow editor at `http://localhost:5678/`.
 3. Click **Workflows** -> **Import from File** and select `n8n_workflow_blueprint.json`.
 4. Click **Activate Workflow**.
-5. Click **Approve & Sync** inside the Streamlit dashboard to watch records flow into n8n in real time.
+5. Click **Approve & Sync** in the nuDesk Operations Studio dashboard to watch records flow into n8n in real time.
 
 ---
 
-## 8. Mobile & Remote Demo Access (Cloudflare Tunnel)
-
-To test or demo the dashboard on mobile devices (iOS / Android) or external computers without complex port-forwarding:
-
-```bash
-make tunnel
-```
-A public HTTPS link (e.g. `https://*.trycloudflare.com`) is generated to access the dashboard securely from any mobile or desktop browser.
-
----
-
-## 9. Authors & Engineering Credits
+## 11. Authors & Engineering Credits
 
 - **Lead Operations & Automation Engineer:** Christian Omar Payán Torróntegui ([@opyntorr](https://github.com/opyntorr))
 - **AI Architecture & Implementation Co-pilot:** Antigravity (Google DeepMind)

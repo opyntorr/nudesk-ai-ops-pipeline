@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# nuDesk Operations Studio - Remote HTTPS Tunnel
+# nuDesk Operations Studio - Remote HTTPS Tunnel & Mobile QR Hub
 # Exposes local Streamlit (port 8501) to a secure HTTPS URL for mobile/remote testing.
 
-echo "=========================================================="
-echo "nuDesk Operations Studio - Remote HTTPS Tunnel"
-echo "=========================================================="
-echo "Launching Cloudflare Tunnel on http://localhost:8501..."
-echo "A public HTTPS URL (e.g. https://*.trycloudflare.com) will appear below."
-echo "Use that URL to test on your phone (iOS / Android) or any Mac."
-echo "Press Ctrl+C to terminate the tunnel."
-echo "=========================================================="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-docker run --rm -it --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:8501
+if command -v python3 &>/dev/null && [ -f "$SCRIPT_DIR/tunnel_runner.py" ]; then
+    exec python3 "$SCRIPT_DIR/tunnel_runner.py"
+else
+    echo "=========================================================="
+    echo "nuDesk Operations Studio - Remote HTTPS Tunnel"
+    echo "=========================================================="
+    echo "Launching Cloudflare Tunnel on http://localhost:8501..."
+    docker run --rm -it --net=host cloudflare/cloudflared:latest tunnel --url http://localhost:8501
+fi

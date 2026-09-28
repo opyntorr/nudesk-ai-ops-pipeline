@@ -1057,20 +1057,169 @@ def get_nudesk_css(theme: str = "light") -> str:
         padding: 1rem !important;
     }}
 
-    /* Responsive adjustments */
-    @media (max-width: 768px) {{
+    /* =========================================================================
+       RESPONSIVE MOBILE DESIGN SYSTEM (@media max-width: 900px)
+       ========================================================================= */
+    @media (max-width: 900px) {{
+        /* Container padding */
+        .block-container {{
+            padding-top: 0.5rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+            padding-bottom: 2.5rem !important;
+        }}
+
+        /* Top Brand Header Banner */
         .nudesk-header {{
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.65rem;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.65rem !important;
+            padding: 0.85rem 1rem !important;
         }}
+        .nudesk-header h1 {{
+            font-size: 1.15rem !important;
+        }}
+        .nudesk-header .subtitle {{
+            font-size: 0.78rem !important;
+        }}
+
+        /* Horizontal Tabs Navigation: Smooth Touch Scrolling */
+        div[data-testid="stTabs"] [role="tablist"],
+        .stTabs [role="tablist"],
+        div[role="tablist"] {{
+            overflow-x: auto !important;
+            flex-wrap: nowrap !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: thin !important;
+            padding-bottom: 4px !important;
+        }}
+        div[data-testid="stTab"],
+        [data-testid="stTab"],
+        div[role="tab"],
+        button[role="tab"] {{
+            flex-shrink: 0 !important;
+            white-space: nowrap !important;
+            padding: 6px 12px !important;
+            font-size: 0.84rem !important;
+        }}
+
+        /* Top KPI Metric Boxes: Compact 2x2 Grid instead of 4 stacked boxes */
         .kpi-container {{
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.5rem !important;
+            margin-bottom: 0.75rem !important;
         }}
+        .kpi-card {{
+            padding: 0.65rem 0.8rem !important;
+        }}
+        .kpi-value {{
+            font-size: 1.25rem !important;
+        }}
+        .kpi-label {{
+            font-size: 0.68rem !important;
+        }}
+        .kpi-sub {{
+            font-size: 0.72rem !important;
+        }}
+
+        /* Master-Detail Workspace: Mobile Accordion Layout */
+        /* On mobile, card details and triage operations open directly beneath each card. */
+        /* Hide the redundant split canvas column on mobile screens. */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:has(.cockpit-canvas-col) {{
+            display: none !important;
+        }}
+
+        /* Queue column takes full width on mobile */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:has(.cockpit-queue-col),
+        div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"]:has(.queue-card-hitbox) {{
+            width: 100% !important;
+            min-width: 100% !important;
+            order: 1 !important;
+            margin-top: 0 !important;
+            border-top: none !important;
+            padding-top: 0 !important;
+        }}
+
+        /* Card expanders open smoothly right beneath each card */
+        div[data-testid="stColumn"]:has(.cockpit-queue-col) div[data-testid="stExpander"] {{
+            display: block !important;
+            margin-top: 0.25rem !important;
+            margin-bottom: 0.65rem !important;
+            border: 1px solid var(--nd-border) !important;
+            border-radius: 6px !important;
+            background: var(--nd-surface) !important;
+        }}
+
+        /* Compact Cockpit Header */
+        .cockpit-header {{
+            padding: 0.75rem 0.95rem !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.4rem !important;
+        }}
+        .cockpit-title {{
+            font-size: 1.05rem !important;
+        }}
+
+        /* Queue Cards Compact Layout on Mobile */
+        .queue-card {{
+            padding: 0.55rem 0.75rem !important;
+            margin-bottom: 0.35rem !important;
+        }}
+        .queue-entity {{
+            font-size: 0.88rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }}
+        .queue-metric {{
+            font-size: 0.84rem !important;
+        }}
+        .queue-meta {{
+            font-size: 0.72rem !important;
+        }}
+
+        /* Seamless button overlays on mobile */
+        div[class*="st-key-btn_c_select_"],
+        div[class*="st-key-btn_s_select_"],
+        div[class*="st-key-btn_h_select_"] {{
+            margin-top: -110px !important;
+            height: 104px !important;
+            margin-bottom: 0.5rem !important;
+        }}
+        div[class*="st-key-btn_c_select_"] button,
+        div[class*="st-key-btn_s_select_"] button,
+        div[class*="st-key-btn_h_select_"] button {{
+            height: 104px !important;
+            min-height: 104px !important;
+            max-height: 104px !important;
+        }}
+
+        /* Executive Large KPI Grid: 2x2 on Mobile */
+        .kpi-large-grid {{
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.45rem !important;
+        }}
+        .kpi-box-large {{
+            padding: 0.5rem 0.65rem !important;
+            min-height: 56px !important;
+        }}
+        .kpi-box-large .kpi-box-val {{
+            font-size: 1.05rem !important;
+        }}
+
+        /* Single-Line Activity Log Row */
         .log-row {{
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.5rem;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.5rem !important;
+        }}
+    }}
+
+    /* On desktop (> 900px), hide inline card expanders so queue stays clean while right canvas is active */
+    @media (min-width: 901px) {{
+        div[data-testid="stColumn"]:has(.cockpit-queue-col) div[data-testid="stExpander"] {{
+            display: none !important;
         }}
     }}
 </style>

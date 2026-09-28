@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Tuple, Dict, Any, Optional
 import requests
@@ -13,13 +14,15 @@ def dispatch_to_n8n(
     Handles simulation mode when endpoint is unconfigured or unreachable.
     Returns: (success: bool, status_message: str, dispatched_payload: dict)
     """
+    auth_token = os.getenv("N8N_AUTH_TOKEN", "nudesk_ops_secure_token_v2")
     enriched_payload = {
         "flow_type": flow_type,
         "metadata": {
             "source": "nuDesk Operations Studio",
             "flow_type": flow_type,
             "dispatch_timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
-            "environment": "Mazatlan Operations Hub"
+            "environment": "Mazatlan Operations Hub",
+            "auth_token_present": bool(auth_token)
         },
         "data": payload
     }
@@ -34,10 +37,14 @@ def dispatch_to_n8n(
     clean_url = webhook_url.strip()
 
     try:
+        headers = {
+            "Content-Type": "application/json",
+            "X-nuDesk-Auth-Token": auth_token
+        }
         response = requests.post(
             clean_url,
             json=enriched_payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=5
         )
 
