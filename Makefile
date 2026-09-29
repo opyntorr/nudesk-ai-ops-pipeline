@@ -1,4 +1,4 @@
-.PHONY: help install test eval run demo verify tunnel lan docker-up docker-down clean
+.PHONY: help install test eval run demo verify tunnel lan docker-up docker-down pdf clean
 
 VENV := .venv
 PYTHON := $(shell if [ -f $(VENV)/bin/python ]; then echo $(VENV)/bin/python; else echo python3; fi)
@@ -12,6 +12,7 @@ help:
 	@echo "make test        : Run full automated test suite"
 	@echo "make eval        : Run AI agent evaluation & safety benchmarking harness"
 	@echo "make run         : Launch Streamlit web application on port 8501"
+	@echo "make pdf         : Generate publication-grade 12-page executive & technical PDF"
 	@echo "make lan         : Show local WiFi URLs for phone & secondary laptop access"
 	@echo "make demo        : Run Playwright automated multi-role UI simulation"
 	@echo "make verify      : Run master end-to-end verification suite (inputs, outputs, guardrails)"
@@ -49,6 +50,9 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+pdf:
+	$(PYTHON) scripts/generate_architecture_pdf.py
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
